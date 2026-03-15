@@ -79,6 +79,20 @@ Individually these may be weak signals. In aggregate they are high-value product
 
 See workflow: [`docs/signal-inbox-workflow.md`](docs/signal-inbox-workflow.md)
 
+### Human input queue (what the agent needs from the PM)
+
+The agent should explicitly request missing human-only inputs.
+
+Use a standing queue at:
+- [`governance/input-queue.md`](governance/input-queue.md)
+
+Use this daily opener:
+- "What inputs do you need from me today?"
+
+Workflow docs:
+- [`docs/monday-input-brief-workflow.md`](docs/monday-input-brief-workflow.md)
+- [`docs/human-in-the-loop-operating-model.md`](docs/human-in-the-loop-operating-model.md)
+
 ---
 
 ## Core principles
@@ -155,6 +169,7 @@ product-context-cascade/
 │   └── decision-template.md
 │
 └── governance/
+    ├── input-queue.md
     ├── quality-checklist.md
     ├── contribution-guide.md
     └── change-log.md

@@ -185,6 +185,7 @@ Default recommendation:
 - Missing metadata count
 - Recent generated outputs
 - Pending review queue
+- **Waiting on Human** queue (top 3 asks from `governance/input-queue.md`)
 - Recent receipts
 
 ### Health signals
