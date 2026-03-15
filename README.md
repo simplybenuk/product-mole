@@ -347,6 +347,38 @@ Initial focus is clear structure and retrieval behaviour.
 
 ---
 
+## Human UX layer (local interface concept)
+
+To make this usable beyond markdown-native users, pair the repo with a lightweight local web UI.
+
+### Design intent
+
+- Keep **files as source of truth** (agent-friendly)
+- Add a **human control panel** (PM-friendly)
+- Run locally with minimal setup
+
+### Proposed v1 UX modes
+
+- **Mode A — Configure:** set company vision, goals, constraints, terminology
+- **Mode B — Capture:** quickly add raw notes, transcripts, exports
+- **Mode C — Generate:** ask agent to produce summaries/PRDs/prioritisation docs
+- **Mode D — Review:** approve, edit, and promote outputs up the cascade
+- **Mode E — Publish/Export (optional):** push outputs to external tools when needed
+
+**Important:** Mode E is optional by design. Teams can skip it entirely and keep outputs inside this repository for coding agents to consume directly.
+
+### Recommended default
+
+Default to **no export dependency**:
+- keep strategy, decisions, PRDs, and implementation-ready artefacts in the cascade;
+- let coding agents consume these files directly from the same repo/workspace.
+
+Add external publish/export only if a team has mandatory downstream systems.
+
+See detailed UI proposal: [`docs/ui-spec-v1.md`](docs/ui-spec-v1.md)
+
+---
+
 ## Immediate next step
 
 Review this README plan, comment, and iterate.
