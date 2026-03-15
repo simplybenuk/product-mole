@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product Context Cascade UI (v0)</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Product Context Cascade</h1>
+      <p>Local UI scaffold (v0) — capture, inspect, and queue human inputs.</p>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Quick Capture (Inbox)</h2>
+        <form id="captureForm">
+          <div class="grid">
+            <label>Type
+              <select name="type">
+                <option value="quick-notes">Quick note</option>
+                <option value="messages">Message</option>
+                <option value="observations">Observation</option>
+              </select>
+            </label>
+            <label>Source
+              <select name="source">
+                <option>self</option>
+                <option>ceo</option>
+                <option>customer</option>
+                <option>sales</option>
+                <option>support</option>
+                <option>other</option>
+              </select>
+            </label>
+            <label>Channel
+              <input name="channel" placeholder="slack, call, meeting..." value="chat" />
+            </label>
+            <label>Confidence
+              <select name="confidence">
+                <option>low</option>
+                <option>medium</option>
+                <option>high</option>
+              </select>
+            </label>
+          </div>
+          <label>Tags (comma-separated)
+            <input name="tags" placeholder="onboarding, ux" />
+          </label>
+          <label>Note
+            <textarea name="note" rows="6" placeholder="Capture the signal quickly..."></textarea>
+          </label>
+          <button type="submit">Save to inbox</button>
+          <p id="captureStatus" class="status"></p>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Waiting on Human</h2>
+        <p>From <code>governance/input-queue.md</code></p>
+        <button id="loadQueueBtn">Load queue</button>
+        <pre id="queueContent" class="viewer"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Repo Explorer</h2>
+        <div class="row">
+          <input id="pathInput" value="2-summaries" />
+          <button id="loadPathBtn">Open</button>
+        </div>
+        <ul id="treeList"></ul>
+        <pre id="fileContent" class="viewer"></pre>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
