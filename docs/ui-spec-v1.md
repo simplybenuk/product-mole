@@ -43,16 +43,19 @@ Define a lightweight, local-first web interface that makes the Product Context C
 
 ## Information architecture
 
-### Main navigation
+### Main navigation (default)
 
 1. **Dashboard**
 2. **Configure** (Mode A)
 3. **Capture** (Mode B)
 4. **Generate** (Mode C)
 5. **Review** (Mode D)
-6. **Publish/Export** (Mode E, optional)
-7. **Repo Explorer**
-8. **Run Log / Receipts**
+6. **Repo Explorer**
+7. **Run Log / Receipts**
+
+### Feature-flagged navigation (optional)
+
+8. **Publish/Export** (Mode E, disabled by default)
 
 ---
 
@@ -148,13 +151,13 @@ Human approval/edit/promote loop.
 
 ---
 
-## Mode E — Publish/Export (Optional)
+## Mode E — Publish/Export (Future extension, feature-flagged)
 
 ### Objective
-Send outputs to external tools only when needed.
+Send outputs to external tools only when explicitly needed.
 
-### Important product decision
-Mode E is **not required** for core value.
+### Product decision
+Mode E is **out of MVP scope** and **disabled by default**.
 
 Default recommendation:
 - keep outputs in cascade files,
@@ -256,7 +259,8 @@ Include:
 - Repo Explorer
 - Run Log/Receipts
 
-Optional/deferred:
+Optional/deferred (feature-flagged or post-MVP):
+- Publish/Export mode (Mode E)
 - Publish/Export adapters
 - Advanced automation
 - Hosted multi-user auth model
@@ -268,7 +272,7 @@ Optional/deferred:
 1. Frontmatter format strictness (required vs optional fields)
 2. Receipt storage path and retention
 3. Conflict resolution UI behaviour
-4. Whether Mode E appears in nav by default or behind feature toggle
+4. Feature flag mechanism for Mode E (env flag vs config file)
 5. Local packaging method (scripted install vs container)
 
 ---
