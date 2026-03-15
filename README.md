@@ -86,15 +86,15 @@ Use `governance/input-queue.md` for missing human-only inputs.
 ## Where to read next
 
 - Human/agent collaboration:
-  - `docs/human-in-the-loop-operating-model.md`
+  - [docs/human-in-the-loop-operating-model.md](docs/human-in-the-loop-operating-model.md)
 - Daily input ritual:
-  - `docs/monday-input-brief-workflow.md`
+  - [docs/monday-input-brief-workflow.md](docs/monday-input-brief-workflow.md)
 - Scratchpad signal workflow:
-  - `docs/signal-inbox-workflow.md`
+  - [docs/signal-inbox-workflow.md](docs/signal-inbox-workflow.md)
 - Local UI concept:
-  - `docs/ui-spec-v1.md`
+  - [docs/ui-spec-v1.md](docs/ui-spec-v1.md)
 - Full architecture/design doc (previous README):
-  - `docs/architecture-and-design.md`
+  - [docs/architecture-and-design.md](docs/architecture-and-design.md)
 
 ---
 
