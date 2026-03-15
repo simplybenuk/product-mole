@@ -93,6 +93,8 @@ Use `governance/input-queue.md` for missing human-only inputs.
   - [docs/signal-inbox-workflow.md](docs/signal-inbox-workflow.md)
 - Local UI concept:
   - [docs/ui-spec-v1.md](docs/ui-spec-v1.md)
+- Migration prompt pack (existing tools → cascade):
+  - [docs/migration-prompt-pack.md](docs/migration-prompt-pack.md)
 - Full architecture/design doc (previous README):
   - [docs/architecture-and-design.md](docs/architecture-and-design.md)
 
