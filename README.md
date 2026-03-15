@@ -102,6 +102,19 @@ Use `governance/input-queue.md` for missing human-only inputs.
 
 ---
 
+## Local UI (v0 scaffold)
+
+A minimal local HTML UI is included for immediate testing:
+
+- start server: `node ui/server.mjs`
+- open: `http://localhost:4173`
+- guide: [ui/README.md](ui/README.md)
+
+Current v0 features:
+- Quick Capture form (writes to `6-raw/inbox/`)
+- Waiting on Human queue viewer
+- Basic repo explorer
+
 ## Suggested Monday opener
 
 Ask:

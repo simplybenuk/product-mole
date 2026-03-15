@@ -1,0 +1,169 @@
+import http from 'node:http';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_ROOT = path.resolve(__dirname, '..');
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const PORT = process.env.PORT || 4173;
+
+const allowedRoots = new Set([
+  '0-bootstrap',
+  '1-routing',
+  '2-summaries',
+  '3-indexes',
+  '4-context',
+  '5-evidence',
+  '6-raw',
+  'governance',
+  'docs',
+  'README.md',
+]);
+
+const mime = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.md': 'text/markdown; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
+};
+
+function send(res, code, body, contentType = 'application/json; charset=utf-8') {
+  res.writeHead(code, { 'content-type': contentType });
+  res.end(typeof body === 'string' ? body : JSON.stringify(body));
+}
+
+async function readBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  if (!chunks.length) return {};
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
+
+function safeRepoPath(input = '') {
+  const normalized = input.replace(/^\/+/, '');
+  const resolved = path.resolve(REPO_ROOT, normalized);
+  if (!resolved.startsWith(REPO_ROOT)) throw new Error('Invalid path');
+  const rel = path.relative(REPO_ROOT, resolved);
+  const top = rel.split(path.sep)[0];
+  if (!allowedRoots.has(top) && rel !== 'README.md') {
+    throw new Error('Path outside allowed roots');
+  }
+  return { resolved, rel };
+}
+
+async function listDir(targetPath) {
+  const entries = await fs.readdir(targetPath, { withFileTypes: true });
+  const out = [];
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    if (entry.name.startsWith('.git')) continue;
+    out.push({ name: entry.name, type: entry.isDirectory() ? 'dir' : 'file' });
+  }
+  return out;
+}
+
+function slugify(input) {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48) || 'note';
+}
+
+function todayDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function routeApi(req, res, urlObj) {
+  if (req.method === 'GET' && urlObj.pathname === '/api/tree') {
+    const p = urlObj.searchParams.get('path') || '';
+    const { resolved, rel } = safeRepoPath(p || 'README.md');
+    let stat;
+    try {
+      stat = await fs.stat(resolved);
+    } catch {
+      return send(res, 404, { error: 'Not found' });
+    }
+    if (stat.isFile()) {
+      return send(res, 200, { path: rel, type: 'file' });
+    }
+    const entries = await listDir(resolved);
+    return send(res, 200, { path: rel || '.', type: 'dir', entries });
+  }
+
+  if (req.method === 'GET' && urlObj.pathname === '/api/file') {
+    const p = urlObj.searchParams.get('path');
+    if (!p) return send(res, 400, { error: 'Missing path' });
+    const { resolved, rel } = safeRepoPath(p);
+    const stat = await fs.stat(resolved).catch(() => null);
+    if (!stat || !stat.isFile()) return send(res, 404, { error: 'File not found' });
+    const content = await fs.readFile(resolved, 'utf8');
+    return send(res, 200, { path: rel, content });
+  }
+
+  if (req.method === 'POST' && urlObj.pathname === '/api/capture') {
+    const body = await readBody(req);
+    const type = body.type || 'quick-notes';
+    const source = body.source || 'self';
+    const channel = body.channel || 'chat';
+    const confidence = body.confidence || 'low';
+    const tags = Array.isArray(body.tags) ? body.tags : [];
+    const note = (body.note || '').trim();
+    if (!note) return send(res, 400, { error: 'Note is required' });
+
+    const date = todayDate();
+    const folder = ['quick-notes', 'messages', 'observations'].includes(type) ? type : 'quick-notes';
+    const filename = `${date}-${slugify(note.split('\n')[0])}.md`;
+    const relPath = path.join('6-raw', 'inbox', folder, filename);
+    const { resolved } = safeRepoPath(relPath);
+
+    const frontmatter = [
+      '---',
+      `date: ${date}`,
+      `source: ${source}`,
+      `channel: ${channel}`,
+      `topic_tags: [${tags.join(', ')}]`,
+      `confidence: ${confidence}`,
+      '---',
+      '',
+      note,
+      '',
+    ].join('\n');
+
+    await fs.mkdir(path.dirname(resolved), { recursive: true });
+    await fs.writeFile(resolved, frontmatter, 'utf8');
+
+    return send(res, 200, { ok: true, path: relPath });
+  }
+
+  return false;
+}
+
+const server = http.createServer(async (req, res) => {
+  try {
+    const urlObj = new URL(req.url, `http://${req.headers.host}`);
+    if (urlObj.pathname.startsWith('/api/')) {
+      const handled = await routeApi(req, res, urlObj);
+      if (handled !== false) return;
+      return send(res, 404, { error: 'API route not found' });
+    }
+
+    let filePath = urlObj.pathname === '/' ? '/index.html' : urlObj.pathname;
+    filePath = path.join(PUBLIC_DIR, filePath);
+    const stat = await fs.stat(filePath).catch(() => null);
+    if (!stat || !stat.isFile()) return send(res, 404, 'Not found', 'text/plain; charset=utf-8');
+    const ext = path.extname(filePath);
+    const contentType = mime[ext] || 'application/octet-stream';
+    const content = await fs.readFile(filePath);
+    return send(res, 200, content, contentType);
+  } catch (err) {
+    return send(res, 500, { error: err.message || 'Server error' });
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`Context Cascade UI running on http://localhost:${PORT}`);
+});
