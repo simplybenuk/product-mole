@@ -39,12 +39,12 @@ The default behaviour should be low-friction:
 
 ### Day-to-day operating pattern
 
-Most PM input will naturally start in raw material. That is expected.
+Most PM input will naturally start as messy micro-signals. That is expected.
 
 **Capture low → Distil up → Retrieve top-down**
 
-1. Capture quickly into Layer 6 (`6-raw/`).
-2. Promote into Layer 5 (`5-evidence/`) as clustered summaries.
+1. Capture quickly into a scratchpad inbox (`6-raw/inbox/`).
+2. Promote inbox batches into Layer 5 (`5-evidence/`) as clustered summaries.
 3. Distil into Layer 4 (`4-context/`) topic modules.
 4. Update Layer 3 indexes (`3-indexes/`).
 5. Refresh Layer 2 summaries (`2-summaries/`).
@@ -54,17 +54,30 @@ This keeps the top layers high-signal so future agent tasks remain cheap.
 ### Human vs agent responsibilities
 
 **PM (human):**
-- capture notes/exports/interviews
+- capture notes/exports/interviews/micro-signals quickly
 - request outputs (PRDs, prioritisation, strategy notes)
 - review and correct important summaries/decisions
 
 **Agent/assistant:**
-- transform raw notes into evidence summaries
-- extract themes and constraints
+- transform inbox/raw notes into evidence summaries
+- extract themes, weak signals, constraints, and opportunities
 - maintain indexes and summaries
 - produce retrieval receipts with each substantive output
 
 Goal: avoid turning the template into documentation overhead.
+
+### Micro-signal capture (scratchpad first)
+
+Examples of valid capture inputs:
+- quick CEO messages
+- passing user comments
+- sales anecdotes
+- support oddities
+- personal PM thoughts/instincts
+
+Individually these may be weak signals. In aggregate they are high-value product context.
+
+See workflow: [`docs/signal-inbox-workflow.md`](docs/signal-inbox-workflow.md)
 
 ---
 
@@ -125,6 +138,10 @@ product-context-cascade/
 │   └── research-notes/
 │
 ├── 6-raw/
+│   ├── inbox/
+│   │   ├── quick-notes/
+│   │   ├── messages/
+│   │   └── observations/
 │   ├── transcripts/
 │   ├── exports/
 │   ├── ticket-dumps/

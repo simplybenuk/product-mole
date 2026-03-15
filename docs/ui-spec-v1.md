@@ -88,22 +88,27 @@ Set and maintain high-signal foundational inputs.
 ## Mode B — Capture
 
 ### Objective
-Fast ingestion of raw inputs with minimal friction.
+Fast ingestion of raw inputs and micro-signals with minimal friction.
 
 ### Inputs
 - free text notes
+- quick messages (e.g. CEO/customer snippets)
+- passing observations
 - transcript files
 - support exports
 - links and attachments
 
 ### Output targets
-- `6-raw/*`
+- `6-raw/inbox/*` for fast scratchpad capture
+- `6-raw/*` for larger raw artefacts
 
 ### UX elements
-- Quick capture text box
+- Quick capture text box (primary)
+- One-click source chips (CEO, customer, sales, support, self)
 - Drag-and-drop uploader
 - Minimal tagging (source/date/topic)
-- "Filed to raw" confirmation
+- "Filed to inbox" confirmation
+- Optional “promote now” action to request immediate synthesis
 
 ---
 
