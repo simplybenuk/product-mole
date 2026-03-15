@@ -95,6 +95,8 @@ Use `governance/input-queue.md` for missing human-only inputs.
   - [docs/ui-spec-v1.md](docs/ui-spec-v1.md)
 - Migration prompt pack (existing tools → cascade):
   - [docs/migration-prompt-pack.md](docs/migration-prompt-pack.md)
+- Template update guide (upstream → local instance):
+  - [docs/template-update-guide.md](docs/template-update-guide.md)
 - Full architecture/design doc (previous README):
   - [docs/architecture-and-design.md](docs/architecture-and-design.md)
 
