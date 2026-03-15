@@ -25,6 +25,49 @@ It is:
 
 ---
 
+## Template-first usage (for product managers)
+
+This repository is intended as a **portable template** that a PM can copy to:
+- local machine,
+- OneDrive/Google Drive,
+- or a Git repo.
+
+The default behaviour should be low-friction:
+1. PM captures inputs quickly.
+2. Agent/assistant structures and promotes them.
+3. PM reviews and approves key outputs.
+
+### Day-to-day operating pattern
+
+Most PM input will naturally start in raw material. That is expected.
+
+**Capture low → Distil up → Retrieve top-down**
+
+1. Capture quickly into Layer 6 (`6-raw/`).
+2. Promote into Layer 5 (`5-evidence/`) as clustered summaries.
+3. Distil into Layer 4 (`4-context/`) topic modules.
+4. Update Layer 3 indexes (`3-indexes/`).
+5. Refresh Layer 2 summaries (`2-summaries/`).
+
+This keeps the top layers high-signal so future agent tasks remain cheap.
+
+### Human vs agent responsibilities
+
+**PM (human):**
+- capture notes/exports/interviews
+- request outputs (PRDs, prioritisation, strategy notes)
+- review and correct important summaries/decisions
+
+**Agent/assistant:**
+- transform raw notes into evidence summaries
+- extract themes and constraints
+- maintain indexes and summaries
+- produce retrieval receipts with each substantive output
+
+Goal: avoid turning the template into documentation overhead.
+
+---
+
 ## Core principles
 
 1. **Progressive retrieval, not blanket reading**
