@@ -34,6 +34,7 @@ This repository is designed to work:
    - `observations/`
 4. Ask your agent:
    - "Synthesize inbox into evidence clusters"
+   - "Process this PDF and promote the useful context"
    - "What inputs do you need from me today?"
 5. Review and promote outputs into `5-evidence/` then `4-context/`.
 
@@ -42,10 +43,10 @@ This repository is designed to work:
 ## How to use day-to-day
 
 ### 1) Capture fast
-Drop notes, snippets, comments, and thoughts into `6-raw/inbox/`.
+Drop notes, snippets, comments, and source artefacts into `6-raw/inbox/`.
 
 ### 2) Distil with agent help
-Batch synthesize raw signals into `5-evidence/signal-clusters/`.
+Batch synthesize weak signals into `5-evidence/signal-clusters/` and promote substantive artefacts into `5-evidence/source-docs/`.
 
 ### 3) Promote meaningful context
 Move validated patterns into focused docs in `4-context/`.
@@ -65,7 +66,7 @@ Use `governance/input-queue.md` for missing human-only inputs.
 - `2-summaries/` — compressed domain summaries
 - `3-indexes/` — pointers to deeper context
 - `4-context/` — focused context modules and decisions
-- `5-evidence/` — clustered evidence and validation material
+- `5-evidence/` — clustered evidence, source docs, and validation material
 - `6-raw/` — inbox + raw captures/archive
 - `templates/` — reusable templates
 - `governance/` — quality, queue, receipts

@@ -1,4 +1,4 @@
-# Agents — Product Context Cascade
+# Agents - Product Context Cascade
 
 Read order (always):
 1. `0-bootstrap/agents.md`
@@ -11,5 +11,9 @@ Rules:
 - Prefer summaries before source docs.
 - Respect depth budgets.
 - Stop at sufficiency.
+- When the inbox contains a substantive artefact such as a PDF, spreadsheet, slide deck, export, or transcript, treat it as a source document rather than a weak signal.
+- Promote substantive artefacts to `5-evidence/source-docs/` first, then create `4-context/` modules only when synthesis adds durable value.
+- Only route inbox snippets to `5-evidence/signal-clusters/` when the input is primarily a set of weak signals or messy notes.
 - If blocked by missing human input, add an item to `governance/input-queue.md`.
+- After promoting an inbox artefact, update relevant indexes and summaries, write a retrieval receipt, and only then remove or archive the inbox copy.
 - End substantive outputs with a retrieval receipt.

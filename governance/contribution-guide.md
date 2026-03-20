@@ -3,10 +3,13 @@
 ## Content operating rules
 
 1. Capture first in `6-raw/inbox/` when speed matters.
-2. Promote only validated patterns into evidence/context.
-3. Keep docs focused (avoid giant omnibus files).
-4. Update indexes after adding context modules.
-5. Keep `governance/input-queue.md` current for human asks.
+2. Promote weak-signal batches into `5-evidence/signal-clusters/`.
+3. Promote substantive artefacts such as PDFs, spreadsheets, decks, exports, and transcripts into `5-evidence/source-docs/` before creating context modules.
+4. Promote only validated patterns or durable syntheses into `4-context/`.
+5. After adding evidence/context, update relevant indexes and summaries.
+6. Only remove an inbox file after a retrieval receipt exists and the content has been promoted or archived.
+7. Keep docs focused (avoid giant omnibus files).
+8. Keep `governance/input-queue.md` current for human asks.
 
 ## Template change control rules
 
