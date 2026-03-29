@@ -1,0 +1,24 @@
+instance_name: demo-product
+cascade_version: 0.2.0
+profile: default
+created_from: v0.2.0
+last_upgraded_from: null
+last_upgraded_to: null
+
+customisations:
+  - added a small demo context set for open-source users
+
+local_ownership:
+  upstream_owned:
+    - 0-bootstrap/
+    - 1-routing/
+    - templates/
+    - docs/
+  merge_carefully:
+    - README.md
+    - 2-summaries/
+    - 3-indexes/
+  instance_owned:
+    - 4-context/
+    - 5-evidence/
+    - 6-raw/

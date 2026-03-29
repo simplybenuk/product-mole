@@ -1,0 +1,40 @@
+# Copy this into your working cascade instance as `cascade.instance.yaml`.
+# It gives the instance a version anchor and records local customisations.
+
+instance_name: your-project-name
+cascade_version: 0.2.0
+profile: default
+created_from: v0.2.0
+last_upgraded_from: null
+last_upgraded_to: null
+
+customisations:
+  # Record important local structural changes here so future upgrades are easier.
+  # Examples:
+  # - renamed `2-summaries/technical-summary.md` to `2-summaries/platform-summary.md`
+  # - added `4-context/pricing/`
+  # - removed `2-summaries/compliance-summary.md`
+  []
+
+local_ownership:
+  upstream_owned:
+    - 0-bootstrap/
+    - 1-routing/
+    - templates/
+    - docs/
+    - governance/contribution-guide.md
+    - governance/quality-checklist.md
+  merge_carefully:
+    - README.md
+    - governance/change-log.md
+    - governance/input-queue.md
+    - 2-summaries/
+    - 3-indexes/
+  instance_owned:
+    - 4-context/
+    - 5-evidence/
+    - 6-raw/
+
+notes: |
+  Keep this file current when making local structural changes.
+  The goal is not perfect bookkeeping. The goal is to make upgrades legible.
