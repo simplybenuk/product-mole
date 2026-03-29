@@ -144,6 +144,100 @@ See:
 - [cli/README.md](cli/README.md)
 - [docs/cli-and-command-surface.md](docs/cli-and-command-surface.md)
 
+## Install and test locally
+
+If you want to try the current prototype quickly:
+
+### 1. Clone the repo
+
+```bash
+git clone git@github.com:simplybenuk/product-context-cascade.git
+cd product-context-cascade
+```
+
+### 2. Create a test instance
+
+```bash
+node cli/cascade.mjs init my-cascade
+cd my-cascade
+```
+
+This creates a starter instance with:
+- bootstrap files
+- starter summaries
+- input queue
+- raw inbox folders
+- core templates
+
+### 3. Install Codex prompt commands
+
+From the project root:
+
+```bash
+cd ..
+node cli/cascade.mjs install codex
+```
+
+This installs prompt files into:
+- `~/.codex/prompts/`
+- or `$CODEX_HOME/prompts/` if `CODEX_HOME` is set
+
+### 4. Test the CLI directly
+
+```bash
+cd my-cascade
+node ../cli/cascade.mjs doctor
+node ../cli/cascade.mjs insight "Users trust CSV export more than dashboard totals"
+node ../cli/cascade.mjs create roadmap
+```
+
+### 5. Test in Codex chat
+
+Once the prompts are installed, try commands like:
+- `/cascade-insight Users trust CSV export more than dashboard totals`
+- `/cascade-synthesise-inbox`
+- `/cascade-create-roadmap`
+- `/cascade-create-spec`
+- `/cascade-review-input-queue`
+
+## What currently works
+
+### Raw inbox flow
+You can still drop files manually into:
+- `6-raw/inbox/`
+
+That remains a first-class workflow.
+
+### Command capture flow
+You can also capture through commands:
+- `cascade insight "..."`
+- `/cascade-insight ...` in Codex after prompt install
+
+### Creation flow
+You can create draft artifacts such as:
+- roadmap
+- spec
+- decision brief
+- strategy memo
+- prioritisation draft
+
+## Current prototype status
+
+This is early but usable.
+
+What exists now:
+- file-native cascade structure
+- CLI scaffold
+- Codex prompt installation
+- raw insight capture
+- draft artifact generation
+- docs for upgrade/adoption/command UX
+
+What is still lightweight:
+- synthesis logic is instruction-driven rather than deeply automated
+- command set is intentionally small
+- naming/brand may still evolve
+
 ## Local UI (v0 scaffold)
 
 A minimal local HTML UI is included for immediate testing:
