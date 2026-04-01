@@ -3,11 +3,13 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
 const cwd = process.cwd();
-const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const thisFile = fileURLToPath(import.meta.url);
+const repoRoot = path.resolve(path.dirname(thisFile), '..');
 
 function printHelp() {
   console.log(`cascade v0.2.0
