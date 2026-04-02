@@ -45,6 +45,24 @@ function copyFile(from, to) {
   fs.copyFileSync(from, to);
 }
 
+function copyDirRecursive(from, to, options = {}) {
+  const { excludeNames = new Set() } = options;
+  ensureDir(to);
+
+  for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+    if (excludeNames.has(entry.name)) continue;
+
+    const sourcePath = path.join(from, entry.name);
+    const targetPath = path.join(to, entry.name);
+
+    if (entry.isDirectory()) {
+      copyDirRecursive(sourcePath, targetPath, options);
+    } else if (entry.isFile()) {
+      copyFile(sourcePath, targetPath);
+    }
+  }
+}
+
 function exists(p) {
   try {
     fs.accessSync(p);
@@ -79,42 +97,22 @@ function initInstance(targetDir) {
   const target = path.resolve(cwd, targetDir || 'cascade-instance');
   ensureDir(target);
 
-  const folders = [
-    '0-bootstrap',
-    '1-routing',
-    '2-summaries',
-    '3-indexes',
-    '4-context/product',
-    '4-context/strategy',
-    '4-context/decisions',
-    '5-evidence',
-    '6-raw/inbox/quick-notes',
-    '6-raw/inbox/messages',
-    '6-raw/inbox/observations',
-    'governance',
-    'templates'
-  ];
+  copyDirRecursive(repoRoot, target, {
+    excludeNames: new Set(['.git', 'cli', 'node_modules'])
+  });
 
-  for (const folder of folders) ensureDir(path.join(target, folder));
-
-  copyFile(path.join(repoRoot, 'cascade.instance-template.yaml'), path.join(target, 'cascade.instance.yaml'));
-  copyFile(path.join(repoRoot, 'README.md'), path.join(target, 'README.md'));
-  copyFile(path.join(repoRoot, '0-bootstrap', 'repo-purpose.md'), path.join(target, '0-bootstrap', 'repo-purpose.md'));
-  copyFile(path.join(repoRoot, '0-bootstrap', 'agents.md'), path.join(target, '0-bootstrap', 'agents.md'));
-  copyFile(path.join(repoRoot, '2-summaries', 'strategy-summary.md'), path.join(target, '2-summaries', 'strategy-summary.md'));
-  copyFile(path.join(repoRoot, '2-summaries', 'user-summary.md'), path.join(target, '2-summaries', 'user-summary.md'));
-  copyFile(path.join(repoRoot, '2-summaries', 'product-summary.md'), path.join(target, '2-summaries', 'product-summary.md'));
-  copyFile(path.join(repoRoot, 'governance', 'input-queue.md'), path.join(target, 'governance', 'input-queue.md'));
-  copyFile(path.join(repoRoot, 'templates', 'summary-template.md'), path.join(target, 'templates', 'summary-template.md'));
-  copyFile(path.join(repoRoot, 'templates', 'context-module-template.md'), path.join(target, 'templates', 'context-module-template.md'));
-  copyFile(path.join(repoRoot, 'templates', 'decision-template.md'), path.join(target, 'templates', 'decision-template.md'));
+  if (exists(path.join(target, 'cascade.instance-template.yaml'))) {
+    copyFile(path.join(target, 'cascade.instance-template.yaml'), path.join(target, 'cascade.instance.yaml'));
+  }
 
   console.log(`Initialised cascade instance at: ${target}`);
+  console.log('Copied a full working cascade scaffold (excluding .git, cli, and node_modules).');
   console.log('Next steps:');
   console.log('- customise 0-bootstrap/repo-purpose.md');
   console.log('- fill key summaries in 2-summaries/');
   console.log('- start capturing in 6-raw/inbox/ or with `cascade insight "..."`');
-  console.log('- optionally install Codex prompts with `cascade install codex`');
+  console.log('- open the new instance folder in your editor, not the source/tool repo');
+  console.log('- optionally install Codex prompts with `cascade install codex` from the source/tool repo');
 }
 
 function createArtifact(kind, outputPath) {
