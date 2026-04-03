@@ -8,7 +8,7 @@ However, once a working mole instance has been created, there is not yet a clean
 
 Current reality:
 - source/tool repo can be updated with `git pull`
-- Codex prompts can be refreshed with `node cli/cascade.mjs install codex`
+- Codex prompts can be refreshed with `node cli/mole.mjs install codex`
 - working instances do **not** yet have a robust upgrade path
 
 This is now one of the main product gaps.
@@ -136,7 +136,7 @@ mole check-updates
 ```
 
 It should:
-- compare source/tool repo version to `cascade.instance.yaml`
+- compare source/tool repo version to `mole.instance.yaml`
 - describe what changed since the instance version
 - list files that could be copied safely
 - list files that need manual merge
@@ -183,7 +183,7 @@ not:
 ## Open questions
 
 1. Should a working instance include a hidden marker showing which files were copied from source?
-2. Should safe-upgrade rules live in `cascade.instance.yaml`, a separate manifest, or both?
+2. Should safe-upgrade rules live in `mole.instance.yaml`, a separate manifest, or both?
 3. How much of README/summaries should be treated as user-owned vs framework-owned?
 4. Should UI files be included in safe-upgrade scope or treated as optional?
 5. How do we avoid the user needing both the source repo and instance repo forever?

@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "bin": {
-    "mole": "./cascade.mjs",
-    "cascade": "./cascade.mjs"
+    "mole": "./mole.mjs"
   }
 }

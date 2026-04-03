@@ -19,7 +19,7 @@ It is:
 
 ## Core user story
 
-A product manager continuously drops raw signals into the cascade:
+A product manager continuously drops raw signals into the mole:
 - notes
 - messages
 - support oddities

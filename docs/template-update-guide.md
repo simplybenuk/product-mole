@@ -9,7 +9,7 @@ This guide is the practical companion to:
 
 - **Upstream template repo:** `product-mole`
 - **Your working repo:** your private instance with real context
-- **Your local metadata file:** `cascade.instance.yaml`
+- **Your local metadata file:** `mole.instance.yaml`
 
 ## One-time setup (in your working repo)
 
@@ -21,7 +21,7 @@ git fetch upstream --tags
 Copy the upstream starter metadata file into your instance:
 
 ```bash
-cp cascade.instance-template.yaml cascade.instance.yaml
+cp mole.instance-template.yaml mole.instance.yaml
 ```
 
 Then update it with your real local customisations over time.
@@ -30,7 +30,7 @@ Then update it with your real local customisations over time.
 
 ### 1. Check what release you are on
 Read:
-- `cascade.instance.yaml`
+- `mole.instance.yaml`
 - upstream `CHANGELOG.md`
 - upstream release/tag notes
 
@@ -78,7 +78,7 @@ git merge upstream/main
 - `6-raw/`
 
 ### 6. Update your instance metadata
-After a successful upgrade, update `cascade.instance.yaml` with:
+After a successful upgrade, update `mole.instance.yaml` with:
 - `last_upgraded_from`
 - `last_upgraded_to`
 - any new local structural drift

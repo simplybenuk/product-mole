@@ -59,7 +59,7 @@ Switch user-facing references from:
 - mole command → mole command
 
 ### 2. Keep compatibility where sensible
-- Keep the existing `cli/cascade.mjs` file working for now
+- Keep the existing `cli/mole.mjs` file working for now
 - Update help/output language toward Mole
 - Optionally add a `mole.mjs` launcher later if needed
 

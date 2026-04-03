@@ -94,15 +94,15 @@ function getCodexHome() {
 }
 
 function initInstance(targetDir) {
-  const target = path.resolve(cwd, targetDir || 'cascade-instance');
+  const target = path.resolve(cwd, targetDir || 'mole-instance');
   ensureDir(target);
 
   copyDirRecursive(repoRoot, target, {
     excludeNames: new Set(['.git', 'cli', 'node_modules'])
   });
 
-  if (exists(path.join(target, 'cascade.instance-template.yaml'))) {
-    copyFile(path.join(target, 'cascade.instance-template.yaml'), path.join(target, 'cascade.instance.yaml'));
+  if (exists(path.join(target, 'mole.instance-template.yaml'))) {
+    copyFile(path.join(target, 'mole.instance-template.yaml'), path.join(target, 'mole.instance.yaml'));
   }
 
   console.log(`Initialised mole instance at: ${target}`);
@@ -203,7 +203,7 @@ function outputDraftInstruction(kind) {
 
 function doctor() {
   const checks = [
-    ['cascade.instance.yaml', exists(path.join(cwd, 'cascade.instance.yaml'))],
+    ['mole.instance.yaml', exists(path.join(cwd, 'mole.instance.yaml'))],
     ['0-bootstrap/', exists(path.join(cwd, '0-bootstrap'))],
     ['1-routing/', exists(path.join(cwd, '1-routing'))],
     ['2-summaries/', exists(path.join(cwd, '2-summaries'))],
@@ -252,7 +252,7 @@ switch (command) {
     }
     break;
   case 'check-updates':
-    console.log('Check the local cascade.instance.yaml against upstream VERSION and CHANGELOG.md.');
+    console.log('Check the local mole.instance.yaml against upstream VERSION and CHANGELOG.md.');
     break;
   case 'upgrade':
     console.log('Follow docs/upgrade-and-instance-management.md and docs/template-update-guide.md.');

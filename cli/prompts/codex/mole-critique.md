@@ -19,4 +19,4 @@ Actions:
 4. Create or update a critique markdown file if appropriate, using the critique template shape if present.
 5. Return a structured judgement with a practical next step.
 
-Avoid generic critique. Ground the output in the cascade.
+Avoid generic critique. Ground the output in the mole.

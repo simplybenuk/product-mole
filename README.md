@@ -128,13 +128,13 @@ Use `governance/input-queue.md` for missing human-only inputs.
 A lightweight CLI prototype now exists to establish the product vocabulary:
 
 ```bash
-node cli/cascade.mjs --help
-node cli/cascade.mjs init my-mole
-node cli/cascade.mjs install codex
-node cli/cascade.mjs doctor
-node cli/cascade.mjs insight "Users trust CSV export more than dashboard totals"
-node cli/cascade.mjs create roadmap
-node cli/cascade.mjs create spec
+node cli/mole.mjs --help
+node cli/mole.mjs init my-mole
+node cli/mole.mjs install codex
+node cli/mole.mjs doctor
+node cli/mole.mjs insight "Users trust CSV export more than dashboard totals"
+node cli/mole.mjs create roadmap
+node cli/mole.mjs create spec
 ```
 
 Current purpose:
@@ -160,7 +160,7 @@ cd product-mole
 ### 2. Create a test instance
 
 ```bash
-node cli/cascade.mjs init my-mole
+node cli/mole.mjs init my-mole
 cd my-mole
 ```
 
@@ -177,7 +177,7 @@ From the **source/tool repo root** (`product-mole`), not from inside the generat
 
 ```bash
 cd ..
-node cli/cascade.mjs install codex
+node cli/mole.mjs install codex
 ```
 
 This installs prompt files into:
@@ -188,9 +188,9 @@ This installs prompt files into:
 
 ```bash
 cd my-mole
-node ../cli/cascade.mjs doctor
-node ../cli/cascade.mjs insight "Users trust CSV export more than dashboard totals"
-node ../cli/cascade.mjs create roadmap
+node ../cli/mole.mjs doctor
+node ../cli/mole.mjs insight "Users trust CSV export more than dashboard totals"
+node ../cli/mole.mjs create roadmap
 ```
 
 ### 5. Test in Codex chat
@@ -209,7 +209,7 @@ When the source/tool repo changes, do this from the `product-mole` folder:
 
 ```bash
 git pull
-node cli/cascade.mjs install codex
+node cli/mole.mjs install codex
 ```
 
 Why both?

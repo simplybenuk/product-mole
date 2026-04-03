@@ -6,7 +6,7 @@ It is intentionally incomplete.
 Its job is to help open-source users understand the model quickly.
 
 ## Suggested contents over time
-- a sample `cascade.instance.yaml`
+- a sample `mole.instance.yaml`
 - a few starter summaries
 - one or two context modules
 - one evidence cluster

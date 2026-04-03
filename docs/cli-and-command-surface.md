@@ -46,7 +46,7 @@ Slash commands like `/PCC create roadmap` can still exist later inside chat tool
 ## v1 command groups
 
 ### Create
-Used to generate product outputs from the current cascade.
+Used to generate product outputs from the current mole.
 
 Examples:
 ```bash
@@ -114,7 +114,7 @@ mole upgrade
 ## Output philosophy
 
 Commands should produce:
-- a file output in the correct part of the cascade,
+- a file output in the correct part of the mole,
 - a short human-readable summary,
 - and optionally a retrieval receipt.
 

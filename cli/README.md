@@ -11,14 +11,14 @@ Current goal:
 ## Try locally
 
 ```bash
-node cli/cascade.mjs --help
-node cli/cascade.mjs init my-mole
-node cli/cascade.mjs install codex
-node cli/cascade.mjs doctor
-node cli/cascade.mjs create roadmap
-node cli/cascade.mjs create spec
-node cli/cascade.mjs insight "Users trust CSV export more than dashboard totals"
-node cli/cascade.mjs synthesise inbox
+node cli/mole.mjs --help
+node cli/mole.mjs init my-mole
+node cli/mole.mjs install codex
+node cli/mole.mjs doctor
+node cli/mole.mjs create roadmap
+node cli/mole.mjs create spec
+node cli/mole.mjs insight "Users trust CSV export more than dashboard totals"
+node cli/mole.mjs synthesise inbox
 ```
 
 ## Current status

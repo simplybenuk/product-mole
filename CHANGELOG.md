@@ -8,7 +8,7 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ### Added
 - `docs/upgrade-and-instance-management.md` to define how local mole instances should track versions, ownership, and upgrades.
-- `cascade.instance-template.yaml` as a starter instance metadata file for adopted cascades.
+- `mole.instance-template.yaml` as a starter instance metadata file for adopted moles.
 - `docs/release-checklist.md` for lightweight release discipline.
 - Stronger upgrade guidance in the README, including the distinction between upstream-owned files and instance-owned content.
 

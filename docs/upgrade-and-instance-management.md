@@ -69,10 +69,10 @@ Typical examples:
 ## Required instance metadata
 
 Every adopted mole instance should maintain a small metadata file:
-- `cascade.instance.yaml`
+- `mole.instance.yaml`
 
 Use the provided starter template:
-- [`../cascade.instance-template.yaml`](../cascade.instance-template.yaml)
+- [`../mole.instance-template.yaml`](../mole.instance-template.yaml)
 
 This file should record:
 - current mole version
@@ -108,7 +108,7 @@ Treat upstream as the evolving framework source.
 Treat your adopted repo as a working instance.
 
 ### 2. Record your local customisations
-Use `cascade.instance.yaml` to note important drift.
+Use `mole.instance.yaml` to note important drift.
 
 ### 3. Upgrade intentionally
 For each upstream release:
@@ -180,7 +180,7 @@ npx product-mole upgrade
 
 That CLI would eventually:
 - scaffold a new instance
-- inspect `cascade.instance.yaml`
+- inspect `mole.instance.yaml`
 - compare instance version to upstream release
 - apply safe additions
 - flag merge-sensitive files

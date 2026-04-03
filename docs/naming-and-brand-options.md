@@ -8,7 +8,7 @@
 
 Keep:
 - repository/product model name: **Mole**
-- command/tool name: **cascade**
+- command/tool name: **mole**
 
 This gives the project a more usable product surface without forcing a rushed rename.
 

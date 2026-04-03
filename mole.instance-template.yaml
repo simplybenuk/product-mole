@@ -1,4 +1,4 @@
-# Copy this into your working mole instance as `cascade.instance.yaml`.
+# Copy this into your working mole instance as `mole.instance.yaml`.
 # It gives the instance a version anchor and records local customisations.
 
 instance_name: your-project-name

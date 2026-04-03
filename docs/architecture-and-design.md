@@ -402,7 +402,7 @@ To make this usable beyond markdown-native users, pair the repo with a lightweig
 ### Recommended default
 
 Default to **no export dependency**:
-- keep strategy, decisions, PRDs, and implementation-ready artefacts in the cascade;
+- keep strategy, decisions, PRDs, and implementation-ready artefacts in the mole;
 - let coding agents consume these files directly from the same repo/workspace.
 
 Add external publish/export only if a team has mandatory downstream systems.

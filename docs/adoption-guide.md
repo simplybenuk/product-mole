@@ -34,7 +34,7 @@ Use the mole to create:
 - strategy notes
 
 ### 5. Upgrade the instance deliberately over time
-Use `cascade.instance.yaml`, version tags, and upgrade notes to evolve safely.
+Use `mole.instance.yaml`, version tags, and upgrade notes to evolve safely.
 
 ## Fastest path to value
 

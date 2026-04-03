@@ -170,6 +170,6 @@ What do we still need to know from humans, evidence, or data?
 
 ## Recommendation
 
-Critique mode should become a first-class capability of the cascade.
+Critique mode should become a first-class capability of the mole.
 
 It is one of the clearest ways to make the system useful for real product judgement rather than just document generation.

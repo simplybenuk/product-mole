@@ -14,7 +14,7 @@ Use this for lightweight, branch-based releases of Mole.
 ## For upgrade-affecting releases
 
 - [ ] `docs/upgrade-and-instance-management.md` updated if the model changed
-- [ ] `cascade.instance-template.yaml` updated if instance metadata expectations changed
+- [ ] `mole.instance-template.yaml` updated if instance metadata expectations changed
 - [ ] Clear notes added for adopters about:
   - what can be copied directly
   - what needs manual merge
