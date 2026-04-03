@@ -173,7 +173,7 @@ This creates a starter instance with:
 
 ### 3. Install Codex prompt commands
 
-From the project root:
+From the **source/tool repo root** (`product-context-cascade`), not from inside the generated instance:
 
 ```bash
 cd ..
@@ -201,6 +201,22 @@ Once the prompts are installed, try commands like:
 - `/cascade-create-roadmap`
 - `/cascade-create-spec`
 - `/cascade-review-input-queue`
+- `/cascade-critique`
+
+## Updating after new changes
+
+When the source/tool repo changes, do this from the `product-context-cascade` folder:
+
+```bash
+git pull
+node cli/cascade.mjs install codex
+```
+
+Why both?
+- `git pull` gets the latest CLI/docs/prompt changes
+- `install codex` refreshes the prompt files in Codex so new commands and updates actually appear
+
+Then reopen or retry in Codex if needed.
 
 ## What currently works
 
