@@ -1,13 +1,13 @@
 # Changelog
 
-All notable changes to Product Context Cascade should be documented here.
+All notable changes to Mole should be documented here.
 
 The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [0.2.0] - 2026-03-29
 
 ### Added
-- `docs/upgrade-and-instance-management.md` to define how local cascade instances should track versions, ownership, and upgrades.
+- `docs/upgrade-and-instance-management.md` to define how local mole instances should track versions, ownership, and upgrades.
 - `cascade.instance-template.yaml` as a starter instance metadata file for adopted cascades.
 - `docs/release-checklist.md` for lightweight release discipline.
 - Stronger upgrade guidance in the README, including the distinction between upstream-owned files and instance-owned content.
@@ -19,7 +19,7 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 ## [0.1.0] - 2026-03-15
 
 ### Added
-- Initial public scaffold for Product Context Cascade.
+- Initial public scaffold for Mole.
 - README as the primary user guide.
 - Architecture/design guidance moved to `docs/architecture-and-design.md`.
 - Local UI v0 scaffold retained on branch `feat/ui-v0-local-scaffold`.

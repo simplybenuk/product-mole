@@ -1,12 +1,12 @@
 # Local UI (v0 scaffold)
 
-A minimal local web interface for Product Context Cascade.
+A minimal local web interface for Mole.
 
 ## What it does
 
 - Quick capture form → writes markdown notes to `6-raw/inbox/...`
 - View human input queue from `governance/input-queue.md`
-- Basic repo explorer for key cascade folders/files
+- Basic repo explorer for key mole folders/files
 
 ## Run
 

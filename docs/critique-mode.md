@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Critique mode turns the cascade from a context store and output generator into a **context-grounded judgement tool**.
+Critique mode turns the mole from a context store and output generator into a **context-grounded judgement tool**.
 
 It should help a product person ask:
 - is this idea actually good?
@@ -32,7 +32,7 @@ That makes critique a natural companion to create/synthesise workflows.
 
 ## Core loop
 
-A strong cascade workflow should eventually support:
+A strong mole workflow should eventually support:
 
 **capture → synthesise → create → critique → refine**
 
@@ -44,16 +44,16 @@ Use `critique` as the primary verb.
 
 Examples:
 ```bash
-cascade critique idea
-cascade critique strategy
-cascade critique roadmap
-cascade critique spec
-cascade critique decision-brief
+mole critique idea
+mole critique strategy
+mole critique roadmap
+mole critique spec
+mole critique decision-brief
 ```
 
 Chat/agent forms could also support:
-- `/cascade-critique-roadmap`
-- `/cascade-critique-spec`
+- `/mole-critique-roadmap`
+- `/mole-critique-spec`
 
 ---
 

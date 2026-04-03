@@ -1,9 +1,9 @@
 ---
-description: Create or update a roadmap draft from the current cascade context.
+description: Create or update a roadmap draft from the current mole context.
 argument-hint: optional scope or timeframe
 ---
 
-You are operating inside a Product Context Cascade instance.
+You are operating inside a Mole instance.
 
 Goal:
 Create a concise, decision-ready roadmap draft grounded in the current layered context.

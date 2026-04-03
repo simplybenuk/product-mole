@@ -4,7 +4,7 @@ artifact_type: decision-brief
 status: draft
 owner:
 last_updated:
-summary: A decision brief generated from cascade context.
+summary: A decision brief generated from mole context.
 ---
 
 # Decision Brief

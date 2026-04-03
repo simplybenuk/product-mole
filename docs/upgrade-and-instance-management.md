@@ -2,7 +2,7 @@
 
 ## Why this matters
 
-Product Context Cascade is easy to **adopt** as a template, but harder to **evolve** once a live working instance has drifted from upstream.
+Mole is easy to **adopt** as a template, but harder to **evolve** once a live working instance has drifted from upstream.
 
 That is the real product problem.
 
@@ -16,7 +16,7 @@ A PM or team will naturally customise:
 
 Once that happens, "just pull the latest template" stops being a satisfying answer.
 
-This document defines a more honest model for upgrading cascade instances over time.
+This document defines a more honest model for upgrading mole instances over time.
 
 ---
 
@@ -68,14 +68,14 @@ Typical examples:
 
 ## Required instance metadata
 
-Every adopted cascade instance should maintain a small metadata file:
+Every adopted mole instance should maintain a small metadata file:
 - `cascade.instance.yaml`
 
 Use the provided starter template:
 - [`../cascade.instance-template.yaml`](../cascade.instance-template.yaml)
 
 This file should record:
-- current cascade version
+- current mole version
 - original release used to scaffold the instance
 - last upgrade applied
 - meaningful local customisations
@@ -173,9 +173,9 @@ If the project matures, the next step is a small scaffolding/upgrade CLI.
 Potential future commands:
 
 ```bash
-npx product-context-cascade init
-npx product-context-cascade check-updates
-npx product-context-cascade upgrade
+npx product-mole init
+npx product-mole check-updates
+npx product-mole upgrade
 ```
 
 That CLI would eventually:
@@ -192,7 +192,7 @@ But this should come **after** the ownership model is stable.
 
 ## Recommendation
 
-Treat Product Context Cascade as a lightweight open-source PM operating system.
+Treat Mole as a lightweight open-source PM operating system.
 Its credibility will come from:
 - clear structure
 - honest upgrade semantics

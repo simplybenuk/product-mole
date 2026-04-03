@@ -1,4 +1,4 @@
-# Product Context Cascade
+# Mole
 
 A repository architecture for AI agents and humans to retrieve product context progressively:
 start with tiny, high-signal guidance, then descend only as needed.
@@ -11,7 +11,7 @@ Most repos are optimised for human browsing, not agent retrieval. Agents either:
 - over-read (wasting tokens), or
 - under-read (missing constraints and decisions).
 
-**Product Context Cascade** solves this with a staged context model:
+**Mole** solves this with a staged context model:
 1. Read a tiny mandatory layer.
 2. Route by task type.
 3. Descend selectively through summaries, indexes, and topic docs.
@@ -110,7 +110,7 @@ Workflow docs:
 ## Planned repository structure
 
 ```text
-product-context-cascade/
+product-mole/
 │
 ├── 0-bootstrap/
 │   ├── agents.md
@@ -394,7 +394,7 @@ To make this usable beyond markdown-native users, pair the repo with a lightweig
 - **Mode A — Configure:** set company vision, goals, constraints, terminology
 - **Mode B — Capture:** quickly add raw notes, transcripts, exports
 - **Mode C — Generate:** ask agent to produce summaries/PRDs/prioritisation docs
-- **Mode D — Review:** approve, edit, and promote outputs up the cascade
+- **Mode D — Review:** approve, edit, and promote outputs up the mole
 - **Mode E — Publish/Export (optional):** push outputs to external tools when needed
 
 **Important:** Mode E is optional by design. Teams can skip it entirely and keep outputs inside this repository for coding agents to consume directly.

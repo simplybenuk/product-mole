@@ -1,20 +1,20 @@
 # Template Update Guide (Upstream → Local Instance)
 
-Use this when you have a live cascade instance and want to pull structural/template updates safely.
+Use this when you have a live mole instance and want to pull structural/template updates safely.
 
 This guide is the practical companion to:
 - [upgrade-and-instance-management.md](./upgrade-and-instance-management.md)
 
 ## Recommended model
 
-- **Upstream template repo:** `product-context-cascade`
+- **Upstream template repo:** `product-mole`
 - **Your working repo:** your private instance with real context
 - **Your local metadata file:** `cascade.instance.yaml`
 
 ## One-time setup (in your working repo)
 
 ```bash
-git remote add upstream git@github.com:simplybenuk/product-context-cascade.git
+git remote add upstream git@github.com:simplybenuk/product-mole.git
 git fetch upstream --tags
 ```
 

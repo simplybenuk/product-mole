@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the future command experience for the cascade so the system is usable as a tool, not just as a template.
+Define the future command experience for the mole so the system is usable as a tool, not just as a template.
 
 The command surface should hide structural complexity and let product managers ask for outcomes.
 
@@ -31,7 +31,7 @@ The architecture exists to improve output quality. It should not become the prod
 Use a short, memorable root command.
 
 ### Recommended working root
-- `cascade`
+- `mole`
 
 Reasons:
 - short
@@ -50,23 +50,23 @@ Used to generate product outputs from the current cascade.
 
 Examples:
 ```bash
-cascade create roadmap
-cascade create spec
-cascade create strategy-memo
-cascade create prioritisation-draft
-cascade create decision-brief
+mole create roadmap
+mole create spec
+mole create strategy-memo
+mole create prioritisation-draft
+mole create decision-brief
 ```
 
 ### Critique
-Used to pressure-test ideas and artefacts against the current cascade context.
+Used to pressure-test ideas and artefacts against the current mole context.
 
 Examples:
 ```bash
-cascade critique idea
-cascade critique strategy
-cascade critique roadmap
-cascade critique spec
-cascade critique decision-brief
+mole critique idea
+mole critique strategy
+mole critique roadmap
+mole critique spec
+mole critique decision-brief
 ```
 
 ### Insight / note / signal capture
@@ -74,9 +74,9 @@ Used to capture chat-native or CLI-native raw context without making users think
 
 Examples:
 ```bash
-cascade insight "Users trust CSV export more than dashboard totals"
-cascade note "CEO wants a faster path to pilot for regulated prospects"
-cascade signal "Support volume spikes after pricing page changes"
+mole insight "Users trust CSV export more than dashboard totals"
+mole note "CEO wants a faster path to pilot for regulated prospects"
+mole signal "Support volume spikes after pricing page changes"
 ```
 
 ### Synthesise
@@ -84,9 +84,9 @@ Used to turn lower-layer/raw material into higher-signal context.
 
 Examples:
 ```bash
-cascade synthesise inbox
-cascade synthesise signals
-cascade synthesise evidence
+mole synthesise inbox
+mole synthesise signals
+mole synthesise evidence
 ```
 
 ### Review
@@ -94,9 +94,9 @@ Used to inspect what needs human input or validation.
 
 Examples:
 ```bash
-cascade review input-queue
-cascade review stale-summaries
-cascade review conflicts
+mole review input-queue
+mole review stale-summaries
+mole review conflicts
 ```
 
 ### Init / upgrade
@@ -104,9 +104,9 @@ Used to scaffold or evolve an instance.
 
 Examples:
 ```bash
-cascade init
-cascade check-updates
-cascade upgrade
+mole init
+mole check-updates
+mole upgrade
 ```
 
 ---
@@ -121,7 +121,7 @@ Commands should produce:
 Example:
 
 ```bash
-cascade create roadmap
+mole create roadmap
 ```
 
 Could:
@@ -161,7 +161,7 @@ So define the verbs well now, even if the backend remains simple at first.
 ## Recommendation
 
 Build the product around:
-- root command: `cascade`
+- root command: `mole`
 - key verbs: `init`, `create`, `insight`, `synthesise`, `review`, `doctor`, `check-updates`, `upgrade`
 
 That is a much stronger foundation than `/PCC` as the primary identity.

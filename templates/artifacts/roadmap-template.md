@@ -4,7 +4,7 @@ artifact_type: roadmap
 status: draft
 owner:
 last_updated:
-summary: A concise roadmap draft generated from the current cascade context.
+summary: A concise roadmap draft generated from the current mole context.
 ---
 
 # Roadmap Draft

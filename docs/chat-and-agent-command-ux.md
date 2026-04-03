@@ -6,7 +6,7 @@ The repository structure is useful, but many users will meet the product through
 
 So the experience should not depend on users manually dropping files into `6-raw/inbox/` forever.
 
-A better UX is to let users speak in outcome-oriented commands and lightweight capture commands, while the tool writes into the cascade on their behalf.
+A better UX is to let users speak in outcome-oriented commands and lightweight capture commands, while the tool writes into the mole on their behalf.
 
 ---
 
@@ -19,11 +19,11 @@ Use the same core product vocabulary across:
 - local UI
 
 That means a user should be able to say things like:
-- `/cascade insight [text]`
-- `/cascade create roadmap`
-- `/cascade create spec`
-- `/cascade synthesise inbox`
-- `/cascade review input-queue`
+- `/mole insight [text]`
+- `/mole create roadmap`
+- `/mole create spec`
+- `/mole synthesise inbox`
+- `/mole review input-queue`
 
 The backend implementation can vary by environment, but the intent should stay stable.
 
@@ -35,9 +35,9 @@ The backend implementation can vary by environment, but the intent should stay s
 These are the chat-native equivalent of adding material to the raw inbox.
 
 Examples:
-- `/cascade insight Customer success keeps hearing pricing confusion on enterprise renewals`
-- `/cascade note CEO wants a faster path to pilot for regulated prospects`
-- `/cascade signal Users trust CSV export more than dashboard totals`
+- `/mole insight Customer success keeps hearing pricing confusion on enterprise renewals`
+- `/mole note CEO wants a faster path to pilot for regulated prospects`
+- `/mole signal Users trust CSV export more than dashboard totals`
 
 These commands should:
 1. create a raw capture entry,
@@ -48,12 +48,12 @@ These commands should:
 These generate outcome artefacts from the layered context.
 
 Examples:
-- `/cascade create roadmap`
-- `/cascade create spec`
-- `/cascade create decision-brief`
+- `/mole create roadmap`
+- `/mole create spec`
+- `/mole create decision-brief`
 
 These should:
-1. retrieve the relevant cascade layers,
+1. retrieve the relevant mole layers,
 2. draft the requested artefact,
 3. report missing human inputs.
 
@@ -76,23 +76,23 @@ The command surface becomes the human-friendly interface.
 ## Recommended initial slash-command vocabulary
 
 ### Capture
-- `/cascade insight ...`
-- `/cascade note ...`
-- `/cascade signal ...`
+- `/mole insight ...`
+- `/mole note ...`
+- `/mole signal ...`
 
 ### Synthesis
-- `/cascade synthesise inbox`
-- `/cascade synthesise signals`
+- `/mole synthesise inbox`
+- `/mole synthesise signals`
 
 ### Creation
-- `/cascade create roadmap`
-- `/cascade create spec`
-- `/cascade create strategy-memo`
-- `/cascade create decision-brief`
+- `/mole create roadmap`
+- `/mole create spec`
+- `/mole create strategy-memo`
+- `/mole create decision-brief`
 
 ### Review
-- `/cascade review input-queue`
-- `/cascade review stale-summaries`
+- `/mole review input-queue`
+- `/mole review stale-summaries`
 
 ---
 
@@ -111,7 +111,7 @@ For Codex specifically, this can be delivered by installing markdown prompt file
 That is the same broad integration pattern used by OpenSpec.
 
 ### Phase 3
-Native integrations in tools like Codex or other assistants can map `/cascade ...` into command handlers or agent workflows.
+Native integrations in tools like Codex or other assistants can map `/mole ...` into command handlers or agent workflows.
 
 ---
 
@@ -122,7 +122,7 @@ The useful pattern to borrow is:
 - the tool creates/updates the right files,
 - the internal structure is still durable and inspectable.
 
-That matches the cascade philosophy very well.
+That matches the mole philosophy very well.
 
 ---
 

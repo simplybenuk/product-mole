@@ -1,6 +1,6 @@
 # Release Checklist
 
-Use this for lightweight, branch-based releases of Product Context Cascade.
+Use this for lightweight, branch-based releases of Mole.
 
 ## Before release
 

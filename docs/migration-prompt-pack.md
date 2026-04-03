@@ -1,4 +1,4 @@
-# Migration Prompt Pack — Existing Tools → Product Context Cascade
+# Migration Prompt Pack — Existing Tools → Mole
 
 Use these prompts in ChatGPT/Claude/Gemini (or other assistants) to export existing context into this repository quickly.
 
@@ -9,7 +9,7 @@ Use these prompts in ChatGPT/Claude/Gemini (or other assistants) to export exist
 ## 0) Global instructions (paste once per session)
 
 ```text
-You are helping me migrate product context into a Product Context Cascade repository.
+You are helping me migrate product context into a Mole repository.
 
 Output requirements:
 - Be concise, structured, and factual.
@@ -193,7 +193,7 @@ Rules:
 Use this to turn existing project memory into quick-capture files.
 
 ```text
-Convert this project memory into discrete inbox entries for Product Context Cascade.
+Convert this project memory into discrete inbox entries for Mole.
 
 Target folders:
 - 6-raw/inbox/messages/
@@ -221,7 +221,7 @@ Split into multiple small entries rather than one long document.
 ## 7) Final migration sanity-check prompt
 
 ```text
-I am about to paste migrated outputs into a Product Context Cascade repo.
+I am about to paste migrated outputs into a Mole repo.
 Please review for quality risks.
 
 Checklist:

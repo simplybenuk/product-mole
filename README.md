@@ -1,4 +1,4 @@
-# Product Context Cascade
+# Mole
 
 A portable, local-first context operating system for product managers and AI assistants.
 
@@ -11,7 +11,7 @@ Use it to:
 
 ## What this is
 
-Product Context Cascade is a **file-based context system** with progressive layers.
+Mole is a **file-based context system** with progressive layers.
 
 - Top layers are small, high-signal, and cheap to read.
 - Lower layers are richer, more detailed, and more expensive.
@@ -40,10 +40,10 @@ It is intended to be reusable across teams and companies, which means it needs a
    - "What inputs do you need from me today?"
 5. Review and promote outputs into `5-evidence/` then `4-context/`.
 6. Start thinking in outcome commands such as:
-   - `cascade insight "Users trust CSV export more than dashboard totals"`
-   - `cascade create roadmap`
-   - `cascade create spec`
-   - `cascade synthesise inbox`
+   - `mole insight "Users trust CSV export more than dashboard totals"`
+   - `mole create roadmap`
+   - `mole create spec`
+   - `mole synthesise inbox`
 
 ---
 
@@ -129,7 +129,7 @@ A lightweight CLI prototype now exists to establish the product vocabulary:
 
 ```bash
 node cli/cascade.mjs --help
-node cli/cascade.mjs init my-cascade
+node cli/cascade.mjs init my-mole
 node cli/cascade.mjs install codex
 node cli/cascade.mjs doctor
 node cli/cascade.mjs insight "Users trust CSV export more than dashboard totals"
@@ -140,7 +140,7 @@ node cli/cascade.mjs create spec
 Current purpose:
 - make the tool feel operable,
 - create draft artifacts from templates,
-- establish the long-term `cascade` command surface.
+- establish the long-term `mole` command surface.
 
 See:
 - [cli/README.md](cli/README.md)
@@ -153,15 +153,15 @@ If you want to try the current prototype quickly:
 ### 1. Clone the repo
 
 ```bash
-git clone git@github.com:simplybenuk/product-context-cascade.git
-cd product-context-cascade
+git clone git@github.com:simplybenuk/product-mole.git
+cd product-mole
 ```
 
 ### 2. Create a test instance
 
 ```bash
-node cli/cascade.mjs init my-cascade
-cd my-cascade
+node cli/cascade.mjs init my-mole
+cd my-mole
 ```
 
 This creates a starter instance with:
@@ -173,7 +173,7 @@ This creates a starter instance with:
 
 ### 3. Install Codex prompt commands
 
-From the **source/tool repo root** (`product-context-cascade`), not from inside the generated instance:
+From the **source/tool repo root** (`product-mole`), not from inside the generated instance:
 
 ```bash
 cd ..
@@ -187,7 +187,7 @@ This installs prompt files into:
 ### 4. Test the CLI directly
 
 ```bash
-cd my-cascade
+cd my-mole
 node ../cli/cascade.mjs doctor
 node ../cli/cascade.mjs insight "Users trust CSV export more than dashboard totals"
 node ../cli/cascade.mjs create roadmap
@@ -196,16 +196,16 @@ node ../cli/cascade.mjs create roadmap
 ### 5. Test in Codex chat
 
 Once the prompts are installed, try commands like:
-- `/cascade-insight Users trust CSV export more than dashboard totals`
-- `/cascade-synthesise-inbox`
-- `/cascade-create-roadmap`
-- `/cascade-create-spec`
-- `/cascade-review-input-queue`
-- `/cascade-critique`
+- `/mole-insight Users trust CSV export more than dashboard totals`
+- `/mole-synthesise-inbox`
+- `/mole-create-roadmap`
+- `/mole-create-spec`
+- `/mole-review-input-queue`
+- `/mole-critique`
 
 ## Updating after new changes
 
-When the source/tool repo changes, do this from the `product-context-cascade` folder:
+When the source/tool repo changes, do this from the `product-mole` folder:
 
 ```bash
 git pull
@@ -228,8 +228,8 @@ That remains a first-class workflow.
 
 ### Command capture flow
 You can also capture through commands:
-- `cascade insight "..."`
-- `/cascade-insight ...` in Codex after prompt install
+- `mole insight "..."`
+- `/mole-insight ...` in Codex after prompt install
 
 ### Creation flow
 You can create draft artifacts such as:
@@ -244,7 +244,7 @@ You can create draft artifacts such as:
 This is early but usable.
 
 What exists now:
-- file-native cascade structure
+- file-native mole structure
 - CLI scaffold
 - Codex prompt installation
 - raw insight capture

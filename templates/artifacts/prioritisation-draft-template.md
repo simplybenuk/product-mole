@@ -4,7 +4,7 @@ artifact_type: prioritisation-draft
 status: draft
 owner:
 last_updated:
-summary: A prioritisation draft generated from cascade context.
+summary: A prioritisation draft generated from mole context.
 ---
 
 # Prioritisation Draft

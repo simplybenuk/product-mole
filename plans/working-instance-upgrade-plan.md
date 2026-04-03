@@ -2,9 +2,9 @@
 
 ## Problem
 
-Product Context Cascade now has a usable source/tool repo, CLI scaffold, and Codex prompt installation flow.
+Mole now has a usable source/tool repo, CLI scaffold, and Codex prompt installation flow.
 
-However, once a working cascade instance has been created, there is not yet a clean or reliable way to upgrade that instance when the source/tool repo evolves.
+However, once a working mole instance has been created, there is not yet a clean or reliable way to upgrade that instance when the source/tool repo evolves.
 
 Current reality:
 - source/tool repo can be updated with `git pull`
@@ -17,7 +17,7 @@ This is now one of the main product gaps.
 
 ## Goal
 
-Make working cascade instances upgradeable in a way that is:
+Make working mole instances upgradeable in a way that is:
 - understandable
 - safe enough for real use
 - respectful of local customisation
@@ -87,8 +87,8 @@ Add stronger instance metadata and status checks so the user can see:
 
 Potential commands:
 ```bash
-cascade doctor
-cascade check-updates
+mole doctor
+mole check-updates
 ```
 
 Expected output should include:
@@ -132,7 +132,7 @@ This logic should exist in a machine-readable form, not only in prose.
 
 Add a command like:
 ```bash
-cascade check-updates
+mole check-updates
 ```
 
 It should:
@@ -150,7 +150,7 @@ This alone would be a major improvement.
 
 Add a command like:
 ```bash
-cascade upgrade
+mole upgrade
 ```
 
 First version should be conservative.
@@ -170,13 +170,13 @@ not:
 ## Command surface proposal
 
 ### Immediate / near-term
-- `cascade doctor`
-- `cascade check-updates`
+- `mole doctor`
+- `mole check-updates`
 
 ### Later
-- `cascade upgrade`
-- maybe `cascade upgrade --apply-safe`
-- maybe `cascade upgrade --report-only`
+- `mole upgrade`
+- maybe `mole upgrade --apply-safe`
+- maybe `mole upgrade --report-only`
 
 ---
 

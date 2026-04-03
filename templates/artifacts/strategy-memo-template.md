@@ -4,7 +4,7 @@ artifact_type: strategy-memo
 status: draft
 owner:
 last_updated:
-summary: A strategy memo generated from layered cascade context.
+summary: A strategy memo generated from layered mole context.
 ---
 
 # Strategy Memo

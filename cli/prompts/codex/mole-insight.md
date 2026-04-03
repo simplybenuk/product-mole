@@ -1,12 +1,12 @@
 ---
-description: Capture a raw product insight into the current cascade instance inbox.
+description: Capture a raw product insight into the current mole instance inbox.
 argument-hint: insight text
 ---
 
 Interpret the user argument as a short raw product insight.
 
 Actions:
-1. Confirm the current workspace is a cascade instance (look for `cascade.instance.yaml`).
+1. Confirm the current workspace is a mole instance (look for `cascade.instance.yaml`).
 2. Create a new markdown file in `6-raw/inbox/quick-notes/`.
 3. Use today's date in the filename plus a short slug from the insight.
 4. Write minimal frontmatter with:

@@ -1,9 +1,9 @@
 ---
-description: Critique an idea, strategy, roadmap, spec, or decision using the current cascade context.
+description: Critique an idea, strategy, roadmap, spec, or decision using the current mole context.
 argument-hint: thing to critique
 ---
 
-You are operating inside a Product Context Cascade instance.
+You are operating inside a Mole instance.
 
 Goal:
 Critique the user's idea, strategy, roadmap, spec, or decision using the actual layered context in the repository.

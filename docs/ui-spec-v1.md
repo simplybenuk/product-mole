@@ -1,8 +1,8 @@
-# Product Context Cascade — Local UI Spec (v1)
+# Mole — Local UI Spec (v1)
 
 ## Purpose
 
-Define a lightweight, local-first web interface that makes the Product Context Cascade easy for humans to use while preserving file-based interoperability for agents.
+Define a lightweight, local-first web interface that makes the Mole easy for humans to use while preserving file-based interoperability for agents.
 
 ---
 
@@ -165,7 +165,7 @@ Send outputs to external tools only when explicitly needed.
 Mode E is **out of MVP scope** and **disabled by default**.
 
 Default recommendation:
-- keep outputs in cascade files,
+- keep outputs in mole files,
 - allow coding agents to consume directly from the repository,
 - add export adapters later only if workflow demands it.
 
@@ -244,7 +244,7 @@ This keeps the system portable and easy to run on local machine or synced folder
 ```text
 repo-root/
 ├── app/                      # product code
-└── product-context-cascade/  # this system
+└── product-mole/  # this system
 ```
 
 Benefits:

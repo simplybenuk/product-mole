@@ -1,9 +1,10 @@
 {
-  "name": "product-context-cascade-cli",
+  "name": "product-mole-cli",
   "version": "0.2.0",
   "private": true,
   "type": "module",
   "bin": {
+    "mole": "./cascade.mjs",
     "cascade": "./cascade.mjs"
   }
 }

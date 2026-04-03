@@ -2,12 +2,12 @@
 
 ## Current state
 
-"Product Context Cascade" is descriptive and useful, but not especially punchy or ownable as an open-source product name.
+"Mole" is descriptive and useful, but not especially punchy or ownable as an open-source product name.
 
 ## Recommended current posture
 
 Keep:
-- repository/product model name: **Product Context Cascade**
+- repository/product model name: **Mole**
 - command/tool name: **cascade**
 
 This gives the project a more usable product surface without forcing a rushed rename.

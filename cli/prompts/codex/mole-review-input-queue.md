@@ -3,7 +3,7 @@ description: Review the current input queue and tell the PM the highest-value qu
 argument-hint: optional scope
 ---
 
-You are operating inside a Product Context Cascade instance.
+You are operating inside a Mole instance.
 
 Goal:
 Help the PM answer the most important missing human questions.

@@ -1,9 +1,9 @@
 ---
-description: Synthesise the current cascade inbox into higher-signal context.
+description: Synthesise the current mole inbox into higher-signal context.
 argument-hint: optional scope or guidance
 ---
 
-You are operating inside a Product Context Cascade instance.
+You are operating inside a Mole instance.
 
 Goal:
 Turn raw inbox material into more useful, higher-signal outputs while preserving the core operating model:

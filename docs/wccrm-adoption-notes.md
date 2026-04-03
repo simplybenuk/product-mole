@@ -2,7 +2,7 @@
 
 ## Why WCCRM is a good candidate
 
-WCCRM is a strong candidate for adopting the cascade because it has:
+WCCRM is a strong candidate for adopting the mole because it has:
 - ongoing product/context evolution
 - requirements, decisions, and implementation planning
 - multiple threads of work (auth, release/versioning, UI, ops, docs)
@@ -10,16 +10,16 @@ WCCRM is a strong candidate for adopting the cascade because it has:
 
 ## Recommended adoption approach
 
-Do not try to turn the whole repo into a cascade overnight.
+Do not try to turn the whole repo into a mole overnight.
 
 ### Suggested first pass
-1. Create a dedicated cascade instance for WCCRM planning/context.
+1. Create a dedicated mole instance for WCCRM planning/context.
 2. Seed only a few high-value summaries.
 3. Start capturing product/ops/auth/release insights into the raw layer.
 4. Use `create spec`, `create roadmap`, and decision briefs against that context.
 
 ## What to avoid
-- forcing every engineering file into the cascade
+- forcing every engineering file into the mole
 - migrating all history before proving value
 - overcomplicating the first workflow
 

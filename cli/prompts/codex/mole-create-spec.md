@@ -1,12 +1,12 @@
 ---
-description: Create or update a product spec draft from the current cascade context.
+description: Create or update a product spec draft from the current mole context.
 argument-hint: optional feature or problem statement
 ---
 
-You are operating inside a Product Context Cascade instance.
+You are operating inside a Mole instance.
 
 Goal:
-Create a strong product spec draft from the best available cascade context.
+Create a strong product spec draft from the best available mole context.
 
 Actions:
 1. Start with `0-bootstrap/`, `1-routing/`, relevant summaries/indexes, then descend only as needed.

@@ -1,6 +1,6 @@
 # Repo Purpose
 
-This repository is a portable Product Context Cascade template for PMs and AI assistants.
+This repository is a portable Mole template for PMs and AI assistants.
 
 Goal:
 - Capture messy product signals quickly.

@@ -2,7 +2,7 @@
 
 ## Who this is for
 
-Product Context Cascade is for product managers and product-adjacent teams who:
+Mole is for product managers and product-adjacent teams who:
 - accumulate lots of messy product inputs,
 - want better AI-assisted outputs,
 - prefer files/Git/local control over opaque SaaS systems,
@@ -27,7 +27,7 @@ Use `6-raw/inbox/` aggressively.
 Use an agent to convert raw signals into evidence, context modules, and summaries.
 
 ### 4. Generate outputs from context
-Use the cascade to create:
+Use the mole to create:
 - roadmaps
 - specs
 - decision briefs

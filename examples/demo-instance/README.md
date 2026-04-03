@@ -1,6 +1,6 @@
 # Demo Instance
 
-This folder is a tiny example of how an adopted cascade instance can look.
+This folder is a tiny example of how an adopted mole instance can look.
 
 It is intentionally incomplete.
 Its job is to help open-source users understand the model quickly.

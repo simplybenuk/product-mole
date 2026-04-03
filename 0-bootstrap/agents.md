@@ -1,4 +1,4 @@
-# Agents - Product Context Cascade
+# Agents - Mole
 
 Read order (always):
 1. `0-bootstrap/agents.md`

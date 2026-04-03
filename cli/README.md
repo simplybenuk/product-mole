@@ -1,6 +1,6 @@
 # CLI Prototype
 
-This is an early prototype command surface for Product Context Cascade.
+This is an early prototype command surface for Mole.
 
 Current goal:
 - define the future command vocabulary,
@@ -12,7 +12,7 @@ Current goal:
 
 ```bash
 node cli/cascade.mjs --help
-node cli/cascade.mjs init my-cascade
+node cli/cascade.mjs init my-mole
 node cli/cascade.mjs install codex
 node cli/cascade.mjs doctor
 node cli/cascade.mjs create roadmap
@@ -26,7 +26,7 @@ node cli/cascade.mjs synthesise inbox
 This is intentionally thin.
 It does not run an AI backend yet.
 It exists to establish:
-- root command: `cascade`
+- root command: `mole`
 - command groups: `create`, `synthesise`, `review`, `init`, `check-updates`, `upgrade`
 
 A future packaged version could expose the same command surface via npm.

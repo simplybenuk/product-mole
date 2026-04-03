@@ -2,7 +2,7 @@
 
 ## Working ambition
 
-Turn Product Context Cascade from a strong repository template into a genuinely useful open-source tool for product managers.
+Turn Mole from a strong repository template into a genuinely useful open-source tool for product managers.
 
 The end state is not just:
 - a folder structure
@@ -71,20 +71,20 @@ Eventually a user should not need to remember folder semantics to get value.
 They should be able to invoke outcomes.
 
 Examples:
-- `cascade create roadmap`
-- `cascade create spec`
-- `cascade inbox synthesise`
-- `cascade review input-queue`
+- `mole create roadmap`
+- `mole create spec`
+- `mole inbox synthesise`
+- `mole review input-queue`
 
 ---
 
 ## Naming / brand direction
 
-"Product Context Cascade" is descriptive but not especially ownable or memorable.
+"Mole" is descriptive but not especially ownable or memorable.
 
 The open-source product may eventually benefit from:
 - a stronger primary name
-- with Product Context Cascade retained as the descriptive subtitle or model name
+- with Mole retained as the descriptive subtitle or model name
 
 For now, a sensible approach is:
 - keep the existing repo/package identity while maturing the concept
@@ -141,10 +141,10 @@ Do not rush the rename until the product surface is clearer.
 Build toward a world where the user experience is:
 
 ```bash
-cascade create roadmap
-cascade create spec
-cascade synthesise inbox
-cascade ask what-inputs-do-you-need
+mole create roadmap
+mole create spec
+mole synthesise inbox
+mole ask what-inputs-do-you-need
 ```
 
 That is a much stronger open-source story than just handing people a folder tree.

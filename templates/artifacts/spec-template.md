@@ -4,7 +4,7 @@ artifact_type: spec
 status: draft
 owner:
 last_updated:
-summary: A product spec draft generated from layered cascade context.
+summary: A product spec draft generated from layered mole context.
 ---
 
 # Product Spec Draft

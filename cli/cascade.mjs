@@ -12,27 +12,27 @@ const thisFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(thisFile), '..');
 
 function printHelp() {
-  console.log(`cascade v0.2.0
+  console.log(`mole v0.2.0
 
 Usage:
-  cascade init [target-dir]
-  cascade create <artifact> [output-path]
-  cascade insight <text>
-  cascade synthesise <target>
-  cascade review <target>
-  cascade install codex
-  cascade check-updates
-  cascade upgrade
-  cascade doctor
+  mole init [target-dir]
+  mole create <artifact> [output-path]
+  mole insight <text>
+  mole synthesise <target>
+  mole review <target>
+  mole install codex
+  mole check-updates
+  mole upgrade
+  mole doctor
 
 Examples:
-  cascade init my-cascade
-  cascade create roadmap
-  cascade create spec drafts/spec.md
-  cascade insight "Users trust CSV export more than dashboard totals"
-  cascade install codex
-  cascade synthesise inbox
-  cascade review input-queue
+  mole init my-mole
+  mole create roadmap
+  mole create spec drafts/spec.md
+  mole insight "Users trust CSV export more than dashboard totals"
+  mole install codex
+  mole synthesise inbox
+  mole review input-queue
 `);
 }
 
@@ -105,14 +105,14 @@ function initInstance(targetDir) {
     copyFile(path.join(target, 'cascade.instance-template.yaml'), path.join(target, 'cascade.instance.yaml'));
   }
 
-  console.log(`Initialised cascade instance at: ${target}`);
-  console.log('Copied a full working cascade scaffold (excluding .git, cli, and node_modules).');
+  console.log(`Initialised mole instance at: ${target}`);
+  console.log('Copied a full working mole scaffold (excluding .git, cli, and node_modules).');
   console.log('Next steps:');
   console.log('- customise 0-bootstrap/repo-purpose.md');
   console.log('- fill key summaries in 2-summaries/');
-  console.log('- start capturing in 6-raw/inbox/ or with `cascade insight "..."`');
+  console.log('- start capturing in 6-raw/inbox/ or with `mole insight "..."`');
   console.log('- open the new instance folder in your editor, not the source/tool repo');
-  console.log('- optionally install Codex prompts with `cascade install codex` from the source/tool repo');
+  console.log('- optionally install Codex prompts with `mole install codex` from the source/tool repo');
 }
 
 function createArtifact(kind, outputPath) {
@@ -154,7 +154,7 @@ function createArtifact(kind, outputPath) {
 function captureInsight(textParts) {
   const text = textParts.join(' ').trim();
   if (!text) {
-    console.error('Missing insight text. Example: cascade insight "Users trust CSV export more than dashboard totals"');
+    console.error('Missing insight text. Example: mole insight "Users trust CSV export more than dashboard totals"');
     process.exit(1);
   }
 
@@ -163,12 +163,12 @@ function captureInsight(textParts) {
   const fileName = `${todayUtc()}-${slugify(text)}.md`;
   const target = path.join(dir, fileName);
 
-  const content = `---\ntitle: Raw Insight\ncapture_type: insight\nsource: cascade cli\ncreated_at: ${nowUtc()}\nsummary: ${text}\ntags: []\n---\n\n# Raw Insight\n\n## Insight\n${text}\n\n## Context / why it matters\n\n## Optional follow-up questions\n- \n`;
+  const content = `---\ntitle: Raw Insight\ncapture_type: insight\nsource: mole cli\ncreated_at: ${nowUtc()}\nsummary: ${text}\ntags: []\n---\n\n# Raw Insight\n\n## Insight\n${text}\n\n## Context / why it matters\n\n## Optional follow-up questions\n- \n`;
 
   fs.writeFileSync(target, content, 'utf8');
   console.log(`Captured insight: ${target}`);
   console.log('\nSuggested next command:');
-  console.log('cascade synthesise inbox');
+  console.log('mole synthesise inbox');
 }
 
 function installCodexPrompts() {
@@ -197,7 +197,7 @@ function outputDraftInstruction(kind) {
     'decision-brief': 'Create a decision brief with recommendation, options, trade-offs, and missing inputs.',
     'prioritisation-draft': 'Create a prioritisation draft with criteria, ranked items, and uncertainties.'
   };
-  const instruction = map[kind] || `Create a ${kind} draft from the cascade using progressive retrieval.`;
+  const instruction = map[kind] || `Create a ${kind} draft from the mole using progressive retrieval.`;
   console.log(instruction);
 }
 
@@ -227,7 +227,7 @@ switch (command) {
     break;
   case 'create':
     if (!subcommand) {
-      console.error('Missing artifact type. Example: cascade create roadmap');
+      console.error('Missing artifact type. Example: mole create roadmap');
       process.exit(1);
     }
     createArtifact(subcommand, rest[0]);
@@ -238,7 +238,7 @@ switch (command) {
     captureInsight([subcommand, ...rest].filter(Boolean));
     break;
   case 'synthesise':
-    console.log(`Suggested agent instruction:\n\nSynthesise ${subcommand || 'the requested target'} using the cascade operating model: capture low, distil up, retrieve top-down.`);
+    console.log(`Suggested agent instruction:\n\nSynthesise ${subcommand || 'the requested target'} using the mole operating model: capture low, distil up, retrieve top-down.`);
     break;
   case 'review':
     console.log(`Suggested agent instruction:\n\nReview ${subcommand || 'the requested target'} and return the highest-value next actions or missing human inputs.`);
