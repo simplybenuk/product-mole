@@ -57,6 +57,18 @@ cascade create prioritisation-draft
 cascade create decision-brief
 ```
 
+### Critique
+Used to pressure-test ideas and artefacts against the current cascade context.
+
+Examples:
+```bash
+cascade critique idea
+cascade critique strategy
+cascade critique roadmap
+cascade critique spec
+cascade critique decision-brief
+```
+
 ### Insight / note / signal capture
 Used to capture chat-native or CLI-native raw context without making users think about folders.
 

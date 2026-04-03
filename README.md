@@ -112,6 +112,8 @@ Use `governance/input-queue.md` for missing human-only inputs.
   - [docs/cli-and-command-surface.md](docs/cli-and-command-surface.md)
 - Open-source product direction:
   - [docs/vision/open-source-product-direction.md](docs/vision/open-source-product-direction.md)
+- Critique mode:
+  - [docs/critique-mode.md](docs/critique-mode.md)
 - Full architecture/design doc (previous README):
   - [docs/architecture-and-design.md](docs/architecture-and-design.md)
 - Release discipline:
