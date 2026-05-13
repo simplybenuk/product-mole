@@ -43,6 +43,26 @@ Examples:
 `;
 }
 
+export function getInstallBanner() {
+  return String.raw`
+        __
+     __/  \__
+   _/  .--.  \_
+  /   (o  o)   \
+ |      \/      |
+ |  /\  __  /\  |
+  \   '----'   /
+   '._  ||  _.'
+      '-||-'
+        ||
+     ___||___
+
+Mole is a local-first product context system for teams and AI agents.
+It helps you capture raw inputs, distil them into evidence, and generate
+better roadmaps, specs, decisions, and prioritisation work from shared context.
+`;
+}
+
 function printHelp() {
   process.stdout.write(getHelpOutput());
 }
@@ -256,6 +276,7 @@ function installCodexPrompts() {
     copyFile(path.join(sourceDir, file), path.join(promptsDir, file));
   }
 
+  console.log(getInstallBanner());
   console.log(`Installed ${files.length} Codex prompt commands to: ${promptsDir}`);
   console.log('Available commands should now include:');
   for (const file of files) {

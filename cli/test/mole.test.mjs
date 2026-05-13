@@ -6,7 +6,13 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../../lib/capture.mjs';
 import { claimInboxProcessing, completeInboxProcessing } from '../../lib/inbox-processing.mjs';
-import { buildInsightCaptureContent, getCheckUpdatesOutput, getDoctorOutput, getHelpOutput } from '../mole.mjs';
+import {
+  buildInsightCaptureContent,
+  getCheckUpdatesOutput,
+  getDoctorOutput,
+  getHelpOutput,
+  getInstallBanner
+} from '../mole.mjs';
 import { buildUiCaptureContent, createCaptureRelPath } from '../../ui/server.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
@@ -59,6 +65,16 @@ describe('help', () => {
     assert.match(output, /mole create spec drafts\/spec\.md/);
     assert.match(output, /mole check-updates/);
     assert.doesNotMatch(output, /Cascade/);
+  });
+});
+
+describe('install banner', () => {
+  it('introduces Mole with an ASCII mascot and concise product description', () => {
+    const output = getInstallBanner();
+
+    assert.match(output, /Mole is a local-first product context system/);
+    assert.match(output, /o  o/);
+    assert.match(output, /better roadmaps, specs, decisions/);
   });
 });
 
