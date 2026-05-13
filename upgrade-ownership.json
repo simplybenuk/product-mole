@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "description": "Conservative ownership classes for working-instance upgrade planning.",
+  "classes": {
+    "safe-copy": {
+      "description": "Source-owned paths that can usually be copied or refreshed when absent, while still avoiding blind overwrites of changed files.",
+      "paths": [
+        "0-bootstrap/",
+        "1-routing/",
+        "templates/",
+        "docs/",
+        "cli/",
+        "ui/",
+        "VERSION",
+        "CHANGELOG.md",
+        "mole.instance-template.yaml"
+      ]
+    },
+    "merge-carefully": {
+      "description": "Paths that often contain local edits and should be reviewed before applying upstream changes.",
+      "paths": [
+        "README.md",
+        "2-summaries/",
+        "3-indexes/",
+        "governance/change-log.md",
+        "governance/input-queue.md",
+        "governance/quality-checklist.md",
+        "governance/contribution-guide.md",
+        "mole.instance.yaml"
+      ]
+    },
+    "never-overwrite": {
+      "description": "Instance-owned product context and captured evidence. Upgrade automation must not overwrite these paths.",
+      "paths": [
+        "4-context/",
+        "5-evidence/",
+        "6-raw/"
+      ]
+    }
+  }
+}

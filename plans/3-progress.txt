@@ -16,3 +16,11 @@
 - Added a Node test harness for the CLI and covered doctor output with and without `mole.instance.yaml`.
 - Validation: `npm test` from `cli/` passed.
 - Next priority: `instance-metadata-and-doctor` / `instance-lifecycle-002`.
+
+2026-05-13
+
+- Completed `instance-lifecycle-002`: added `upgrade-ownership.json` with safe-copy, merge-carefully, and never-overwrite classes.
+- Documented the ownership classes in `docs/upgrade-ownership.md`.
+- Added a validation test that parses the manifest and confirms `4-context/`, `5-evidence/`, and `6-raw/` are never-overwrite paths.
+- Validation: `npm test` from `cli/` passed.
+- Next priority: `upgrade-report` / `instance-lifecycle-003`.

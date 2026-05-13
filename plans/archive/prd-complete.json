@@ -19,6 +19,24 @@
       "validation": [
         "npm test"
       ]
+    },
+    {
+      "id": "instance-lifecycle-002",
+      "title": "Add machine-readable upgrade ownership classes",
+      "category": "instance-lifecycle",
+      "chunk": "instance-metadata-and-doctor",
+      "description": "Introduce a conservative manifest that classifies repository paths as safe-copy, merge-carefully, or never-overwrite for future upgrade reporting.",
+      "acceptance_criteria": [
+        "The manifest is documented in a readable format.",
+        "Core directories are assigned ownership classes.",
+        "User-owned evidence, context, and raw folders are marked never-overwrite.",
+        "A test or validation step confirms the manifest can be parsed."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test"
+      ]
     }
   ]
 }
