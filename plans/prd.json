@@ -5,34 +5,21 @@
     {
       "id": "instance-lifecycle",
       "title": "Working Instance Lifecycle",
-      "status": "active",
+      "status": "complete",
       "summary": "Make generated Mole instances easier to validate, compare with source, and upgrade conservatively.",
       "priority_notes": "This aligns with the current product goal of making working instances credible beyond initial scaffolding.",
       "chunks": [
         {
           "id": "instance-metadata-and-doctor",
           "title": "Instance metadata and doctor checks",
-          "status": "active",
+          "status": "complete",
           "tasks": []
         },
         {
           "id": "upgrade-report",
           "title": "Upgrade report",
-          "status": "planned",
-          "tasks": [
-            {
-              "id": "instance-lifecycle-003",
-              "title": "Implement check-updates report scaffold",
-              "description": "Replace the placeholder check-updates output with a report that compares source version to instance metadata and lists likely next actions.",
-              "acceptance_criteria": [
-                "A test covers check-updates output for an up-to-date instance.",
-                "A test covers check-updates output when source is newer than the instance.",
-                "The report lists safe additions separately from manual review items.",
-                "The command remains read-only."
-              ],
-              "passes": false
-            }
-          ]
+          "status": "complete",
+          "tasks": []
         }
       ]
     },

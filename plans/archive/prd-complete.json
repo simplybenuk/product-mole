@@ -37,6 +37,24 @@
       "validation": [
         "npm test"
       ]
+    },
+    {
+      "id": "instance-lifecycle-003",
+      "title": "Implement check-updates report scaffold",
+      "category": "instance-lifecycle",
+      "chunk": "upgrade-report",
+      "description": "Replace the placeholder check-updates output with a report that compares source version to instance metadata and lists likely next actions.",
+      "acceptance_criteria": [
+        "A test covers check-updates output for an up-to-date instance.",
+        "A test covers check-updates output when source is newer than the instance.",
+        "The report lists safe additions separately from manual review items.",
+        "The command remains read-only."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test"
+      ]
     }
   ]
 }

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { getDoctorOutput } from '../mole.mjs';
+import { getCheckUpdatesOutput, getDoctorOutput } from '../mole.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, '..', '..');
@@ -60,5 +60,43 @@ describe('upgrade ownership manifest', () => {
     assert.ok(manifest.classes['never-overwrite'].paths.includes('4-context/'));
     assert.ok(manifest.classes['never-overwrite'].paths.includes('5-evidence/'));
     assert.ok(manifest.classes['never-overwrite'].paths.includes('6-raw/'));
+  });
+});
+
+describe('check-updates', () => {
+  it('reports when an instance is up to date', () => {
+    withTempInstance((dir) => {
+      fs.writeFileSync(
+        path.join(dir, 'mole.instance.yaml'),
+        'instance_name: test-instance\ncascade_version: 0.2.0\n',
+        'utf8'
+      );
+
+      const output = getCheckUpdatesOutput(dir);
+
+      assert.match(output, /Mole update check/);
+      assert.match(output, /source version\s+0\.2\.0/);
+      assert.match(output, /instance version\s+0\.2\.0/);
+      assert.match(output, /status\s+up to date/);
+      assert.match(output, /read-only report/i);
+    });
+  });
+
+  it('reports when the source is newer than the instance', () => {
+    withTempInstance((dir) => {
+      fs.writeFileSync(
+        path.join(dir, 'mole.instance.yaml'),
+        'instance_name: test-instance\ncascade_version: 0.1.0\n',
+        'utf8'
+      );
+
+      const output = getCheckUpdatesOutput(dir);
+
+      assert.match(output, /status\s+update available/);
+      assert.match(output, /Safe additions/);
+      assert.match(output, /Manual review/);
+      assert.match(output, /0-bootstrap\//);
+      assert.match(output, /README\.md/);
+    });
   });
 });

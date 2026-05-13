@@ -24,3 +24,11 @@
 - Added a validation test that parses the manifest and confirms `4-context/`, `5-evidence/`, and `6-raw/` are never-overwrite paths.
 - Validation: `npm test` from `cli/` passed.
 - Next priority: `upgrade-report` / `instance-lifecycle-003`.
+
+2026-05-13
+
+- Completed `instance-lifecycle-003`: replaced the placeholder `check-updates` command with a read-only report.
+- The report compares source and instance versions, reports update status, and lists safe-copy paths separately from merge-carefully paths.
+- Added tests for up-to-date and source-newer instance states.
+- Validation: `npm test` from `cli/` passed.
+- Category `instance-lifecycle` is complete. Next priority category: `command-surface`.

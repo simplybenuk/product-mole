@@ -117,6 +117,30 @@ function getInstanceVersion(instanceRoot = cwd) {
   return readSimpleYamlField(instanceFile, 'cascade_version') || readSimpleYamlField(instanceFile, 'mole_version');
 }
 
+function compareVersions(a, b) {
+  const left = String(a).split('.').map(part => Number.parseInt(part, 10) || 0);
+  const right = String(b).split('.').map(part => Number.parseInt(part, 10) || 0);
+  const length = Math.max(left.length, right.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const delta = (left[index] || 0) - (right[index] || 0);
+    if (delta !== 0) return delta > 0 ? 1 : -1;
+  }
+
+  return 0;
+}
+
+function getUpgradeOwnership() {
+  const content = readTextIfExists(path.join(repoRoot, 'upgrade-ownership.json'));
+  if (!content) return null;
+
+  try {
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
 function getCodexHome() {
   const envHome = process.env.CODEX_HOME?.trim();
   return path.resolve(envHome ? envHome : path.join(os.homedir(), '.codex'));
@@ -264,6 +288,47 @@ function doctor() {
   process.stdout.write(getDoctorOutput());
 }
 
+export function getCheckUpdatesOutput(instanceRoot = cwd) {
+  const sourceVersion = getSourceVersion();
+  const instanceVersion = getInstanceVersion(instanceRoot);
+  const ownership = getUpgradeOwnership();
+  const comparison = instanceVersion ? compareVersions(sourceVersion, instanceVersion) : 1;
+  const status = comparison > 0 ? 'update available' : comparison === 0 ? 'up to date' : 'instance ahead of source';
+  const safeCopy = ownership?.classes?.['safe-copy']?.paths || [];
+  const mergeCarefully = ownership?.classes?.['merge-carefully']?.paths || [];
+
+  const lines = [
+    'Mole update check',
+    '',
+    'read-only report',
+    `source version   ${sourceVersion}`,
+    `instance version ${instanceVersion || 'not found'}`,
+    `status          ${status}`,
+    '',
+    'Safe additions'
+  ];
+
+  if (safeCopy.length) {
+    for (const item of safeCopy) lines.push(`- ${item}`);
+  } else {
+    lines.push('- No safe-copy paths declared.');
+  }
+
+  lines.push('', 'Manual review');
+
+  if (mergeCarefully.length) {
+    for (const item of mergeCarefully) lines.push(`- ${item}`);
+  } else {
+    lines.push('- No merge-carefully paths declared.');
+  }
+
+  return `${lines.join('\n')}\n`;
+}
+
+function checkUpdates() {
+  process.stdout.write(getCheckUpdatesOutput());
+}
+
 if (isDirectRun) {
   switch (command) {
     case undefined:
@@ -301,7 +366,7 @@ if (isDirectRun) {
       }
       break;
     case 'check-updates':
-      console.log('Check the local mole.instance.yaml against upstream VERSION and CHANGELOG.md.');
+      checkUpdates();
       break;
     case 'upgrade':
       console.log('Follow docs/upgrade-and-instance-management.md and docs/template-update-guide.md.');
