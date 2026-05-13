@@ -54,26 +54,13 @@
         {
           "id": "team-safe-capture",
           "title": "Team-safe capture",
-          "status": "active",
-          "tasks": [
-            {
-              "id": "team-collaboration-003",
-              "title": "Add capture attribution metadata",
-              "description": "Add contributor attribution fields to raw capture frontmatter so shared inbox material can be traced back to the person or source that supplied it.",
-              "acceptance_criteria": [
-                "CLI capture frontmatter includes captured-by or equivalent contributor metadata.",
-                "UI capture frontmatter includes captured-by or equivalent contributor metadata.",
-                "Default attribution behaviour is documented for local use.",
-                "Tests cover emitted capture attribution metadata."
-              ],
-              "passes": false
-            }
-          ]
+          "status": "complete",
+          "tasks": []
         },
         {
           "id": "inbox-processing-coordination",
           "title": "Inbox processing coordination",
-          "status": "planned",
+          "status": "active",
           "tasks": [
             {
               "id": "team-collaboration-004",

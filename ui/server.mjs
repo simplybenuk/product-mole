@@ -2,7 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createCaptureFileName } from '../lib/capture.mjs';
+import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,6 +77,30 @@ export function createCaptureRelPath(type, note, options = {}) {
   return path.join('6-raw', 'inbox', folder, filename);
 }
 
+export function buildUiCaptureContent(body, options = {}) {
+  const date = options.date || todayDate();
+  const source = body.source || 'self';
+  const channel = body.channel || 'chat';
+  const confidence = body.confidence || 'low';
+  const tags = Array.isArray(body.tags) ? body.tags : [];
+  const capturedBy = resolveCapturedBy(body.capturedBy || body.captured_by);
+  const note = (body.note || '').trim();
+
+  return [
+    '---',
+    `date: ${date}`,
+    `source: ${source}`,
+    `captured_by: ${capturedBy}`,
+    `channel: ${channel}`,
+    `topic_tags: [${tags.join(', ')}]`,
+    `confidence: ${confidence}`,
+    '---',
+    '',
+    note,
+    '',
+  ].join('\n');
+}
+
 async function routeApi(req, res, urlObj) {
   if (req.method === 'GET' && urlObj.pathname === '/api/tree') {
     const p = urlObj.searchParams.get('path') || '';
@@ -118,18 +142,14 @@ async function routeApi(req, res, urlObj) {
     const relPath = createCaptureRelPath(type, note);
     const { resolved } = safeRepoPath(relPath);
 
-    const frontmatter = [
-      '---',
-      `date: ${date}`,
-      `source: ${source}`,
-      `channel: ${channel}`,
-      `topic_tags: [${tags.join(', ')}]`,
-      `confidence: ${confidence}`,
-      '---',
-      '',
+    const frontmatter = buildUiCaptureContent({
+      source,
+      channel,
+      confidence,
+      tags,
       note,
-      '',
-    ].join('\n');
+      capturedBy: body.capturedBy || body.captured_by
+    }, { date });
 
     await fs.mkdir(path.dirname(resolved), { recursive: true });
     try {

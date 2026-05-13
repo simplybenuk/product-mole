@@ -4,9 +4,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { createCaptureFileName } from '../../lib/capture.mjs';
-import { getCheckUpdatesOutput, getDoctorOutput, getHelpOutput } from '../mole.mjs';
-import { createCaptureRelPath } from '../../ui/server.mjs';
+import { createCaptureFileName, resolveCapturedBy } from '../../lib/capture.mjs';
+import { buildInsightCaptureContent, getCheckUpdatesOutput, getDoctorOutput, getHelpOutput } from '../mole.mjs';
+import { buildUiCaptureContent, createCaptureRelPath } from '../../ui/server.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, '..', '..');
@@ -142,5 +142,40 @@ describe('team-safe capture filenames', () => {
       relPath,
       path.join('6-raw', 'inbox', 'quick-notes', '20260513T101112345Z-repeated-note-abc12345.md')
     );
+  });
+});
+
+describe('capture attribution metadata', () => {
+  it('resolves captured_by from explicit value or local environment defaults', () => {
+    assert.equal(resolveCapturedBy('Ada'), 'Ada');
+    assert.equal(resolveCapturedBy('', { MOLE_CAPTURED_BY: 'Grace' }), 'Grace');
+    assert.equal(resolveCapturedBy('', { USER: 'hopper' }), 'hopper');
+    assert.equal(resolveCapturedBy('', {}, 'unknown'), 'unknown');
+  });
+
+  it('emits captured_by in CLI capture frontmatter', () => {
+    const content = buildInsightCaptureContent('Team note', {
+      capturedBy: 'Ada',
+      createdAt: '2026-05-13T10:11:12.345Z'
+    });
+
+    assert.match(content, /captured_by: Ada/);
+    assert.match(content, /source: mole CLI/);
+  });
+
+  it('emits captured_by in UI capture frontmatter', () => {
+    const content = buildUiCaptureContent({
+      source: 'customer',
+      channel: 'call',
+      confidence: 'medium',
+      tags: ['research'],
+      note: 'Team note',
+      capturedBy: 'Ada'
+    }, {
+      date: '2026-05-13'
+    });
+
+    assert.match(content, /captured_by: Ada/);
+    assert.match(content, /source: customer/);
   });
 });

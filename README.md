@@ -114,7 +114,9 @@ Recommended permissions:
 - a smaller group can promote evidence, edit context, and update summaries
 - only maintainers should change templates, governance rules, and upgrade metadata
 
-Current limitation: team capture is usable as a shared folder workflow, but Mole still needs collision-resistant filenames, capture attribution, inbox states, and a processing lock before concurrent team use is robust.
+Raw captures include `captured_by` metadata. For CLI capture this defaults to `MOLE_CAPTURED_BY`, then the local OS username, then `unknown`; set `MOLE_CAPTURED_BY` on shared machines or service accounts. The local UI includes a `Captured by` field for explicit attribution.
+
+Current limitation: team capture is usable as a shared folder workflow, but Mole still needs inbox states and a processing lock before concurrent processing is robust.
 
 ---
 

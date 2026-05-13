@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createCaptureFileName } from '../lib/capture.mjs';
+import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
@@ -217,7 +217,7 @@ function captureInsight(textParts) {
   const fileName = createCaptureFileName(text);
   const target = path.join(dir, fileName);
 
-  const content = `---\ntitle: Raw Insight\ncapture_type: insight\nsource: mole CLI\ncreated_at: ${nowUtc()}\nsummary: ${text}\ntags: []\n---\n\n# Raw Insight\n\n## Insight\n${text}\n\n## Context / why it matters\n\n## Optional follow-up questions\n- \n`;
+  const content = buildInsightCaptureContent(text);
 
   try {
     fs.writeFileSync(target, content, { encoding: 'utf8', flag: 'wx' });
@@ -231,6 +231,13 @@ function captureInsight(textParts) {
   console.log(`Captured insight: ${target}`);
   console.log('\nSuggested next command:');
   console.log('mole synthesise inbox');
+}
+
+export function buildInsightCaptureContent(text, options = {}) {
+  const createdAt = options.createdAt || nowUtc();
+  const capturedBy = resolveCapturedBy(options.capturedBy);
+
+  return `---\ntitle: Raw Insight\ncapture_type: insight\nsource: mole CLI\ncaptured_by: ${capturedBy}\ncreated_at: ${createdAt}\nsummary: ${text}\ntags: []\n---\n\n# Raw Insight\n\n## Insight\n${text}\n\n## Context / why it matters\n\n## Optional follow-up questions\n- \n`;
 }
 
 function installCodexPrompts() {

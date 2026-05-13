@@ -55,3 +55,11 @@
 - Added tests for repeated similar notes and UI capture paths.
 - Validation: `npm test` from `cli/` passed.
 - Next priority: `team-safe-capture` / `team-collaboration-003`.
+
+2026-05-13
+
+- Completed `team-collaboration-003`: added `captured_by` metadata to CLI and UI raw captures.
+- CLI capture defaults attribution from `MOLE_CAPTURED_BY`, then local username, then `unknown`; the UI now exposes a `Captured by` field.
+- Added tests for attribution defaults and emitted frontmatter.
+- Validation: `npm test` from `cli/` passed.
+- Next priority: `inbox-processing-coordination` / `team-collaboration-004`.
