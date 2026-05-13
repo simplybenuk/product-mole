@@ -54,20 +54,8 @@
         {
           "id": "team-safe-capture",
           "title": "Team-safe capture",
-          "status": "planned",
+          "status": "active",
           "tasks": [
-            {
-              "id": "team-collaboration-002",
-              "title": "Make CLI and UI capture filenames collision-resistant",
-              "description": "Update CLI and local UI capture so repeated or similar notes from multiple contributors do not silently overwrite each other in shared synced folders.",
-              "acceptance_criteria": [
-                "CLI capture filenames include a UTC timestamp and unique suffix.",
-                "UI capture filenames include a UTC timestamp and unique suffix.",
-                "Tests cover repeated similar notes without filename collision.",
-                "Capture refuses or avoids silent overwrite when a target path already exists."
-              ],
-              "passes": false
-            },
             {
               "id": "team-collaboration-003",
               "title": "Add capture attribution metadata",

@@ -47,3 +47,11 @@
 - Clarified that many contributors can capture raw inputs while one maintainer or agent should process and promote inbox material at a time.
 - Validation: `jq empty plans/prd.json` passed; `npm test` from `cli/` passed.
 - Next priority: `team-safe-capture` / `team-collaboration-002`.
+
+2026-05-13
+
+- Completed `team-collaboration-002`: added a shared capture filename helper used by both CLI capture and the local UI capture endpoint.
+- Capture filenames now include a UTC timestamp, slug, and unique suffix, and writes refuse silent overwrite.
+- Added tests for repeated similar notes and UI capture paths.
+- Validation: `npm test` from `cli/` passed.
+- Next priority: `team-safe-capture` / `team-collaboration-003`.

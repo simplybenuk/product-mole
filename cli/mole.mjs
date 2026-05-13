@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createCaptureFileName } from '../lib/capture.mjs';
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
@@ -83,10 +84,6 @@ function slugify(text) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 50) || 'insight';
-}
-
-function todayUtc() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 function nowUtc() {
@@ -217,12 +214,20 @@ function captureInsight(textParts) {
 
   const dir = path.join(cwd, '6-raw', 'inbox', 'quick-notes');
   ensureDir(dir);
-  const fileName = `${todayUtc()}-${slugify(text)}.md`;
+  const fileName = createCaptureFileName(text);
   const target = path.join(dir, fileName);
 
   const content = `---\ntitle: Raw Insight\ncapture_type: insight\nsource: mole CLI\ncreated_at: ${nowUtc()}\nsummary: ${text}\ntags: []\n---\n\n# Raw Insight\n\n## Insight\n${text}\n\n## Context / why it matters\n\n## Optional follow-up questions\n- \n`;
 
-  fs.writeFileSync(target, content, 'utf8');
+  try {
+    fs.writeFileSync(target, content, { encoding: 'utf8', flag: 'wx' });
+  } catch (err) {
+    if (err.code === 'EEXIST') {
+      console.error(`Refusing to overwrite existing capture: ${target}`);
+      process.exit(1);
+    }
+    throw err;
+  }
   console.log(`Captured insight: ${target}`);
   console.log('\nSuggested next command:');
   console.log('mole synthesise inbox');

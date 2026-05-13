@@ -94,6 +94,24 @@
         "jq empty plans/prd.json",
         "npm test"
       ]
+    },
+    {
+      "id": "team-collaboration-002",
+      "title": "Make CLI and UI capture filenames collision-resistant",
+      "category": "team-collaboration",
+      "chunk": "team-safe-capture",
+      "description": "Update CLI and local UI capture so repeated or similar notes from multiple contributors do not silently overwrite each other in shared synced folders.",
+      "acceptance_criteria": [
+        "CLI capture filenames include a UTC timestamp and unique suffix.",
+        "UI capture filenames include a UTC timestamp and unique suffix.",
+        "Tests cover repeated similar notes without filename collision.",
+        "Capture refuses or avoids silent overwrite when a target path already exists."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test"
+      ]
     }
   ]
 }

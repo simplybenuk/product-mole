@@ -4,7 +4,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { createCaptureFileName } from '../../lib/capture.mjs';
 import { getCheckUpdatesOutput, getDoctorOutput, getHelpOutput } from '../mole.mjs';
+import { createCaptureRelPath } from '../../ui/server.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, '..', '..');
@@ -110,5 +112,35 @@ describe('check-updates', () => {
       assert.match(output, /0-bootstrap\//);
       assert.match(output, /README\.md/);
     });
+  });
+});
+
+describe('team-safe capture filenames', () => {
+  it('creates repeated similar note filenames with UTC timestamp and unique suffixes', () => {
+    const now = new Date('2026-05-13T10:11:12.345Z');
+    const first = createCaptureFileName('Repeated note', {
+      now,
+      uniqueSuffix: 'abc12345'
+    });
+    const second = createCaptureFileName('Repeated note', {
+      now,
+      uniqueSuffix: 'def67890'
+    });
+
+    assert.equal(first, '20260513T101112345Z-repeated-note-abc12345.md');
+    assert.equal(second, '20260513T101112345Z-repeated-note-def67890.md');
+    assert.notEqual(first, second);
+  });
+
+  it('uses the collision-resistant filename helper for UI capture paths', () => {
+    const relPath = createCaptureRelPath('quick-notes', 'Repeated note', {
+      now: new Date('2026-05-13T10:11:12.345Z'),
+      uniqueSuffix: 'abc12345'
+    });
+
+    assert.equal(
+      relPath,
+      path.join('6-raw', 'inbox', 'quick-notes', '20260513T101112345Z-repeated-note-abc12345.md')
+    );
   });
 });
