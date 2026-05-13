@@ -39,3 +39,11 @@
 - Added a help-output test covering the main command examples and preventing `Cascade` regressions in help text.
 - Validation: `npm test` from `cli/` passed; `node cli/mole.mjs --help` produced the expected help text.
 - Category `command-surface` is complete. No incomplete PRD tasks remain.
+
+2026-05-13
+
+- Completed `team-collaboration-001`: documented the shared synced-folder team operating model in the README.
+- Added provider guidance for SharePoint/OneDrive, Google Drive for desktop, Dropbox desktop app, and Box Drive.
+- Clarified that many contributors can capture raw inputs while one maintainer or agent should process and promote inbox material at a time.
+- Validation: `jq empty plans/prd.json` passed; `npm test` from `cli/` passed.
+- Next priority: `team-safe-capture` / `team-collaboration-002`.

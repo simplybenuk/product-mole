@@ -74,6 +74,26 @@
         "npm test",
         "node cli/mole.mjs --help"
       ]
+    },
+    {
+      "id": "team-collaboration-001",
+      "title": "Document the shared-folder team operating model",
+      "category": "team-collaboration",
+      "chunk": "shared-folder-operating-model",
+      "description": "Document how teams can run Mole from a shared cloud-synced folder, including capture versus processing responsibilities and safe provider guidance.",
+      "acceptance_criteria": [
+        "README explains capture versus processing for teams.",
+        "README states that only one maintainer or agent should process and promote inbox material at a time.",
+        "README describes suggested permissions for raw capture, promoted context, and framework files.",
+        "README explains that cloud version history is useful for recovery but not a replacement for careful processing.",
+        "README mentions SharePoint/OneDrive, Google Drive for desktop, Dropbox desktop app, and Box Drive as plausible local-file-system options."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "jq empty plans/prd.json",
+        "npm test"
+      ]
     }
   ]
 }

@@ -37,6 +37,83 @@
           "tasks": []
         }
       ]
+    },
+    {
+      "id": "team-collaboration",
+      "title": "Team Collaboration",
+      "status": "active",
+      "summary": "Make Mole safer and clearer for teams using shared cloud-synced folders as a local file system.",
+      "priority_notes": "This is the next active category because previous PRD categories are complete and team shared-folder use is a likely adoption path.",
+      "chunks": [
+        {
+          "id": "shared-folder-operating-model",
+          "title": "Shared folder operating model",
+          "status": "complete",
+          "tasks": []
+        },
+        {
+          "id": "team-safe-capture",
+          "title": "Team-safe capture",
+          "status": "planned",
+          "tasks": [
+            {
+              "id": "team-collaboration-002",
+              "title": "Make CLI and UI capture filenames collision-resistant",
+              "description": "Update CLI and local UI capture so repeated or similar notes from multiple contributors do not silently overwrite each other in shared synced folders.",
+              "acceptance_criteria": [
+                "CLI capture filenames include a UTC timestamp and unique suffix.",
+                "UI capture filenames include a UTC timestamp and unique suffix.",
+                "Tests cover repeated similar notes without filename collision.",
+                "Capture refuses or avoids silent overwrite when a target path already exists."
+              ],
+              "passes": false
+            },
+            {
+              "id": "team-collaboration-003",
+              "title": "Add capture attribution metadata",
+              "description": "Add contributor attribution fields to raw capture frontmatter so shared inbox material can be traced back to the person or source that supplied it.",
+              "acceptance_criteria": [
+                "CLI capture frontmatter includes captured-by or equivalent contributor metadata.",
+                "UI capture frontmatter includes captured-by or equivalent contributor metadata.",
+                "Default attribution behaviour is documented for local use.",
+                "Tests cover emitted capture attribution metadata."
+              ],
+              "passes": false
+            }
+          ]
+        },
+        {
+          "id": "inbox-processing-coordination",
+          "title": "Inbox processing coordination",
+          "status": "planned",
+          "tasks": [
+            {
+              "id": "team-collaboration-004",
+              "title": "Add inbox processing states",
+              "description": "Define and document inbox states so team captures can move through new, processing, processed, and archive phases without losing raw inputs.",
+              "acceptance_criteria": [
+                "Docs define new, processing, processed, and archive inbox states.",
+                "Agent guidance says not to delete raw inputs before a retrieval receipt exists.",
+                "Docs explain how substantive artefacts and weak signals move through the states.",
+                "Existing capture paths remain compatible or receive a documented migration path."
+              ],
+              "passes": false
+            },
+            {
+              "id": "team-collaboration-005",
+              "title": "Add a simple inbox processing lock and receipt",
+              "description": "Add a lightweight lock and receipt convention so only one processor claims shared inbox synthesis work at a time.",
+              "acceptance_criteria": [
+                "One processing run can claim the inbox before synthesis begins.",
+                "Concurrent processing attempts fail safely with a clear message.",
+                "Stale-lock handling is documented.",
+                "A processing receipt records who claimed the run, when it started, what was processed, and when it completed."
+              ],
+              "passes": false
+            }
+          ]
+        }
+      ]
     }
   ]
 }

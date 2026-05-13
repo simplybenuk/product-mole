@@ -19,7 +19,7 @@ Mole is a **file-based context system** with progressive layers.
 
 This repository is designed to work:
 - on a local machine,
-- in synced folders (OneDrive/Google Drive),
+- in synced cloud folders (SharePoint/OneDrive, Google Drive, Dropbox, Box),
 - or in Git alongside your codebase.
 
 It is intended to be reusable across teams and companies, which means it needs an honest upgrade story — not just a one-time template copy.
@@ -92,6 +92,32 @@ Use `governance/input-queue.md` for missing human-only inputs.
 
 ---
 
+## Team use with shared synced folders
+
+Mole can work as a shared team capture space when the folder is available locally through a cloud desktop sync or mount client. The safest pattern is:
+
+- many contributors capture raw inputs into `6-raw/inbox/`
+- one maintainer or one agent run processes the inbox at a time
+- promoted evidence and context are reviewed before shared summaries or indexes are changed
+- version history in the cloud platform is treated as recovery, not as a replacement for careful processing
+
+Use a desktop sync or mounted-folder client rather than an old-style SharePoint mapped network drive. Plausible options include:
+
+- Microsoft SharePoint or OneDrive with the OneDrive sync client and Files On-Demand: [sync SharePoint files](https://support.microsoft.com/en-us/office/sync-sharepoint-files-and-folders-87a96948-4dd7-43e4-aca1-53f3e18bea9b). Avoid legacy mapped SharePoint drives where possible because Microsoft notes they use older WebDAV technology that is slower and less reliable than OneDrive sync: [mapped drive guidance](https://learn.microsoft.com/en-us/sharepoint/troubleshoot/lists-and-libraries/troubleshoot-mapped-network-drives).
+- Google Drive for desktop, using streamed or mirrored files visible in File Explorer or Finder: [stream and mirror files](https://support.google.com/drive/answer/13401938).
+- Dropbox desktop app, using the local Dropbox folder with online-only or offline file states: [online-only files](https://help.dropbox.com/sync/make-files-online-only).
+- Box Drive, exposing Box content in Explorer or Finder with optional offline marking: [Box Drive overview](https://support.box.com/hc/en-us/articles/360044196553-About-Box-Drive).
+
+Recommended permissions:
+
+- most team members can add raw files and notes
+- a smaller group can promote evidence, edit context, and update summaries
+- only maintainers should change templates, governance rules, and upgrade metadata
+
+Current limitation: team capture is usable as a shared folder workflow, but Mole still needs collision-resistant filenames, capture attribution, inbox states, and a processing lock before concurrent team use is robust.
+
+---
+
 ## Where to read next
 
 - Human/agent collaboration:
@@ -132,6 +158,7 @@ node cli/mole.mjs --help
 node cli/mole.mjs init my-mole
 node cli/mole.mjs install codex
 node cli/mole.mjs doctor
+node cli/mole.mjs check-updates
 node cli/mole.mjs insight "Users trust CSV export more than dashboard totals"
 node cli/mole.mjs create roadmap
 node cli/mole.mjs create spec
@@ -140,6 +167,8 @@ node cli/mole.mjs create spec
 Current purpose:
 - make the tool feel operable,
 - create draft artifacts from templates,
+- report source/instance version state,
+- produce conservative upgrade review guidance,
 - establish the long-term `mole` command surface.
 
 See:
@@ -189,6 +218,7 @@ This installs prompt files into:
 ```bash
 cd my-mole
 node ../cli/mole.mjs doctor
+node ../cli/mole.mjs check-updates
 node ../cli/mole.mjs insight "Users trust CSV export more than dashboard totals"
 node ../cli/mole.mjs create roadmap
 ```
@@ -205,6 +235,8 @@ Once the prompts are installed, try commands like:
 
 ## Updating after new changes
 
+Mole separates the source/tool repo from generated working instances.
+
 When the source/tool repo changes, do this from the `product-mole` folder:
 
 ```bash
@@ -217,6 +249,25 @@ Why both?
 - `install codex` refreshes the prompt files in Codex so new commands and updates actually appear
 
 Then reopen or retry in Codex if needed.
+
+To inspect a working instance before upgrading it, run these from inside the instance folder using the source repo CLI:
+
+```bash
+node ../cli/mole.mjs doctor
+node ../cli/mole.mjs check-updates
+```
+
+`doctor` reports:
+- source version from `VERSION`
+- instance version from `mole.instance.yaml`
+- core folder checks
+- a warning when instance metadata is missing
+
+`check-updates` is currently a read-only report. It compares source and instance versions, then lists:
+- safe additions from `upgrade-ownership.json`
+- manual review paths that may contain local customisation
+
+`mole upgrade` is still intentionally conservative. For now it points to the upgrade docs rather than applying automatic file changes.
 
 ## What currently works
 
@@ -247,6 +298,8 @@ What exists now:
 - file-native mole structure
 - CLI scaffold
 - Codex prompt installation
+- source/instance version checks
+- read-only update report using `upgrade-ownership.json`
 - raw insight capture
 - draft artifact generation
 - docs for upgrade/adoption/command UX
