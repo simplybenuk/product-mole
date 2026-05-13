@@ -63,3 +63,11 @@
 - Added tests for attribution defaults and emitted frontmatter.
 - Validation: `npm test` from `cli/` passed.
 - Next priority: `inbox-processing-coordination` / `team-collaboration-004`.
+
+2026-05-13
+
+- Completed `team-collaboration-004`: documented shared inbox states for `new`, `processing`, `processed`, and `archive`.
+- Updated agent guidance to treat legacy direct inbox folders as unprocessed input and never delete raw inputs before a retrieval receipt exists.
+- Documented weak signal and substantive artefact movement through the state flow while preserving compatibility with current capture paths.
+- Validation: `npm test` from `cli/` passed; state documentation checks passed with `rg`.
+- Next priority: `inbox-processing-coordination` / `team-collaboration-005`.

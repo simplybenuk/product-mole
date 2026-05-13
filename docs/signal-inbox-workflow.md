@@ -28,6 +28,23 @@ This workflow is designed for reality: valuable inputs arrive as both short mess
     └── observations/     # passing comments and lightweight field notes
 ```
 
+For shared team folders, use explicit inbox states when the team is processing material together:
+
+```text
+6-raw/
+└── inbox/
+    ├── new/              # unprocessed captures waiting for synthesis
+    │   ├── quick-notes/
+    │   ├── messages/
+    │   ├── observations/
+    │   └── artefacts/
+    ├── processing/       # batches claimed by one maintainer or agent run
+    ├── processed/        # raw inputs already promoted with a receipt
+    └── archive/          # retained raw inputs that should not be reprocessed
+```
+
+Compatibility rule: existing captures in `6-raw/inbox/quick-notes/`, `messages/`, and `observations/` are still valid and should be treated as `new` until a team chooses to adopt the explicit state folders.
+
 Optional downstream outputs:
 
 ```text
@@ -128,6 +145,19 @@ Promote inbox content upward only when one of these is true:
 
 - Do not delete an inbox item until its promoted output and retrieval receipt exist.
 - After promotion, either delete the inbox copy or move it into a stable raw/archive location.
+
+### Shared inbox state flow
+
+Use states to avoid two people or agents processing the same raw input:
+
+1. `new`: contributors add weak signals and substantive artefacts here, or in the legacy direct type folders.
+2. `processing`: one maintainer or agent moves a batch here before synthesis begins.
+3. `processed`: after promotion, receipt creation, and index/summary updates, move the raw inputs here.
+4. `archive`: use for retained raw inputs that should stay available but should not be picked up by routine synthesis.
+
+Weak signals usually move from `new` to `processing`, then into `processed` after a signal cluster and retrieval receipt exist. Substantive artefacts move through the same states, but promotion should preserve or summarise them first in `5-evidence/source-docs/` before any durable `4-context/` module is created.
+
+Never delete raw inputs from a shared inbox before the promoted output and retrieval receipt exist. If sync conflicts appear, keep both copies and resolve them during the processing pass rather than discarding either contributor's input.
 
 ---
 

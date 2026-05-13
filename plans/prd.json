@@ -63,18 +63,6 @@
           "status": "active",
           "tasks": [
             {
-              "id": "team-collaboration-004",
-              "title": "Add inbox processing states",
-              "description": "Define and document inbox states so team captures can move through new, processing, processed, and archive phases without losing raw inputs.",
-              "acceptance_criteria": [
-                "Docs define new, processing, processed, and archive inbox states.",
-                "Agent guidance says not to delete raw inputs before a retrieval receipt exists.",
-                "Docs explain how substantive artefacts and weak signals move through the states.",
-                "Existing capture paths remain compatible or receive a documented migration path."
-              ],
-              "passes": false
-            },
-            {
               "id": "team-collaboration-005",
               "title": "Add a simple inbox processing lock and receipt",
               "description": "Add a lightweight lock and receipt convention so only one processor claims shared inbox synthesis work at a time.",

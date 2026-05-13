@@ -130,6 +130,25 @@
       "validation": [
         "npm test"
       ]
+    },
+    {
+      "id": "team-collaboration-004",
+      "title": "Add inbox processing states",
+      "category": "team-collaboration",
+      "chunk": "inbox-processing-coordination",
+      "description": "Define and document inbox states so team captures can move through new, processing, processed, and archive phases without losing raw inputs.",
+      "acceptance_criteria": [
+        "Docs define new, processing, processed, and archive inbox states.",
+        "Agent guidance says not to delete raw inputs before a retrieval receipt exists.",
+        "Docs explain how substantive artefacts and weak signals move through the states.",
+        "Existing capture paths remain compatible or receive a documented migration path."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test",
+        "rg -n \"new/|processing/|processed/|archive/|legacy direct inbox|Never delete raw inputs|retrieval receipt|shared inbox\" docs/signal-inbox-workflow.md 0-bootstrap/agents.md README.md"
+      ]
     }
   ]
 }
