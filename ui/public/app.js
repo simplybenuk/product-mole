@@ -27,6 +27,7 @@ form.addEventListener('submit', async (e) => {
   const payload = {
     type: fd.get('type'),
     source: fd.get('source'),
+    capturedBy: fd.get('capturedBy'),
     channel: fd.get('channel'),
     confidence: fd.get('confidence'),
     tags: String(fd.get('tags') || '').split(',').map(s => s.trim()).filter(Boolean),

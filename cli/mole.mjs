@@ -4,15 +4,18 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
+import { claimInboxProcessing, completeInboxProcessing } from '../lib/inbox-processing.mjs';
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
 const cwd = process.cwd();
 const thisFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(thisFile), '..');
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === thisFile;
 
-function printHelp() {
-  console.log(`mole v0.2.0
+export function getHelpOutput() {
+  return `Mole CLI v0.2.0
 
 Usage:
   mole init [target-dir]
@@ -20,6 +23,8 @@ Usage:
   mole insight <text>
   mole synthesise <target>
   mole review <target>
+  mole inbox claim [processor]
+  mole inbox complete [summary]
   mole install codex
   mole check-updates
   mole upgrade
@@ -33,7 +38,33 @@ Examples:
   mole install codex
   mole synthesise inbox
   mole review input-queue
-`);
+  mole inbox claim
+  mole inbox complete "Promoted this week's research notes"
+`;
+}
+
+export function getInstallBanner() {
+  return String.raw`
+        __
+     __/  \__
+   _/  .--.  \_
+  /   (o  o)   \
+ |      \/      |
+ |  /\  __  /\  |
+  \   '----'   /
+   '._  ||  _.'
+      '-||-'
+        ||
+     ___||___
+
+Mole is a local-first product context system for teams and AI agents.
+It helps you capture raw inputs, distil them into evidence, and generate
+better roadmaps, specs, decisions, and prioritisation work from shared context.
+`;
+}
+
+function printHelp() {
+  process.stdout.write(getHelpOutput());
 }
 
 function ensureDir(dir) {
@@ -80,12 +111,60 @@ function slugify(text) {
     .slice(0, 50) || 'insight';
 }
 
-function todayUtc() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function nowUtc() {
   return new Date().toISOString();
+}
+
+function readTextIfExists(file) {
+  try {
+    return fs.readFileSync(file, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+function readSimpleYamlField(file, field) {
+  const content = readTextIfExists(file);
+  if (!content) return null;
+
+  const pattern = new RegExp(`^${field}:\\s*(.+?)\\s*$`, 'm');
+  const match = content.match(pattern);
+  if (!match) return null;
+
+  return match[1].replace(/^['"]|['"]$/g, '');
+}
+
+function getSourceVersion() {
+  return readTextIfExists(path.join(repoRoot, 'VERSION'))?.trim() || 'unknown';
+}
+
+function getInstanceVersion(instanceRoot = cwd) {
+  const instanceFile = path.join(instanceRoot, 'mole.instance.yaml');
+  return readSimpleYamlField(instanceFile, 'cascade_version') || readSimpleYamlField(instanceFile, 'mole_version');
+}
+
+function compareVersions(a, b) {
+  const left = String(a).split('.').map(part => Number.parseInt(part, 10) || 0);
+  const right = String(b).split('.').map(part => Number.parseInt(part, 10) || 0);
+  const length = Math.max(left.length, right.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const delta = (left[index] || 0) - (right[index] || 0);
+    if (delta !== 0) return delta > 0 ? 1 : -1;
+  }
+
+  return 0;
+}
+
+function getUpgradeOwnership() {
+  const content = readTextIfExists(path.join(repoRoot, 'upgrade-ownership.json'));
+  if (!content) return null;
+
+  try {
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
 }
 
 function getCodexHome() {
@@ -105,8 +184,8 @@ function initInstance(targetDir) {
     copyFile(path.join(target, 'mole.instance-template.yaml'), path.join(target, 'mole.instance.yaml'));
   }
 
-  console.log(`Initialised mole instance at: ${target}`);
-  console.log('Copied a full working mole scaffold (excluding .git, cli, and node_modules).');
+  console.log(`Initialised Mole instance at: ${target}`);
+  console.log('Copied a full working Mole scaffold (excluding .git, cli, and node_modules).');
   console.log('Next steps:');
   console.log('- customise 0-bootstrap/repo-purpose.md');
   console.log('- fill key summaries in 2-summaries/');
@@ -160,15 +239,30 @@ function captureInsight(textParts) {
 
   const dir = path.join(cwd, '6-raw', 'inbox', 'quick-notes');
   ensureDir(dir);
-  const fileName = `${todayUtc()}-${slugify(text)}.md`;
+  const fileName = createCaptureFileName(text);
   const target = path.join(dir, fileName);
 
-  const content = `---\ntitle: Raw Insight\ncapture_type: insight\nsource: mole cli\ncreated_at: ${nowUtc()}\nsummary: ${text}\ntags: []\n---\n\n# Raw Insight\n\n## Insight\n${text}\n\n## Context / why it matters\n\n## Optional follow-up questions\n- \n`;
+  const content = buildInsightCaptureContent(text);
 
-  fs.writeFileSync(target, content, 'utf8');
+  try {
+    fs.writeFileSync(target, content, { encoding: 'utf8', flag: 'wx' });
+  } catch (err) {
+    if (err.code === 'EEXIST') {
+      console.error(`Refusing to overwrite existing capture: ${target}`);
+      process.exit(1);
+    }
+    throw err;
+  }
   console.log(`Captured insight: ${target}`);
   console.log('\nSuggested next command:');
   console.log('mole synthesise inbox');
+}
+
+export function buildInsightCaptureContent(text, options = {}) {
+  const createdAt = options.createdAt || nowUtc();
+  const capturedBy = resolveCapturedBy(options.capturedBy);
+
+  return `---\ntitle: Raw Insight\ncapture_type: insight\nsource: mole CLI\ncaptured_by: ${capturedBy}\ncreated_at: ${createdAt}\nsummary: ${text}\ntags: []\n---\n\n# Raw Insight\n\n## Insight\n${text}\n\n## Context / why it matters\n\n## Optional follow-up questions\n- \n`;
 }
 
 function installCodexPrompts() {
@@ -182,6 +276,7 @@ function installCodexPrompts() {
     copyFile(path.join(sourceDir, file), path.join(promptsDir, file));
   }
 
+  console.log(getInstallBanner());
   console.log(`Installed ${files.length} Codex prompt commands to: ${promptsDir}`);
   console.log('Available commands should now include:');
   for (const file of files) {
@@ -197,71 +292,161 @@ function outputDraftInstruction(kind) {
     'decision-brief': 'Create a decision brief with recommendation, options, trade-offs, and missing inputs.',
     'prioritisation-draft': 'Create a prioritisation draft with criteria, ranked items, and uncertainties.'
   };
-  const instruction = map[kind] || `Create a ${kind} draft from the mole using progressive retrieval.`;
+  const instruction = map[kind] || `Create a ${kind} draft from Mole using progressive retrieval.`;
   console.log(instruction);
 }
 
-function doctor() {
+export function getDoctorOutput(instanceRoot = cwd) {
   const checks = [
-    ['mole.instance.yaml', exists(path.join(cwd, 'mole.instance.yaml'))],
-    ['0-bootstrap/', exists(path.join(cwd, '0-bootstrap'))],
-    ['1-routing/', exists(path.join(cwd, '1-routing'))],
-    ['2-summaries/', exists(path.join(cwd, '2-summaries'))],
-    ['6-raw/inbox/', exists(path.join(cwd, '6-raw', 'inbox'))]
+    ['mole.instance.yaml', exists(path.join(instanceRoot, 'mole.instance.yaml'))],
+    ['0-bootstrap/', exists(path.join(instanceRoot, '0-bootstrap'))],
+    ['1-routing/', exists(path.join(instanceRoot, '1-routing'))],
+    ['2-summaries/', exists(path.join(instanceRoot, '2-summaries'))],
+    ['6-raw/inbox/', exists(path.join(instanceRoot, '6-raw', 'inbox'))]
   ];
 
-  console.log('Cascade doctor\n');
-  for (const [label, ok] of checks) {
-    console.log(`${ok ? '✓' : '✗'} ${label}`);
+  const instanceVersion = getInstanceVersion(instanceRoot);
+  const lines = [
+    'Mole doctor',
+    '',
+    `source version   ${getSourceVersion()}`,
+    `instance version ${instanceVersion || 'not found'}`
+  ];
+
+  if (!instanceVersion) {
+    lines.push('warning          missing instance metadata');
   }
+
+  lines.push('');
+
+  for (const [label, ok] of checks) {
+    lines.push(`${ok ? '✓' : '✗'} ${label}`);
+  }
+
+  return `${lines.join('\n')}\n`;
 }
 
-switch (command) {
-  case undefined:
-  case '--help':
-  case '-h':
-    printHelp();
-    break;
-  case 'init':
-    initInstance(subcommand);
-    break;
-  case 'create':
-    if (!subcommand) {
-      console.error('Missing artifact type. Example: mole create roadmap');
+function doctor() {
+  process.stdout.write(getDoctorOutput());
+}
+
+export function getCheckUpdatesOutput(instanceRoot = cwd) {
+  const sourceVersion = getSourceVersion();
+  const instanceVersion = getInstanceVersion(instanceRoot);
+  const ownership = getUpgradeOwnership();
+  const comparison = instanceVersion ? compareVersions(sourceVersion, instanceVersion) : 1;
+  const status = comparison > 0 ? 'update available' : comparison === 0 ? 'up to date' : 'instance ahead of source';
+  const safeCopy = ownership?.classes?.['safe-copy']?.paths || [];
+  const mergeCarefully = ownership?.classes?.['merge-carefully']?.paths || [];
+
+  const lines = [
+    'Mole update check',
+    '',
+    'read-only report',
+    `source version   ${sourceVersion}`,
+    `instance version ${instanceVersion || 'not found'}`,
+    `status          ${status}`,
+    '',
+    'Safe additions'
+  ];
+
+  if (safeCopy.length) {
+    for (const item of safeCopy) lines.push(`- ${item}`);
+  } else {
+    lines.push('- No safe-copy paths declared.');
+  }
+
+  lines.push('', 'Manual review');
+
+  if (mergeCarefully.length) {
+    for (const item of mergeCarefully) lines.push(`- ${item}`);
+  } else {
+    lines.push('- No merge-carefully paths declared.');
+  }
+
+  return `${lines.join('\n')}\n`;
+}
+
+function checkUpdates() {
+  process.stdout.write(getCheckUpdatesOutput());
+}
+
+function runInboxCommand(action, values = []) {
+  if (action === 'claim') {
+    const result = claimInboxProcessing(cwd, {
+      claimedBy: values.join(' ')
+    });
+    const output = result.ok ? console.log : console.error;
+    output(result.message);
+    if (!result.ok) process.exit(1);
+    return;
+  }
+
+  if (action === 'complete') {
+    const result = completeInboxProcessing(cwd, {
+      summary: values.join(' ').trim() || undefined
+    });
+    const output = result.ok ? console.log : console.error;
+    output(result.message);
+    if (!result.ok) process.exit(1);
+    return;
+  }
+
+  console.error('Supported inbox commands: claim, complete');
+  process.exit(1);
+}
+
+if (isDirectRun) {
+  switch (command) {
+    case undefined:
+    case '--help':
+    case '-h':
+      printHelp();
+      break;
+    case 'init':
+      initInstance(subcommand);
+      break;
+    case 'create':
+      if (!subcommand) {
+        console.error('Missing artifact type. Example: mole create roadmap');
+        process.exit(1);
+      }
+      createArtifact(subcommand, rest[0]);
+      break;
+    case 'insight':
+    case 'note':
+    case 'signal':
+      captureInsight([subcommand, ...rest].filter(Boolean));
+      break;
+    case 'synthesise':
+      console.log(`Suggested agent instruction:\n\nSynthesise ${subcommand || 'the requested target'} using the Mole operating model: capture low, distil up, retrieve top-down.`);
+      break;
+    case 'review':
+      console.log(`Suggested agent instruction:\n\nReview ${subcommand || 'the requested target'} and return the highest-value next actions or missing human inputs.`);
+      break;
+    case 'inbox':
+      runInboxCommand(subcommand, rest);
+      break;
+    case 'install':
+      if (subcommand === 'codex') {
+        installCodexPrompts();
+      } else {
+        console.error('Supported install targets: codex');
+        process.exit(1);
+      }
+      break;
+    case 'check-updates':
+      checkUpdates();
+      break;
+    case 'upgrade':
+      console.log('Follow docs/upgrade-and-instance-management.md and docs/template-update-guide.md.');
+      break;
+    case 'doctor':
+      doctor();
+      break;
+    default:
+      console.error(`Unknown command: ${command}`);
+      printHelp();
       process.exit(1);
-    }
-    createArtifact(subcommand, rest[0]);
-    break;
-  case 'insight':
-  case 'note':
-  case 'signal':
-    captureInsight([subcommand, ...rest].filter(Boolean));
-    break;
-  case 'synthesise':
-    console.log(`Suggested agent instruction:\n\nSynthesise ${subcommand || 'the requested target'} using the mole operating model: capture low, distil up, retrieve top-down.`);
-    break;
-  case 'review':
-    console.log(`Suggested agent instruction:\n\nReview ${subcommand || 'the requested target'} and return the highest-value next actions or missing human inputs.`);
-    break;
-  case 'install':
-    if (subcommand === 'codex') {
-      installCodexPrompts();
-    } else {
-      console.error('Supported install targets: codex');
-      process.exit(1);
-    }
-    break;
-  case 'check-updates':
-    console.log('Check the local mole.instance.yaml against upstream VERSION and CHANGELOG.md.');
-    break;
-  case 'upgrade':
-    console.log('Follow docs/upgrade-and-instance-management.md and docs/template-update-guide.md.');
-    break;
-  case 'doctor':
-    doctor();
-    break;
-  default:
-    console.error(`Unknown command: ${command}`);
-    printHelp();
-    process.exit(1);
+  }
 }

@@ -2,12 +2,14 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const PORT = process.env.PORT || 4173;
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === __filename;
 
 const allowedRoots = new Set([
   '0-bootstrap',
@@ -65,16 +67,38 @@ async function listDir(targetPath) {
   return out;
 }
 
-function slugify(input) {
-  return input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48) || 'note';
-}
-
 function todayDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+export function createCaptureRelPath(type, note, options = {}) {
+  const folder = ['quick-notes', 'messages', 'observations'].includes(type) ? type : 'quick-notes';
+  const filename = createCaptureFileName(String(note || '').split('\n')[0], options);
+  return path.join('6-raw', 'inbox', folder, filename);
+}
+
+export function buildUiCaptureContent(body, options = {}) {
+  const date = options.date || todayDate();
+  const source = body.source || 'self';
+  const channel = body.channel || 'chat';
+  const confidence = body.confidence || 'low';
+  const tags = Array.isArray(body.tags) ? body.tags : [];
+  const capturedBy = resolveCapturedBy(body.capturedBy || body.captured_by);
+  const note = (body.note || '').trim();
+
+  return [
+    '---',
+    `date: ${date}`,
+    `source: ${source}`,
+    `captured_by: ${capturedBy}`,
+    `channel: ${channel}`,
+    `topic_tags: [${tags.join(', ')}]`,
+    `confidence: ${confidence}`,
+    '---',
+    '',
+    note,
+    '',
+  ].join('\n');
 }
 
 async function routeApi(req, res, urlObj) {
@@ -115,26 +139,27 @@ async function routeApi(req, res, urlObj) {
     if (!note) return send(res, 400, { error: 'Note is required' });
 
     const date = todayDate();
-    const folder = ['quick-notes', 'messages', 'observations'].includes(type) ? type : 'quick-notes';
-    const filename = `${date}-${slugify(note.split('\n')[0])}.md`;
-    const relPath = path.join('6-raw', 'inbox', folder, filename);
+    const relPath = createCaptureRelPath(type, note);
     const { resolved } = safeRepoPath(relPath);
 
-    const frontmatter = [
-      '---',
-      `date: ${date}`,
-      `source: ${source}`,
-      `channel: ${channel}`,
-      `topic_tags: [${tags.join(', ')}]`,
-      `confidence: ${confidence}`,
-      '---',
-      '',
+    const frontmatter = buildUiCaptureContent({
+      source,
+      channel,
+      confidence,
+      tags,
       note,
-      '',
-    ].join('\n');
+      capturedBy: body.capturedBy || body.captured_by
+    }, { date });
 
     await fs.mkdir(path.dirname(resolved), { recursive: true });
-    await fs.writeFile(resolved, frontmatter, 'utf8');
+    try {
+      await fs.writeFile(resolved, frontmatter, { encoding: 'utf8', flag: 'wx' });
+    } catch (err) {
+      if (err.code === 'EEXIST') {
+        return send(res, 409, { error: 'Capture already exists; retry to generate a new filename.' });
+      }
+      throw err;
+    }
 
     return send(res, 200, { ok: true, path: relPath });
   }
@@ -164,6 +189,8 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`Context Cascade UI running on http://localhost:${PORT}`);
-});
+if (isDirectRun) {
+  server.listen(PORT, () => {
+    console.log(`Context Cascade UI running on http://localhost:${PORT}`);
+  });
+}

@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-13",
+  "categories": [
+    {
+      "id": "instance-lifecycle",
+      "title": "Working Instance Lifecycle",
+      "status": "complete",
+      "summary": "Make generated Mole instances easier to validate, compare with source, and upgrade conservatively.",
+      "priority_notes": "This aligns with the current product goal of making working instances credible beyond initial scaffolding.",
+      "chunks": [
+        {
+          "id": "instance-metadata-and-doctor",
+          "title": "Instance metadata and doctor checks",
+          "status": "complete",
+          "tasks": []
+        },
+        {
+          "id": "upgrade-report",
+          "title": "Upgrade report",
+          "status": "complete",
+          "tasks": []
+        }
+      ]
+    },
+    {
+      "id": "command-surface",
+      "title": "Command Surface",
+      "status": "complete",
+      "summary": "Make outcome-oriented Mole commands more consistent and useful without overbuilding the backend.",
+      "priority_notes": "This supports adoption, but follows the instance lifecycle work.",
+      "chunks": [
+        {
+          "id": "command-output-polish",
+          "title": "Command output polish",
+          "status": "complete",
+          "tasks": []
+        }
+      ]
+    },
+    {
+      "id": "team-collaboration",
+      "title": "Team Collaboration",
+      "status": "complete",
+      "summary": "Make Mole safer and clearer for teams using shared cloud-synced folders as a local file system.",
+      "priority_notes": "This is the next active category because previous PRD categories are complete and team shared-folder use is a likely adoption path.",
+      "chunks": [
+        {
+          "id": "shared-folder-operating-model",
+          "title": "Shared folder operating model",
+          "status": "complete",
+          "tasks": []
+        },
+        {
+          "id": "team-safe-capture",
+          "title": "Team-safe capture",
+          "status": "complete",
+          "tasks": []
+        },
+        {
+          "id": "inbox-processing-coordination",
+          "title": "Inbox processing coordination",
+          "status": "complete",
+          "tasks": []
+        }
+      ]
+    }
+  ]
+}

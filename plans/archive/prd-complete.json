@@ -1,0 +1,173 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-13",
+  "completed": [
+    {
+      "id": "instance-lifecycle-001",
+      "title": "Expand doctor checks to report source and instance version state",
+      "category": "instance-lifecycle",
+      "chunk": "instance-metadata-and-doctor",
+      "description": "Update the CLI doctor command so it reads VERSION and mole.instance.yaml when available, reports both values, and clearly flags missing instance metadata.",
+      "acceptance_criteria": [
+        "A test covers doctor output when mole.instance.yaml exists.",
+        "A test covers doctor output when mole.instance.yaml is missing.",
+        "doctor output includes source version, instance version, and a clear warning for missing metadata.",
+        "Existing doctor scaffold checks still run."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test"
+      ]
+    },
+    {
+      "id": "instance-lifecycle-002",
+      "title": "Add machine-readable upgrade ownership classes",
+      "category": "instance-lifecycle",
+      "chunk": "instance-metadata-and-doctor",
+      "description": "Introduce a conservative manifest that classifies repository paths as safe-copy, merge-carefully, or never-overwrite for future upgrade reporting.",
+      "acceptance_criteria": [
+        "The manifest is documented in a readable format.",
+        "Core directories are assigned ownership classes.",
+        "User-owned evidence, context, and raw folders are marked never-overwrite.",
+        "A test or validation step confirms the manifest can be parsed."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test"
+      ]
+    },
+    {
+      "id": "instance-lifecycle-003",
+      "title": "Implement check-updates report scaffold",
+      "category": "instance-lifecycle",
+      "chunk": "upgrade-report",
+      "description": "Replace the placeholder check-updates output with a report that compares source version to instance metadata and lists likely next actions.",
+      "acceptance_criteria": [
+        "A test covers check-updates output for an up-to-date instance.",
+        "A test covers check-updates output when source is newer than the instance.",
+        "The report lists safe additions separately from manual review items.",
+        "The command remains read-only."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test"
+      ]
+    },
+    {
+      "id": "command-surface-001",
+      "title": "Normalize CLI naming and help output",
+      "category": "command-surface",
+      "chunk": "command-output-polish",
+      "description": "Review the CLI help and command output for consistent Mole naming, command examples, and next-step language.",
+      "acceptance_criteria": [
+        "Help output consistently uses Mole and `mole` terminology.",
+        "Examples match documented command names.",
+        "A test or snapshot protects the main help output.",
+        "No command behaviour changes beyond text output."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test",
+        "node cli/mole.mjs --help"
+      ]
+    },
+    {
+      "id": "team-collaboration-001",
+      "title": "Document the shared-folder team operating model",
+      "category": "team-collaboration",
+      "chunk": "shared-folder-operating-model",
+      "description": "Document how teams can run Mole from a shared cloud-synced folder, including capture versus processing responsibilities and safe provider guidance.",
+      "acceptance_criteria": [
+        "README explains capture versus processing for teams.",
+        "README states that only one maintainer or agent should process and promote inbox material at a time.",
+        "README describes suggested permissions for raw capture, promoted context, and framework files.",
+        "README explains that cloud version history is useful for recovery but not a replacement for careful processing.",
+        "README mentions SharePoint/OneDrive, Google Drive for desktop, Dropbox desktop app, and Box Drive as plausible local-file-system options."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "jq empty plans/prd.json",
+        "npm test"
+      ]
+    },
+    {
+      "id": "team-collaboration-002",
+      "title": "Make CLI and UI capture filenames collision-resistant",
+      "category": "team-collaboration",
+      "chunk": "team-safe-capture",
+      "description": "Update CLI and local UI capture so repeated or similar notes from multiple contributors do not silently overwrite each other in shared synced folders.",
+      "acceptance_criteria": [
+        "CLI capture filenames include a UTC timestamp and unique suffix.",
+        "UI capture filenames include a UTC timestamp and unique suffix.",
+        "Tests cover repeated similar notes without filename collision.",
+        "Capture refuses or avoids silent overwrite when a target path already exists."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test"
+      ]
+    },
+    {
+      "id": "team-collaboration-003",
+      "title": "Add capture attribution metadata",
+      "category": "team-collaboration",
+      "chunk": "team-safe-capture",
+      "description": "Add contributor attribution fields to raw capture frontmatter so shared inbox material can be traced back to the person or source that supplied it.",
+      "acceptance_criteria": [
+        "CLI capture frontmatter includes captured-by or equivalent contributor metadata.",
+        "UI capture frontmatter includes captured-by or equivalent contributor metadata.",
+        "Default attribution behaviour is documented for local use.",
+        "Tests cover emitted capture attribution metadata."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test"
+      ]
+    },
+    {
+      "id": "team-collaboration-004",
+      "title": "Add inbox processing states",
+      "category": "team-collaboration",
+      "chunk": "inbox-processing-coordination",
+      "description": "Define and document inbox states so team captures can move through new, processing, processed, and archive phases without losing raw inputs.",
+      "acceptance_criteria": [
+        "Docs define new, processing, processed, and archive inbox states.",
+        "Agent guidance says not to delete raw inputs before a retrieval receipt exists.",
+        "Docs explain how substantive artefacts and weak signals move through the states.",
+        "Existing capture paths remain compatible or receive a documented migration path."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test",
+        "rg -n \"new/|processing/|processed/|archive/|legacy direct inbox|Never delete raw inputs|retrieval receipt|shared inbox\" docs/signal-inbox-workflow.md 0-bootstrap/agents.md README.md"
+      ]
+    },
+    {
+      "id": "team-collaboration-005",
+      "title": "Add a simple inbox processing lock and receipt",
+      "category": "team-collaboration",
+      "chunk": "inbox-processing-coordination",
+      "description": "Add a lightweight lock and receipt convention so only one processor claims shared inbox synthesis work at a time.",
+      "acceptance_criteria": [
+        "One processing run can claim the inbox before synthesis begins.",
+        "Concurrent processing attempts fail safely with a clear message.",
+        "Stale-lock handling is documented.",
+        "A processing receipt records who claimed the run, when it started, what was processed, and when it completed."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test",
+        "node cli/mole.mjs --help"
+      ]
+    }
+  ]
+}

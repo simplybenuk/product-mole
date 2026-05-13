@@ -1,154 +1,12 @@
 # Mole
 
-A portable, local-first context operating system for product managers and AI assistants.
+Mole is a portable, local-first context operating system for product managers and AI assistants.
 
-Use it to:
-- capture messy product inputs quickly,
-- synthesise them into structured context,
-- generate better PRDs, decisions, and prioritisation outputs.
+It gives teams a file-based place to capture messy product inputs, distil them into structured evidence, and generate better roadmaps, specs, decisions, and prioritisation work from shared context. Mole is designed to work locally, in synced folders such as SharePoint/OneDrive or Google Drive, or alongside a codebase in Git.
 
 ---
 
-## What this is
-
-Mole is a **file-based context system** with progressive layers.
-
-- Top layers are small, high-signal, and cheap to read.
-- Lower layers are richer, more detailed, and more expensive.
-- Agents should descend only as needed.
-
-This repository is designed to work:
-- on a local machine,
-- in synced folders (OneDrive/Google Drive),
-- or in Git alongside your codebase.
-
-It is intended to be reusable across teams and companies, which means it needs an honest upgrade story — not just a one-time template copy.
-
----
-
-## Quick start (first 10 minutes)
-
-1. Open `0-bootstrap/repo-purpose.md` and customise for your company/product.
-2. Fill `2-summaries/strategy-summary.md`, `user-summary.md`, and `product-summary.md` with lightweight starter context.
-3. Start capturing raw inputs in `6-raw/inbox/`:
-   - `quick-notes/`
-   - `messages/`
-   - `observations/`
-4. Ask your agent:
-   - "Synthesize inbox into evidence clusters"
-   - "Process this PDF and promote the useful context"
-   - "What inputs do you need from me today?"
-5. Review and promote outputs into `5-evidence/` then `4-context/`.
-6. Start thinking in outcome commands such as:
-   - `mole insight "Users trust CSV export more than dashboard totals"`
-   - `mole create roadmap`
-   - `mole create spec`
-   - `mole synthesise inbox`
-
----
-
-## How to use day-to-day
-
-### 1) Capture fast
-Drop notes, snippets, comments, and source artefacts into `6-raw/inbox/`.
-
-### 2) Distil with agent help
-Batch synthesize weak signals into `5-evidence/signal-clusters/` and promote substantive artefacts into `5-evidence/source-docs/`.
-
-### 3) Promote meaningful context
-Move validated patterns into focused docs in `4-context/`.
-
-### 4) Keep navigation fresh
-Update `3-indexes/` and refresh `2-summaries/` when context changes.
-
-### 5) Run a human input loop
-Use `governance/input-queue.md` for missing human-only inputs.
-
----
-
-## Repo map (at a glance)
-
-- `0-bootstrap/` — mandatory starter guidance
-- `1-routing/` — task routing + retrieval rules
-- `2-summaries/` — compressed domain summaries
-- `3-indexes/` — pointers to deeper context
-- `4-context/` — focused context modules and decisions
-- `5-evidence/` — clustered evidence, source docs, and validation material
-- `6-raw/` — inbox + raw captures/archive
-- `templates/` — reusable templates
-- `governance/` — quality, queue, receipts
-- `docs/` — operating guides and UX specs
-
----
-
-## Core operating principle
-
-**Capture low → Distil up → Retrieve top-down → Create**
-
-- Humans capture quickly.
-- Agents structure/synthesise.
-- Humans review and steer.
-- Outputs are generated from the layered context, not from a blank prompt.
-
----
-
-## Where to read next
-
-- Human/agent collaboration:
-  - [docs/human-in-the-loop-operating-model.md](docs/human-in-the-loop-operating-model.md)
-- Daily input ritual:
-  - [docs/monday-input-brief-workflow.md](docs/monday-input-brief-workflow.md)
-- Scratchpad signal workflow:
-  - [docs/signal-inbox-workflow.md](docs/signal-inbox-workflow.md)
-- Local UI concept:
-  - [docs/ui-spec-v1.md](docs/ui-spec-v1.md)
-- Migration prompt pack (existing tools → cascade):
-  - [docs/migration-prompt-pack.md](docs/migration-prompt-pack.md)
-- Upgrade and instance management:
-  - [docs/upgrade-and-instance-management.md](docs/upgrade-and-instance-management.md)
-- Template update guide (upstream → local instance):
-  - [docs/template-update-guide.md](docs/template-update-guide.md)
-- CLI and command surface:
-  - [docs/cli-and-command-surface.md](docs/cli-and-command-surface.md)
-- Open-source product direction:
-  - [docs/vision/open-source-product-direction.md](docs/vision/open-source-product-direction.md)
-- Critique mode:
-  - [docs/critique-mode.md](docs/critique-mode.md)
-- Full architecture/design doc (previous README):
-  - [docs/architecture-and-design.md](docs/architecture-and-design.md)
-- Release discipline:
-  - [docs/release-checklist.md](docs/release-checklist.md)
-- CLI prototype:
-  - [cli/README.md](cli/README.md)
-
----
-
-## Command surface (early prototype)
-
-A lightweight CLI prototype now exists to establish the product vocabulary:
-
-```bash
-node cli/mole.mjs --help
-node cli/mole.mjs init my-mole
-node cli/mole.mjs install codex
-node cli/mole.mjs doctor
-node cli/mole.mjs insight "Users trust CSV export more than dashboard totals"
-node cli/mole.mjs create roadmap
-node cli/mole.mjs create spec
-```
-
-Current purpose:
-- make the tool feel operable,
-- create draft artifacts from templates,
-- establish the long-term `mole` command surface.
-
-See:
-- [cli/README.md](cli/README.md)
-- [docs/cli-and-command-surface.md](docs/cli-and-command-surface.md)
-
-## Install and test locally
-
-If you want to try the current prototype quickly:
+## Installation
 
 ### 1. Clone the repo
 
@@ -157,34 +15,27 @@ git clone git@github.com:simplybenuk/product-mole.git
 cd product-mole
 ```
 
-### 2. Create a test instance
+### 2. Create a Mole instance
 
 ```bash
 node cli/mole.mjs init my-mole
 cd my-mole
 ```
 
-This creates a starter instance with:
-- bootstrap files
-- starter summaries
-- input queue
-- raw inbox folders
-- core templates
+This creates a starter instance with bootstrap guidance, summaries, indexes, an inbox, governance files, and templates.
 
 ### 3. Install Codex prompt commands
 
-From the **source/tool repo root** (`product-mole`), not from inside the generated instance:
+From the source/tool repo root, install the Codex slash-command prompts:
 
 ```bash
 cd ..
 node cli/mole.mjs install codex
 ```
 
-This installs prompt files into:
-- `~/.codex/prompts/`
-- or `$CODEX_HOME/prompts/` if `CODEX_HOME` is set
+This copies prompt files into `~/.codex/prompts/`, or `$CODEX_HOME/prompts/` when `CODEX_HOME` is set. The installer prints the Mole mascot and lists the installed slash commands.
 
-### 4. Test the CLI directly
+### 4. Try the CLI
 
 ```bash
 cd my-mole
@@ -193,9 +44,10 @@ node ../cli/mole.mjs insight "Users trust CSV export more than dashboard totals"
 node ../cli/mole.mjs create roadmap
 ```
 
-### 5. Test in Codex chat
+### 5. Try the Codex commands
 
-Once the prompts are installed, try commands like:
+After installing prompts, use these in Codex chat:
+
 - `/mole-insight Users trust CSV export more than dashboard totals`
 - `/mole-synthesise-inbox`
 - `/mole-create-roadmap`
@@ -203,7 +55,44 @@ Once the prompts are installed, try commands like:
 - `/mole-review-input-queue`
 - `/mole-critique`
 
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `node cli/mole.mjs --help` | Prints CLI usage, examples, and supported commands. |
+| `node cli/mole.mjs init [target-dir]` | Creates a new Mole working instance from the repo scaffold. |
+| `node cli/mole.mjs install codex` | Installs Mole Codex prompt commands into `~/.codex/prompts/` or `$CODEX_HOME/prompts/`. |
+| `node cli/mole.mjs doctor` | Checks source and instance versions plus required instance folders. |
+| `node cli/mole.mjs check-updates` | Reports whether the source repo is newer than the current instance. |
+| `node cli/mole.mjs insight "<text>"` | Captures a raw insight into `6-raw/inbox/quick-notes/`. |
+| `node cli/mole.mjs create roadmap [output-path]` | Creates a roadmap draft from the roadmap template. |
+| `node cli/mole.mjs create spec [output-path]` | Creates a product spec draft from the spec template. |
+| `node cli/mole.mjs create decision-brief [output-path]` | Creates a decision brief draft. |
+| `node cli/mole.mjs create strategy-memo [output-path]` | Creates a strategy memo draft. |
+| `node cli/mole.mjs create prioritisation-draft [output-path]` | Creates a prioritisation draft. |
+| `node cli/mole.mjs synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
+| `node cli/mole.mjs review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
+| `node cli/mole.mjs inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
+| `node cli/mole.mjs inbox complete [summary]` | Writes a processing receipt and releases the inbox lock. |
+| `node cli/mole.mjs upgrade` | Points to the conservative manual upgrade docs. |
+
+## How Mole Works
+
+Mole is a file-based context system with progressive layers.
+
+- Top layers are small, high-signal, and cheap to read.
+- Lower layers are richer, more detailed, and more expensive.
+- Agents should descend only as needed.
+
+The core operating principle is:
+
+**Capture low -> Distil up -> Retrieve top-down -> Create**
+
+Humans capture quickly, agents structure and synthesise, humans review and steer, and outputs are generated from layered context instead of from a blank prompt.
+
 ## Updating after new changes
+
+Mole separates the source/tool repo from generated working instances.
 
 When the source/tool repo changes, do this from the `product-mole` folder:
 
@@ -217,6 +106,25 @@ Why both?
 - `install codex` refreshes the prompt files in Codex so new commands and updates actually appear
 
 Then reopen or retry in Codex if needed.
+
+To inspect a working instance before upgrading it, run these from inside the instance folder using the source repo CLI:
+
+```bash
+node ../cli/mole.mjs doctor
+node ../cli/mole.mjs check-updates
+```
+
+`doctor` reports:
+- source version from `VERSION`
+- instance version from `mole.instance.yaml`
+- core folder checks
+- a warning when instance metadata is missing
+
+`check-updates` is currently a read-only report. It compares source and instance versions, then lists:
+- safe additions from `upgrade-ownership.json`
+- manual review paths that may contain local customisation
+
+`mole upgrade` is still intentionally conservative. For now it points to the upgrade docs rather than applying automatic file changes.
 
 ## What currently works
 
@@ -247,6 +155,8 @@ What exists now:
 - file-native mole structure
 - CLI scaffold
 - Codex prompt installation
+- source/instance version checks
+- read-only update report using `upgrade-ownership.json`
 - raw insight capture
 - draft artifact generation
 - docs for upgrade/adoption/command UX

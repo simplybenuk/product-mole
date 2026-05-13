@@ -1,0 +1,82 @@
+2026-05-13
+
+- Created initial Ralph planning scaffold for this repository.
+- Current PRD focus is the Mole working-instance lifecycle and command surface.
+- No Ralph PRD tasks have been completed yet.
+- Existing source context used for the initial scaffold:
+  - README.md
+  - docs/vision/open-source-product-direction.md
+  - plans/working-instance-upgrade-plan.md
+  - docs/cli-and-command-surface.md
+  - cli/README.md
+
+2026-05-13
+
+- Completed `instance-lifecycle-001`: expanded `mole doctor` to report source version, instance version, and missing metadata warnings.
+- Added a Node test harness for the CLI and covered doctor output with and without `mole.instance.yaml`.
+- Validation: `npm test` from `cli/` passed.
+- Next priority: `instance-metadata-and-doctor` / `instance-lifecycle-002`.
+
+2026-05-13
+
+- Completed `instance-lifecycle-002`: added `upgrade-ownership.json` with safe-copy, merge-carefully, and never-overwrite classes.
+- Documented the ownership classes in `docs/upgrade-ownership.md`.
+- Added a validation test that parses the manifest and confirms `4-context/`, `5-evidence/`, and `6-raw/` are never-overwrite paths.
+- Validation: `npm test` from `cli/` passed.
+- Next priority: `upgrade-report` / `instance-lifecycle-003`.
+
+2026-05-13
+
+- Completed `instance-lifecycle-003`: replaced the placeholder `check-updates` command with a read-only report.
+- The report compares source and instance versions, reports update status, and lists safe-copy paths separately from merge-carefully paths.
+- Added tests for up-to-date and source-newer instance states.
+- Validation: `npm test` from `cli/` passed.
+- Category `instance-lifecycle` is complete. Next priority category: `command-surface`.
+
+2026-05-13
+
+- Completed `command-surface-001`: normalized CLI help and visible command text around `Mole` for the product name and `mole` for command examples.
+- Added a help-output test covering the main command examples and preventing `Cascade` regressions in help text.
+- Validation: `npm test` from `cli/` passed; `node cli/mole.mjs --help` produced the expected help text.
+- Category `command-surface` is complete. No incomplete PRD tasks remain.
+
+2026-05-13
+
+- Completed `team-collaboration-001`: documented the shared synced-folder team operating model in the README.
+- Added provider guidance for SharePoint/OneDrive, Google Drive for desktop, Dropbox desktop app, and Box Drive.
+- Clarified that many contributors can capture raw inputs while one maintainer or agent should process and promote inbox material at a time.
+- Validation: `jq empty plans/prd.json` passed; `npm test` from `cli/` passed.
+- Next priority: `team-safe-capture` / `team-collaboration-002`.
+
+2026-05-13
+
+- Completed `team-collaboration-002`: added a shared capture filename helper used by both CLI capture and the local UI capture endpoint.
+- Capture filenames now include a UTC timestamp, slug, and unique suffix, and writes refuse silent overwrite.
+- Added tests for repeated similar notes and UI capture paths.
+- Validation: `npm test` from `cli/` passed.
+- Next priority: `team-safe-capture` / `team-collaboration-003`.
+
+2026-05-13
+
+- Completed `team-collaboration-003`: added `captured_by` metadata to CLI and UI raw captures.
+- CLI capture defaults attribution from `MOLE_CAPTURED_BY`, then local username, then `unknown`; the UI now exposes a `Captured by` field.
+- Added tests for attribution defaults and emitted frontmatter.
+- Validation: `npm test` from `cli/` passed.
+- Next priority: `inbox-processing-coordination` / `team-collaboration-004`.
+
+2026-05-13
+
+- Completed `team-collaboration-004`: documented shared inbox states for `new`, `processing`, `processed`, and `archive`.
+- Updated agent guidance to treat legacy direct inbox folders as unprocessed input and never delete raw inputs before a retrieval receipt exists.
+- Documented weak signal and substantive artefact movement through the state flow while preserving compatibility with current capture paths.
+- Validation: `npm test` from `cli/` passed; state documentation checks passed with `rg`.
+- Next priority: `inbox-processing-coordination` / `team-collaboration-005`.
+
+2026-05-13
+
+- Completed `team-collaboration-005`: added a file-based inbox processing lock and JSON receipt convention.
+- Added `mole inbox claim [processor]` and `mole inbox complete [summary]` commands.
+- Documented stale-lock handling and updated shared inbox agent guidance.
+- Added tests for one active claim, safe concurrent-claim failure, receipt creation, and lock release.
+- Validation: `npm test` from `cli/` passed; `node cli/mole.mjs --help` lists the inbox commands.
+- Category `team-collaboration` is complete. No incomplete PRD tasks remain.
