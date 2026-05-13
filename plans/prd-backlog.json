@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-13",
+  "items": [
+    {
+      "id": "backlog-hosted-service",
+      "title": "Hosted Mole service",
+      "reason": "Out of scope while the product is proving the local-first file workflow.",
+      "source": "plans/1-vision.md"
+    },
+    {
+      "id": "backlog-automatic-overwrite-upgrade",
+      "title": "Fully automatic instance upgrade that overwrites local files",
+      "reason": "Contradicts the current conservative upgrade strategy and risks destroying user-owned context.",
+      "source": "plans/working-instance-upgrade-plan.md"
+    }
+  ]
+}
+

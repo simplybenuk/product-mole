@@ -1,0 +1,3 @@
+display_name: Deliver
+short_description: Execute one planned PRD task with validation, planning updates, and a commit.
+default_prompt: Run deliver for the next priority task.
