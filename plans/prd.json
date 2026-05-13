@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-13",
+  "categories": [
+    {
+      "id": "instance-lifecycle",
+      "title": "Working Instance Lifecycle",
+      "status": "active",
+      "summary": "Make generated Mole instances easier to validate, compare with source, and upgrade conservatively.",
+      "priority_notes": "This aligns with the current product goal of making working instances credible beyond initial scaffolding.",
+      "chunks": [
+        {
+          "id": "instance-metadata-and-doctor",
+          "title": "Instance metadata and doctor checks",
+          "status": "active",
+          "tasks": [
+            {
+              "id": "instance-lifecycle-002",
+              "title": "Add machine-readable upgrade ownership classes",
+              "description": "Introduce a conservative manifest that classifies repository paths as safe-copy, merge-carefully, or never-overwrite for future upgrade reporting.",
+              "acceptance_criteria": [
+                "The manifest is documented in a readable format.",
+                "Core directories are assigned ownership classes.",
+                "User-owned evidence, context, and raw folders are marked never-overwrite.",
+                "A test or validation step confirms the manifest can be parsed."
+              ],
+              "passes": false
+            }
+          ]
+        },
+        {
+          "id": "upgrade-report",
+          "title": "Upgrade report",
+          "status": "planned",
+          "tasks": [
+            {
+              "id": "instance-lifecycle-003",
+              "title": "Implement check-updates report scaffold",
+              "description": "Replace the placeholder check-updates output with a report that compares source version to instance metadata and lists likely next actions.",
+              "acceptance_criteria": [
+                "A test covers check-updates output for an up-to-date instance.",
+                "A test covers check-updates output when source is newer than the instance.",
+                "The report lists safe additions separately from manual review items.",
+                "The command remains read-only."
+              ],
+              "passes": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "command-surface",
+      "title": "Command Surface",
+      "status": "planned",
+      "summary": "Make outcome-oriented Mole commands more consistent and useful without overbuilding the backend.",
+      "priority_notes": "This supports adoption, but follows the instance lifecycle work.",
+      "chunks": [
+        {
+          "id": "command-output-polish",
+          "title": "Command output polish",
+          "status": "planned",
+          "tasks": [
+            {
+              "id": "command-surface-001",
+              "title": "Normalize CLI naming and help output",
+              "description": "Review the CLI help and command output for consistent Mole naming, command examples, and next-step language.",
+              "acceptance_criteria": [
+                "Help output consistently uses Mole and `mole` terminology.",
+                "Examples match documented command names.",
+                "A test or snapshot protects the main help output.",
+                "No command behaviour changes beyond text output."
+              ],
+              "passes": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

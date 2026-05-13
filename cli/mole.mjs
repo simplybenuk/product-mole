@@ -10,6 +10,7 @@ const [command, subcommand, ...rest] = args;
 const cwd = process.cwd();
 const thisFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(thisFile), '..');
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === thisFile;
 
 function printHelp() {
   console.log(`mole v0.2.0
@@ -86,6 +87,34 @@ function todayUtc() {
 
 function nowUtc() {
   return new Date().toISOString();
+}
+
+function readTextIfExists(file) {
+  try {
+    return fs.readFileSync(file, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+function readSimpleYamlField(file, field) {
+  const content = readTextIfExists(file);
+  if (!content) return null;
+
+  const pattern = new RegExp(`^${field}:\\s*(.+?)\\s*$`, 'm');
+  const match = content.match(pattern);
+  if (!match) return null;
+
+  return match[1].replace(/^['"]|['"]$/g, '');
+}
+
+function getSourceVersion() {
+  return readTextIfExists(path.join(repoRoot, 'VERSION'))?.trim() || 'unknown';
+}
+
+function getInstanceVersion(instanceRoot = cwd) {
+  const instanceFile = path.join(instanceRoot, 'mole.instance.yaml');
+  return readSimpleYamlField(instanceFile, 'cascade_version') || readSimpleYamlField(instanceFile, 'mole_version');
 }
 
 function getCodexHome() {
@@ -201,67 +230,88 @@ function outputDraftInstruction(kind) {
   console.log(instruction);
 }
 
-function doctor() {
+export function getDoctorOutput(instanceRoot = cwd) {
   const checks = [
-    ['mole.instance.yaml', exists(path.join(cwd, 'mole.instance.yaml'))],
-    ['0-bootstrap/', exists(path.join(cwd, '0-bootstrap'))],
-    ['1-routing/', exists(path.join(cwd, '1-routing'))],
-    ['2-summaries/', exists(path.join(cwd, '2-summaries'))],
-    ['6-raw/inbox/', exists(path.join(cwd, '6-raw', 'inbox'))]
+    ['mole.instance.yaml', exists(path.join(instanceRoot, 'mole.instance.yaml'))],
+    ['0-bootstrap/', exists(path.join(instanceRoot, '0-bootstrap'))],
+    ['1-routing/', exists(path.join(instanceRoot, '1-routing'))],
+    ['2-summaries/', exists(path.join(instanceRoot, '2-summaries'))],
+    ['6-raw/inbox/', exists(path.join(instanceRoot, '6-raw', 'inbox'))]
   ];
 
-  console.log('Cascade doctor\n');
-  for (const [label, ok] of checks) {
-    console.log(`${ok ? '✓' : '✗'} ${label}`);
+  const instanceVersion = getInstanceVersion(instanceRoot);
+  const lines = [
+    'Mole doctor',
+    '',
+    `source version   ${getSourceVersion()}`,
+    `instance version ${instanceVersion || 'not found'}`
+  ];
+
+  if (!instanceVersion) {
+    lines.push('warning          missing instance metadata');
   }
+
+  lines.push('');
+
+  for (const [label, ok] of checks) {
+    lines.push(`${ok ? '✓' : '✗'} ${label}`);
+  }
+
+  return `${lines.join('\n')}\n`;
 }
 
-switch (command) {
-  case undefined:
-  case '--help':
-  case '-h':
-    printHelp();
-    break;
-  case 'init':
-    initInstance(subcommand);
-    break;
-  case 'create':
-    if (!subcommand) {
-      console.error('Missing artifact type. Example: mole create roadmap');
+function doctor() {
+  process.stdout.write(getDoctorOutput());
+}
+
+if (isDirectRun) {
+  switch (command) {
+    case undefined:
+    case '--help':
+    case '-h':
+      printHelp();
+      break;
+    case 'init':
+      initInstance(subcommand);
+      break;
+    case 'create':
+      if (!subcommand) {
+        console.error('Missing artifact type. Example: mole create roadmap');
+        process.exit(1);
+      }
+      createArtifact(subcommand, rest[0]);
+      break;
+    case 'insight':
+    case 'note':
+    case 'signal':
+      captureInsight([subcommand, ...rest].filter(Boolean));
+      break;
+    case 'synthesise':
+      console.log(`Suggested agent instruction:\n\nSynthesise ${subcommand || 'the requested target'} using the mole operating model: capture low, distil up, retrieve top-down.`);
+      break;
+    case 'review':
+      console.log(`Suggested agent instruction:\n\nReview ${subcommand || 'the requested target'} and return the highest-value next actions or missing human inputs.`);
+      break;
+    case 'install':
+      if (subcommand === 'codex') {
+        installCodexPrompts();
+      } else {
+        console.error('Supported install targets: codex');
+        process.exit(1);
+      }
+      break;
+    case 'check-updates':
+      console.log('Check the local mole.instance.yaml against upstream VERSION and CHANGELOG.md.');
+      break;
+    case 'upgrade':
+      console.log('Follow docs/upgrade-and-instance-management.md and docs/template-update-guide.md.');
+      break;
+    case 'doctor':
+      doctor();
+      break;
+    default:
+      console.error(`Unknown command: ${command}`);
+      printHelp();
       process.exit(1);
-    }
-    createArtifact(subcommand, rest[0]);
-    break;
-  case 'insight':
-  case 'note':
-  case 'signal':
-    captureInsight([subcommand, ...rest].filter(Boolean));
-    break;
-  case 'synthesise':
-    console.log(`Suggested agent instruction:\n\nSynthesise ${subcommand || 'the requested target'} using the mole operating model: capture low, distil up, retrieve top-down.`);
-    break;
-  case 'review':
-    console.log(`Suggested agent instruction:\n\nReview ${subcommand || 'the requested target'} and return the highest-value next actions or missing human inputs.`);
-    break;
-  case 'install':
-    if (subcommand === 'codex') {
-      installCodexPrompts();
-    } else {
-      console.error('Supported install targets: codex');
-      process.exit(1);
-    }
-    break;
-  case 'check-updates':
-    console.log('Check the local mole.instance.yaml against upstream VERSION and CHANGELOG.md.');
-    break;
-  case 'upgrade':
-    console.log('Follow docs/upgrade-and-instance-management.md and docs/template-update-guide.md.');
-    break;
-  case 'doctor':
-    doctor();
-    break;
-  default:
-    console.error(`Unknown command: ${command}`);
-    printHelp();
-    process.exit(1);
+  }
 }

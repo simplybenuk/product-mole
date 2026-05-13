@@ -1,0 +1,18 @@
+2026-05-13
+
+- Created initial Ralph planning scaffold for this repository.
+- Current PRD focus is the Mole working-instance lifecycle and command surface.
+- No Ralph PRD tasks have been completed yet.
+- Existing source context used for the initial scaffold:
+  - README.md
+  - docs/vision/open-source-product-direction.md
+  - plans/working-instance-upgrade-plan.md
+  - docs/cli-and-command-surface.md
+  - cli/README.md
+
+2026-05-13
+
+- Completed `instance-lifecycle-001`: expanded `mole doctor` to report source version, instance version, and missing metadata warnings.
+- Added a Node test harness for the CLI and covered doctor output with and without `mole.instance.yaml`.
+- Validation: `npm test` from `cli/` passed.
+- Next priority: `instance-metadata-and-doctor` / `instance-lifecycle-002`.
