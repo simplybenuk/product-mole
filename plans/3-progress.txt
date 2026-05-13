@@ -71,3 +71,12 @@
 - Documented weak signal and substantive artefact movement through the state flow while preserving compatibility with current capture paths.
 - Validation: `npm test` from `cli/` passed; state documentation checks passed with `rg`.
 - Next priority: `inbox-processing-coordination` / `team-collaboration-005`.
+
+2026-05-13
+
+- Completed `team-collaboration-005`: added a file-based inbox processing lock and JSON receipt convention.
+- Added `mole inbox claim [processor]` and `mole inbox complete [summary]` commands.
+- Documented stale-lock handling and updated shared inbox agent guidance.
+- Added tests for one active claim, safe concurrent-claim failure, receipt creation, and lock release.
+- Validation: `npm test` from `cli/` passed; `node cli/mole.mjs --help` lists the inbox commands.
+- Category `team-collaboration` is complete. No incomplete PRD tasks remain.

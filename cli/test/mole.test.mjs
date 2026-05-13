@@ -5,6 +5,7 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../../lib/capture.mjs';
+import { claimInboxProcessing, completeInboxProcessing } from '../../lib/inbox-processing.mjs';
 import { buildInsightCaptureContent, getCheckUpdatesOutput, getDoctorOutput, getHelpOutput } from '../mole.mjs';
 import { buildUiCaptureContent, createCaptureRelPath } from '../../ui/server.mjs';
 
@@ -177,5 +178,56 @@ describe('capture attribution metadata', () => {
 
     assert.match(content, /captured_by: Ada/);
     assert.match(content, /source: customer/);
+  });
+});
+
+describe('inbox processing lock and receipt', () => {
+  it('allows one claim and fails concurrent claims safely', () => {
+    withTempInstance((dir) => {
+      const first = claimInboxProcessing(dir, {
+        claimedBy: 'Ada',
+        now: new Date('2026-05-13T10:11:12.345Z'),
+        lockId: 'lock-1'
+      });
+      const second = claimInboxProcessing(dir, {
+        claimedBy: 'Grace',
+        now: new Date('2026-05-13T10:12:12.345Z'),
+        lockId: 'lock-2'
+      });
+
+      assert.equal(first.ok, true);
+      assert.equal(first.lock.claimed_by, 'Ada');
+      assert.equal(second.ok, false);
+      assert.match(second.message, /already claimed by Ada/);
+    });
+  });
+
+  it('writes a processing receipt and releases the lock on completion', () => {
+    withTempInstance((dir) => {
+      claimInboxProcessing(dir, {
+        claimedBy: 'Ada',
+        now: new Date('2026-05-13T10:11:12.345Z'),
+        lockId: 'lock-1'
+      });
+
+      const result = completeInboxProcessing(dir, {
+        completedAt: new Date('2026-05-13T10:21:12.345Z'),
+        processed: ['6-raw/inbox/new/quick-notes/a.md'],
+        summary: 'Promoted one note.'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.receipt.lock_id, 'lock-1');
+      assert.equal(result.receipt.claimed_by, 'Ada');
+      assert.deepEqual(result.receipt.processed, ['6-raw/inbox/new/quick-notes/a.md']);
+      assert.match(result.receiptPath, /governance\/run-receipts\/inbox-processing\//);
+
+      const next = claimInboxProcessing(dir, {
+        claimedBy: 'Grace',
+        now: new Date('2026-05-13T10:22:12.345Z'),
+        lockId: 'lock-2'
+      });
+      assert.equal(next.ok, true);
+    });
   });
 });

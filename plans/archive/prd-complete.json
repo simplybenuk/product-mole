@@ -149,6 +149,25 @@
         "npm test",
         "rg -n \"new/|processing/|processed/|archive/|legacy direct inbox|Never delete raw inputs|retrieval receipt|shared inbox\" docs/signal-inbox-workflow.md 0-bootstrap/agents.md README.md"
       ]
+    },
+    {
+      "id": "team-collaboration-005",
+      "title": "Add a simple inbox processing lock and receipt",
+      "category": "team-collaboration",
+      "chunk": "inbox-processing-coordination",
+      "description": "Add a lightweight lock and receipt convention so only one processor claims shared inbox synthesis work at a time.",
+      "acceptance_criteria": [
+        "One processing run can claim the inbox before synthesis begins.",
+        "Concurrent processing attempts fail safely with a clear message.",
+        "Stale-lock handling is documented.",
+        "A processing receipt records who claimed the run, when it started, what was processed, and when it completed."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test",
+        "node cli/mole.mjs --help"
+      ]
     }
   ]
 }

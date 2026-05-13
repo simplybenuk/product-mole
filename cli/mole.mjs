@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
+import { claimInboxProcessing, completeInboxProcessing } from '../lib/inbox-processing.mjs';
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
@@ -22,6 +23,8 @@ Usage:
   mole insight <text>
   mole synthesise <target>
   mole review <target>
+  mole inbox claim [processor]
+  mole inbox complete [summary]
   mole install codex
   mole check-updates
   mole upgrade
@@ -35,6 +38,8 @@ Examples:
   mole install codex
   mole synthesise inbox
   mole review input-queue
+  mole inbox claim
+  mole inbox complete "Promoted this week's research notes"
 `;
 }
 
@@ -345,6 +350,31 @@ function checkUpdates() {
   process.stdout.write(getCheckUpdatesOutput());
 }
 
+function runInboxCommand(action, values = []) {
+  if (action === 'claim') {
+    const result = claimInboxProcessing(cwd, {
+      claimedBy: values.join(' ')
+    });
+    const output = result.ok ? console.log : console.error;
+    output(result.message);
+    if (!result.ok) process.exit(1);
+    return;
+  }
+
+  if (action === 'complete') {
+    const result = completeInboxProcessing(cwd, {
+      summary: values.join(' ').trim() || undefined
+    });
+    const output = result.ok ? console.log : console.error;
+    output(result.message);
+    if (!result.ok) process.exit(1);
+    return;
+  }
+
+  console.error('Supported inbox commands: claim, complete');
+  process.exit(1);
+}
+
 if (isDirectRun) {
   switch (command) {
     case undefined:
@@ -372,6 +402,9 @@ if (isDirectRun) {
       break;
     case 'review':
       console.log(`Suggested agent instruction:\n\nReview ${subcommand || 'the requested target'} and return the highest-value next actions or missing human inputs.`);
+      break;
+    case 'inbox':
+      runInboxCommand(subcommand, rest);
       break;
     case 'install':
       if (subcommand === 'codex') {

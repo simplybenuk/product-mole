@@ -116,7 +116,7 @@ Recommended permissions:
 
 Raw captures include `captured_by` metadata. For CLI capture this defaults to `MOLE_CAPTURED_BY`, then the local OS username, then `unknown`; set `MOLE_CAPTURED_BY` on shared machines or service accounts. The local UI includes a `Captured by` field for explicit attribution.
 
-Current limitation: team capture is usable as a shared folder workflow, but Mole still needs a processing lock before concurrent processing is robust.
+Current limitation: team coordination is intentionally lightweight. The processing lock is a file-based convention, so offline sync conflicts still need human review using the cloud platform's version history.
 
 ---
 

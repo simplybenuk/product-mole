@@ -159,6 +159,31 @@ Weak signals usually move from `new` to `processing`, then into `processed` afte
 
 Never delete raw inputs from a shared inbox before the promoted output and retrieval receipt exist. If sync conflicts appear, keep both copies and resolve them during the processing pass rather than discarding either contributor's input.
 
+### Processing lock and receipt
+
+Before synthesising a shared inbox, claim the processing lock:
+
+```bash
+mole inbox claim "Your Name"
+```
+
+This creates `governance/inbox-processing.lock.json` with:
+- `lock_id`
+- `claimed_by`
+- `started_at`
+- `stale_after`
+- `inbox`
+
+If a lock already exists, another processor must stop and coordinate with the person named in the lock. Treat the lock as stale only after `stale_after`; when that happens, inspect cloud version history and current `processing/` contents before deleting or replacing the lock.
+
+After the promoted outputs, index/summary updates, and retrieval receipt exist, complete the processing run:
+
+```bash
+mole inbox complete "Promoted weekly research notes"
+```
+
+This writes a JSON receipt under `governance/run-receipts/inbox-processing/` and releases the lock. The receipt records who claimed the run, when it started, when it completed, what was processed, and a short summary.
+
 ---
 
 ## Anti-noise rules
