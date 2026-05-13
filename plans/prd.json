@@ -26,28 +26,15 @@
     {
       "id": "command-surface",
       "title": "Command Surface",
-      "status": "planned",
+      "status": "complete",
       "summary": "Make outcome-oriented Mole commands more consistent and useful without overbuilding the backend.",
       "priority_notes": "This supports adoption, but follows the instance lifecycle work.",
       "chunks": [
         {
           "id": "command-output-polish",
           "title": "Command output polish",
-          "status": "planned",
-          "tasks": [
-            {
-              "id": "command-surface-001",
-              "title": "Normalize CLI naming and help output",
-              "description": "Review the CLI help and command output for consistent Mole naming, command examples, and next-step language.",
-              "acceptance_criteria": [
-                "Help output consistently uses Mole and `mole` terminology.",
-                "Examples match documented command names.",
-                "A test or snapshot protects the main help output.",
-                "No command behaviour changes beyond text output."
-              ],
-              "passes": false
-            }
-          ]
+          "status": "complete",
+          "tasks": []
         }
       ]
     }

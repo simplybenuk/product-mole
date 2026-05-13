@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { getCheckUpdatesOutput, getDoctorOutput } from '../mole.mjs';
+import { getCheckUpdatesOutput, getDoctorOutput, getHelpOutput } from '../mole.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, '..', '..');
@@ -44,6 +44,18 @@ describe('doctor', () => {
       assert.match(output, /instance version\s+not found/);
       assert.match(output, /missing instance metadata/i);
     });
+  });
+});
+
+describe('help', () => {
+  it('uses consistent Mole naming and documented command examples', () => {
+    const output = getHelpOutput();
+
+    assert.match(output, /^Mole CLI v0\.2\.0/m);
+    assert.match(output, /mole create roadmap/);
+    assert.match(output, /mole create spec drafts\/spec\.md/);
+    assert.match(output, /mole check-updates/);
+    assert.doesNotMatch(output, /Cascade/);
   });
 });
 

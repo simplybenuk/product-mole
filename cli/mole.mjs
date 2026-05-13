@@ -12,8 +12,8 @@ const thisFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(thisFile), '..');
 const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === thisFile;
 
-function printHelp() {
-  console.log(`mole v0.2.0
+export function getHelpOutput() {
+  return `Mole CLI v0.2.0
 
 Usage:
   mole init [target-dir]
@@ -34,7 +34,11 @@ Examples:
   mole install codex
   mole synthesise inbox
   mole review input-queue
-`);
+`;
+}
+
+function printHelp() {
+  process.stdout.write(getHelpOutput());
 }
 
 function ensureDir(dir) {
@@ -158,8 +162,8 @@ function initInstance(targetDir) {
     copyFile(path.join(target, 'mole.instance-template.yaml'), path.join(target, 'mole.instance.yaml'));
   }
 
-  console.log(`Initialised mole instance at: ${target}`);
-  console.log('Copied a full working mole scaffold (excluding .git, cli, and node_modules).');
+  console.log(`Initialised Mole instance at: ${target}`);
+  console.log('Copied a full working Mole scaffold (excluding .git, cli, and node_modules).');
   console.log('Next steps:');
   console.log('- customise 0-bootstrap/repo-purpose.md');
   console.log('- fill key summaries in 2-summaries/');
@@ -216,7 +220,7 @@ function captureInsight(textParts) {
   const fileName = `${todayUtc()}-${slugify(text)}.md`;
   const target = path.join(dir, fileName);
 
-  const content = `---\ntitle: Raw Insight\ncapture_type: insight\nsource: mole cli\ncreated_at: ${nowUtc()}\nsummary: ${text}\ntags: []\n---\n\n# Raw Insight\n\n## Insight\n${text}\n\n## Context / why it matters\n\n## Optional follow-up questions\n- \n`;
+  const content = `---\ntitle: Raw Insight\ncapture_type: insight\nsource: mole CLI\ncreated_at: ${nowUtc()}\nsummary: ${text}\ntags: []\n---\n\n# Raw Insight\n\n## Insight\n${text}\n\n## Context / why it matters\n\n## Optional follow-up questions\n- \n`;
 
   fs.writeFileSync(target, content, 'utf8');
   console.log(`Captured insight: ${target}`);
@@ -250,7 +254,7 @@ function outputDraftInstruction(kind) {
     'decision-brief': 'Create a decision brief with recommendation, options, trade-offs, and missing inputs.',
     'prioritisation-draft': 'Create a prioritisation draft with criteria, ranked items, and uncertainties.'
   };
-  const instruction = map[kind] || `Create a ${kind} draft from the mole using progressive retrieval.`;
+  const instruction = map[kind] || `Create a ${kind} draft from Mole using progressive retrieval.`;
   console.log(instruction);
 }
 
@@ -352,7 +356,7 @@ if (isDirectRun) {
       captureInsight([subcommand, ...rest].filter(Boolean));
       break;
     case 'synthesise':
-      console.log(`Suggested agent instruction:\n\nSynthesise ${subcommand || 'the requested target'} using the mole operating model: capture low, distil up, retrieve top-down.`);
+      console.log(`Suggested agent instruction:\n\nSynthesise ${subcommand || 'the requested target'} using the Mole operating model: capture low, distil up, retrieve top-down.`);
       break;
     case 'review':
       console.log(`Suggested agent instruction:\n\nReview ${subcommand || 'the requested target'} and return the highest-value next actions or missing human inputs.`);

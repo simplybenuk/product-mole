@@ -55,6 +55,25 @@
       "validation": [
         "npm test"
       ]
+    },
+    {
+      "id": "command-surface-001",
+      "title": "Normalize CLI naming and help output",
+      "category": "command-surface",
+      "chunk": "command-output-polish",
+      "description": "Review the CLI help and command output for consistent Mole naming, command examples, and next-step language.",
+      "acceptance_criteria": [
+        "Help output consistently uses Mole and `mole` terminology.",
+        "Examples match documented command names.",
+        "A test or snapshot protects the main help output.",
+        "No command behaviour changes beyond text output."
+      ],
+      "passes": true,
+      "completed_at": "2026-05-13",
+      "validation": [
+        "npm test",
+        "node cli/mole.mjs --help"
+      ]
     }
   ]
 }

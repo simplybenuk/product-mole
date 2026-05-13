@@ -32,3 +32,10 @@
 - Added tests for up-to-date and source-newer instance states.
 - Validation: `npm test` from `cli/` passed.
 - Category `instance-lifecycle` is complete. Next priority category: `command-surface`.
+
+2026-05-13
+
+- Completed `command-surface-001`: normalized CLI help and visible command text around `Mole` for the product name and `mole` for command examples.
+- Added a help-output test covering the main command examples and preventing `Cascade` regressions in help text.
+- Validation: `npm test` from `cli/` passed; `node cli/mole.mjs --help` produced the expected help text.
+- Category `command-surface` is complete. No incomplete PRD tasks remain.
