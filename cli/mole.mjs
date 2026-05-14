@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
 import { claimInboxProcessing, completeInboxProcessing } from '../lib/inbox-processing.mjs';
@@ -13,6 +14,7 @@ const cwd = process.cwd();
 const thisFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(thisFile), '..');
 const isDirectRun = process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(thisFile);
+const PACKAGE_SOURCE = 'github:simplybenuk/product-mole#main';
 
 const WORKSPACE_SCAFFOLD_DIRS = Object.freeze([
   '0-bootstrap',
@@ -34,7 +36,7 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
 ]);
 
 export function getHelpOutput() {
-  return `Mole CLI v0.2.0
+  return `Mole CLI v${getSourceVersion()}
 
 Usage:
   mole new <workspace-name>
@@ -406,6 +408,31 @@ function checkUpdates() {
   process.stdout.write(getCheckUpdatesOutput());
 }
 
+export function getUpgradeCommand() {
+  return ['npm', 'install', '-g', PACKAGE_SOURCE];
+}
+
+function upgradeTool() {
+  const command = getUpgradeCommand();
+  console.log(`Updating Mole from ${PACKAGE_SOURCE}...`);
+
+  const result = spawnSync(command[0], command.slice(1), {
+    stdio: 'inherit'
+  });
+
+  if (result.error) {
+    console.error(`Failed to run ${command.join(' ')}: ${result.error.message}`);
+    process.exit(1);
+  }
+
+  if (result.status !== 0) {
+    console.error(`Mole upgrade failed. Run manually: ${command.join(' ')}`);
+    process.exit(result.status || 1);
+  }
+
+  console.log('Mole upgrade complete. Run `mole --help` to confirm the installed version.');
+}
+
 function runInboxCommand(action, values = []) {
   if (action === 'claim') {
     const result = claimInboxProcessing(cwd, {
@@ -475,7 +502,7 @@ if (isDirectRun) {
       checkUpdates();
       break;
     case 'upgrade':
-      console.log('Follow docs/upgrade-and-instance-management.md and docs/template-update-guide.md.');
+      upgradeTool();
       break;
     case 'doctor':
       doctor();

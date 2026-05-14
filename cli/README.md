@@ -51,4 +51,4 @@ This copies prompt files to `~/.codex/prompts/`, or `$CODEX_HOME/prompts/` when 
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
 | `mole inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
 | `mole inbox complete [summary]` | Writes a processing receipt and releases the inbox lock. |
-| `mole upgrade` | Points to the conservative manual upgrade docs. |
+| `mole upgrade` | Updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`. |

@@ -1,6 +1,6 @@
 {
   "name": "product-mole",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A portable, local-first context operating system for product managers and AI assistants.",
   "type": "module",
   "bin": {

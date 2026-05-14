@@ -75,7 +75,7 @@ After installing prompts, use these in Codex chat:
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
 | `mole inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
 | `mole inbox complete [summary]` | Writes a processing receipt and releases the inbox lock. |
-| `mole upgrade` | Points to the conservative manual upgrade docs. |
+| `mole upgrade` | Updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`. |
 
 ## How Mole Works
 
@@ -102,6 +102,8 @@ npm install -g github:simplybenuk/product-mole#main
 mole install codex
 ```
 
+If your installed `mole upgrade` only prints upgrade documentation, you are on an older placeholder build. Run the `npm install -g ...` command once; after `0.2.1`, `mole upgrade` performs that update for you.
+
 Why both?
 - `npm install -g ...` refreshes the CLI, bundled scaffold, docs, and prompt files
 - `mole install codex` refreshes the prompt files in Codex so new commands and updates actually appear
@@ -125,7 +127,7 @@ mole check-updates
 - safe additions from `upgrade-ownership.json`
 - manual review paths that may contain local customisation
 
-`mole upgrade` is still intentionally conservative. For now it points to the upgrade docs rather than applying automatic file changes.
+`mole upgrade` updates the installed Mole CLI and bundled scaffold. It does not rewrite an existing workspace's local product context.
 
 ## What currently works
 

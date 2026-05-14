@@ -12,7 +12,8 @@ import {
   getCheckUpdatesOutput,
   getDoctorOutput,
   getHelpOutput,
-  getInstallBanner
+  getInstallBanner,
+  getUpgradeCommand
 } from '../mole.mjs';
 import { buildUiCaptureContent, createCaptureRelPath } from '../../ui/server.mjs';
 
@@ -40,7 +41,7 @@ describe('doctor', () => {
       const output = getDoctorOutput(dir);
 
       assert.match(output, /Mole doctor/);
-      assert.match(output, /source version\s+0\.2\.0/);
+      assert.match(output, /source version\s+0\.2\.1/);
       assert.match(output, /instance version\s+0\.1\.0/);
       assert.doesNotMatch(output, /missing instance metadata/i);
     });
@@ -50,7 +51,7 @@ describe('doctor', () => {
     withTempInstance((dir) => {
       const output = getDoctorOutput(dir);
 
-      assert.match(output, /source version\s+0\.2\.0/);
+      assert.match(output, /source version\s+0\.2\.1/);
       assert.match(output, /instance version\s+not found/);
       assert.match(output, /missing instance metadata/i);
     });
@@ -61,7 +62,7 @@ describe('help', () => {
   it('uses consistent Mole naming and documented command examples', () => {
     const output = getHelpOutput();
 
-    assert.match(output, /^Mole CLI v0\.2\.0/m);
+    assert.match(output, /^Mole CLI v0\.2\.1/m);
     assert.match(output, /mole new my-mole/);
     assert.match(output, /mole create roadmap/);
     assert.match(output, /mole create spec drafts\/spec\.md/);
@@ -125,6 +126,17 @@ describe('install banner', () => {
   });
 });
 
+describe('upgrade command', () => {
+  it('updates the installed Mole CLI from the GitHub main branch', () => {
+    assert.deepEqual(getUpgradeCommand(), [
+      'npm',
+      'install',
+      '-g',
+      'github:simplybenuk/product-mole#main'
+    ]);
+  });
+});
+
 describe('upgrade ownership manifest', () => {
   it('defines parseable ownership classes for upgrade planning', () => {
     const manifest = JSON.parse(
@@ -146,15 +158,15 @@ describe('check-updates', () => {
     withTempInstance((dir) => {
       fs.writeFileSync(
         path.join(dir, 'mole.instance.yaml'),
-        'instance_name: test-instance\ncascade_version: 0.2.0\n',
+        'instance_name: test-instance\ncascade_version: 0.2.1\n',
         'utf8'
       );
 
       const output = getCheckUpdatesOutput(dir);
 
       assert.match(output, /Mole update check/);
-      assert.match(output, /source version\s+0\.2\.0/);
-      assert.match(output, /instance version\s+0\.2\.0/);
+      assert.match(output, /source version\s+0\.2\.1/);
+      assert.match(output, /instance version\s+0\.2\.1/);
       assert.match(output, /status\s+up to date/);
       assert.match(output, /read-only report/i);
     });

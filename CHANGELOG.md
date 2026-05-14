@@ -4,6 +4,18 @@ All notable changes to Mole should be documented here.
 
 The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
+## [0.2.1] - 2026-05-14
+
+### Added
+- `mole upgrade` now updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`.
+- `mole new` / `mole init` now creates workspaces from an explicit scaffold allowlist.
+- Added tracked `4-context/` and `5-evidence/` workspace placeholders.
+
+### Changed
+- New workspaces are clean Mole instances instead of copies of the Product Mole source repository.
+- `mole doctor` now checks the full `0-bootstrap/` through `6-raw/` workspace structure.
+- Workspace metadata no longer references source-only paths such as `docs/`, `templates/`, or `cli/`.
+
 ## [0.2.0] - 2026-03-29
 
 ### Added
