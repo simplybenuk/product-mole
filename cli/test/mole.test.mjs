@@ -13,7 +13,8 @@ import {
   getDoctorOutput,
   getHelpOutput,
   getInstallBanner,
-  getUpgradeCommand
+  getUpgradeCommand,
+  installMoleSkills
 } from '../mole.mjs';
 import { buildUiCaptureContent, createCaptureRelPath } from '../../ui/server.mjs';
 
@@ -41,7 +42,7 @@ describe('doctor', () => {
       const output = getDoctorOutput(dir);
 
       assert.match(output, /Mole doctor/);
-      assert.match(output, /source version\s+0\.2\.1/);
+      assert.match(output, /source version\s+0\.2\.2/);
       assert.match(output, /instance version\s+0\.1\.0/);
       assert.doesNotMatch(output, /missing instance metadata/i);
     });
@@ -51,7 +52,7 @@ describe('doctor', () => {
     withTempInstance((dir) => {
       const output = getDoctorOutput(dir);
 
-      assert.match(output, /source version\s+0\.2\.1/);
+      assert.match(output, /source version\s+0\.2\.2/);
       assert.match(output, /instance version\s+not found/);
       assert.match(output, /missing instance metadata/i);
     });
@@ -62,12 +63,15 @@ describe('help', () => {
   it('uses consistent Mole naming and documented command examples', () => {
     const output = getHelpOutput();
 
-    assert.match(output, /^Mole CLI v0\.2\.1/m);
+    assert.match(output, /^Mole CLI v0\.2\.2/m);
     assert.match(output, /mole new my-mole/);
     assert.match(output, /mole create roadmap/);
     assert.match(output, /mole create spec drafts\/spec\.md/);
+    assert.match(output, /mole install skills\s+Install Mole agent skills into ~\/\.agents\/skills/);
+    assert.match(output, /More help:\n  https:\/\/github\.com\/simplybenuk\/product-mole#readme/);
     assert.match(output, /mole check-updates/);
     assert.doesNotMatch(output, /Cascade/);
+    assert.doesNotMatch(output, /mole install codex/);
   });
 });
 
@@ -126,6 +130,39 @@ describe('install banner', () => {
   });
 });
 
+describe('skills installer', () => {
+  it('installs packaged Mole skills into the configured agents home', () => {
+    withTempInstance((dir) => {
+      const previousAgentsHome = process.env.AGENTS_HOME;
+      process.env.AGENTS_HOME = path.join(dir, '.agents');
+
+      try {
+        installMoleSkills({ silent: true });
+      } finally {
+        if (previousAgentsHome === undefined) {
+          delete process.env.AGENTS_HOME;
+        } else {
+          process.env.AGENTS_HOME = previousAgentsHome;
+        }
+      }
+
+      for (const skill of [
+        'mole-create-roadmap',
+        'mole-create-spec',
+        'mole-critique',
+        'mole-insight',
+        'mole-review-input-queue',
+        'mole-synthesise-inbox'
+      ]) {
+        assert.ok(
+          fs.existsSync(path.join(dir, '.agents', 'skills', skill, 'SKILL.md')),
+          `${skill} should be installed as a skill`
+        );
+      }
+    });
+  });
+});
+
 describe('upgrade command', () => {
   it('updates the installed Mole CLI from the GitHub main branch', () => {
     assert.deepEqual(getUpgradeCommand(), [
@@ -158,15 +195,15 @@ describe('check-updates', () => {
     withTempInstance((dir) => {
       fs.writeFileSync(
         path.join(dir, 'mole.instance.yaml'),
-        'instance_name: test-instance\ncascade_version: 0.2.1\n',
+        'instance_name: test-instance\ncascade_version: 0.2.2\n',
         'utf8'
       );
 
       const output = getCheckUpdatesOutput(dir);
 
       assert.match(output, /Mole update check/);
-      assert.match(output, /source version\s+0\.2\.1/);
-      assert.match(output, /instance version\s+0\.2\.1/);
+      assert.match(output, /source version\s+0\.2\.2/);
+      assert.match(output, /instance version\s+0\.2\.2/);
       assert.match(output, /status\s+up to date/);
       assert.match(output, /read-only report/i);
     });

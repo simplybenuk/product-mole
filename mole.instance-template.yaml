@@ -2,9 +2,9 @@
 # It gives the workspace a version anchor and records local customisations.
 
 instance_name: your-project-name
-cascade_version: 0.2.1
+cascade_version: 0.2.2
 profile: default
-created_from: v0.2.1
+created_from: v0.2.2
 last_upgraded_from: null
 last_upgraded_to: null
 

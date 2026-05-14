@@ -1,8 +1,8 @@
 # Mole CLI
 
-The Mole CLI is the lightweight command surface for creating Mole instances, capturing raw product inputs, generating draft artifacts, and installing Codex slash-command prompts.
+The Mole CLI is the lightweight command surface for creating Mole instances, capturing raw product inputs, generating draft artifacts, and installing agent skills.
 
-It is intentionally thin: the CLI manages files and prompts, while synthesis and review are still agent-guided.
+It is intentionally thin: the CLI manages files and skills, while synthesis and review are still agent-guided.
 
 Generated workspaces are clean Mole instances, not copies of the Product Mole source repository. The scaffold is copied from an explicit allowlist of workspace paths.
 
@@ -23,13 +23,13 @@ node cli/mole.mjs --help
 node cli/mole.mjs init my-mole
 ```
 
-To install Codex prompt commands:
+To install Mole agent skills:
 
 ```bash
-mole install codex
+mole install skills
 ```
 
-This copies prompt files to `~/.codex/prompts/`, or `$CODEX_HOME/prompts/` when `CODEX_HOME` is set. The installer prints the Mole mascot and lists the installed commands.
+This copies skill directories to `~/.agents/skills/`, or `$AGENTS_HOME/skills/` when `AGENTS_HOME` is set. The installer prints the Mole mascot and lists the installed skills.
 
 ## Commands
 
@@ -38,7 +38,7 @@ This copies prompt files to `~/.codex/prompts/`, or `$CODEX_HOME/prompts/` when 
 | `mole --help` | Prints CLI usage, examples, and supported commands. |
 | `mole new <workspace-name>` | Creates a new Mole workspace from the bundled scaffold. |
 | `mole init [target-dir]` | Backwards-compatible alias for `mole new`. |
-| `mole install codex` | Installs Mole Codex prompt commands. |
+| `mole install skills` | Installs Mole agent skills. |
 | `mole doctor` | Checks source and instance versions plus required instance folders. |
 | `mole check-updates` | Reports whether the installed Mole source is newer than the current workspace. |
 | `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/quick-notes/`. |

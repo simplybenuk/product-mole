@@ -2,13 +2,13 @@
 
 ## Problem
 
-Mole now has a usable source/tool repo, CLI scaffold, and Codex prompt installation flow.
+Mole now has a usable source/tool repo, CLI scaffold, and agent skill installation flow.
 
 However, once a working mole instance has been created, there is not yet a clean or reliable way to upgrade that instance when the source/tool repo evolves.
 
 Current reality:
 - source/tool repo can be updated with `git pull`
-- Codex prompts can be refreshed with `node cli/mole.mjs install codex`
+- agent skills can be refreshed with `node cli/mole.mjs install skills`
 - working instances do **not** yet have a robust upgrade path
 
 This is now one of the main product gaps.
@@ -50,7 +50,7 @@ Instead:
 ### 1. Source/tool repo
 Owns:
 - CLI
-- prompt installers
+- skill installers
 - docs
 - templates
 - framework structure

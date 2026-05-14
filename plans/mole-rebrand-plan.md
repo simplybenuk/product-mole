@@ -9,7 +9,7 @@ Rebrand the project from **Mole / cascade** to **Mole / mole** while keeping the
 ### Public-facing identity
 - Product name: **Mole**
 - Command surface: **`mole`**
-- Chat/Codex prompts: **`/mole-*`**
+- Agent skills: **`mole-*`**
 
 ### Technical/repo reality
 - GitHub repository URL may remain unchanged temporarily
@@ -40,7 +40,7 @@ Mole is a better fit because it implies:
 - README and docs
 - CLI help text
 - command vocabulary in docs/examples
-- Codex prompt names and prompt contents
+- agent skill names and skill contents
 - visible UI strings
 - plan/docs references where the public identity should now be Mole
 
@@ -63,7 +63,7 @@ Switch user-facing references from:
 - Update help/output language toward Mole
 - Optionally add a `mole.mjs` launcher later if needed
 
-### 3. Rename Codex prompts
+### 3. Rename agent skills
 Move from:
 - `cascade-*`
 
@@ -91,10 +91,10 @@ Make it clear that:
 - [ ] Update slash command examples from `/mole-*` to `/mole-*`
 - [ ] Update CLI help text to present Mole as the command surface
 
-### Prompt files
-- [ ] Rename Codex prompt files to `mole-*`
-- [ ] Update prompt bodies to refer to Mole / Mole instance where appropriate
-- [ ] Make installer copy the new prompt names
+### Skill files
+- [ ] Rename agent skill files to `mole-*`
+- [ ] Update skill bodies to refer to Mole / Mole instance where appropriate
+- [ ] Make installer copy the new skill names
 
 ### UI / visible strings
 - [ ] Update visible UI strings from Mole / mole to Mole / mole where appropriate

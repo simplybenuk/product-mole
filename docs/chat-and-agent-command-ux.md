@@ -14,7 +14,8 @@ A better UX is to let users speak in outcome-oriented commands and lightweight c
 
 Use the same core product vocabulary across:
 - CLI
-- chat slash-command wrappers
+- agent skills
+- chat command wrappers
 - coding agents
 - local UI
 
@@ -73,7 +74,7 @@ The command surface becomes the human-friendly interface.
 
 ---
 
-## Recommended initial slash-command vocabulary
+## Recommended initial command vocabulary
 
 ### Capture
 - `/mole insight ...`
@@ -102,16 +103,12 @@ The command surface becomes the human-friendly interface.
 CLI + docs define the command vocabulary.
 
 ### Phase 2
-Agent prompt packs and wrappers translate chat commands into file writes or retrieval/generation actions.
+Agent skills and wrappers translate user requests into file writes or retrieval/generation actions.
 
-For Codex specifically, this can be delivered by installing markdown prompt files into:
-- `~/.codex/prompts/`
-- or `$CODEX_HOME/prompts/`
-
-That is the same broad integration pattern used by OpenSpec.
+The CLI-delivered baseline is `mole install skills`, which installs Mole skill directories into `~/.agents/skills/` or `$AGENTS_HOME/skills/`.
 
 ### Phase 3
-Native integrations in tools like Codex or other assistants can map `/mole ...` into command handlers or agent workflows.
+Native integrations in coding assistants can map `/mole ...` or natural-language Mole requests into command handlers or agent workflows.
 
 ---
 

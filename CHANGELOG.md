@@ -4,6 +4,18 @@ All notable changes to Mole should be documented here.
 
 The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
+## [0.2.2] - 2026-05-14
+
+### Added
+- `mole --help` now includes command descriptions, artifact types, examples, and a README link.
+- `mole install skills` installs Mole agent skills into `~/.agents/skills` or `$AGENTS_HOME/skills`.
+- Packaged Mole workflows as agent skills under `cli/skills/`.
+
+### Changed
+- Replaced bundled Codex prompt files with agent skill directories.
+- `mole install codex` is now a deprecated compatibility alias for `mole install skills`.
+- README and CLI docs now describe the agent skill installation flow.
+
 ## [0.2.1] - 2026-05-14
 
 ### Added

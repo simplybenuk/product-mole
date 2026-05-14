@@ -15,6 +15,7 @@ const thisFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(thisFile), '..');
 const isDirectRun = process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(thisFile);
 const PACKAGE_SOURCE = 'github:simplybenuk/product-mole#main';
+const HELP_URL = 'https://github.com/simplybenuk/product-mole#readme';
 
 const WORKSPACE_SCAFFOLD_DIRS = Object.freeze([
   '0-bootstrap',
@@ -39,18 +40,21 @@ export function getHelpOutput() {
   return `Mole CLI v${getSourceVersion()}
 
 Usage:
-  mole new <workspace-name>
-  mole init [target-dir]
-  mole create <artifact> [output-path]
-  mole insight <text>
-  mole synthesise <target>
-  mole review <target>
-  mole inbox claim [processor]
-  mole inbox complete [summary]
-  mole install codex
-  mole check-updates
-  mole upgrade
-  mole doctor
+  mole new <workspace-name>            Create a clean Mole workspace scaffold.
+  mole init [target-dir]               Alias for "mole new" for older docs/scripts.
+  mole create <artifact> [output-path] Create a draft artifact from a Mole template.
+  mole insight <text>                  Capture a raw product insight into the inbox.
+  mole synthesise <target>             Print an agent instruction for synthesis work.
+  mole review <target>                 Print an agent instruction for review work.
+  mole inbox claim [processor]         Claim inbox processing with a file lock.
+  mole inbox complete [summary]        Write a receipt and release the inbox lock.
+  mole install skills                  Install Mole agent skills into ~/.agents/skills.
+  mole check-updates                   Compare this CLI version with the workspace.
+  mole upgrade                         Update the globally installed Mole CLI.
+  mole doctor                          Check workspace metadata and required folders.
+
+Artifacts:
+  roadmap, spec, decision-brief, strategy-memo, prioritisation-draft
 
 Examples:
   mole new my-mole
@@ -58,11 +62,14 @@ Examples:
   mole create roadmap
   mole create spec drafts/spec.md
   mole insight "Users trust CSV export more than dashboard totals"
-  mole install codex
+  mole install skills
   mole synthesise inbox
   mole review input-queue
   mole inbox claim
   mole inbox complete "Promoted this week's research notes"
+
+More help:
+  ${HELP_URL}
 `;
 }
 
@@ -209,9 +216,9 @@ function getUpgradeOwnership() {
   }
 }
 
-function getCodexHome() {
-  const envHome = process.env.CODEX_HOME?.trim();
-  return path.resolve(envHome ? envHome : path.join(os.homedir(), '.codex'));
+function getAgentsHome() {
+  const envHome = process.env.AGENTS_HOME?.trim();
+  return path.resolve(envHome ? envHome : path.join(os.homedir(), '.agents'));
 }
 
 function initInstance(targetDir) {
@@ -225,7 +232,7 @@ function initInstance(targetDir) {
   console.log('- fill key summaries in 2-summaries/');
   console.log('- start capturing in 6-raw/inbox/ or with `mole insight "..."`');
   console.log('- open the new workspace folder in your editor');
-  console.log('- optionally install Codex prompts with `mole install codex`');
+  console.log('- optionally install agent skills with `mole install skills`');
 }
 
 function createArtifact(kind, outputPath) {
@@ -260,7 +267,7 @@ function createArtifact(kind, outputPath) {
 
   copyFile(source, target);
   console.log(`Created ${kind} draft: ${target}`);
-  console.log('\nSuggested next prompt for an agent:\n');
+  console.log('\nSuggested next agent instruction:\n');
   outputDraftInstruction(kind);
 }
 
@@ -299,23 +306,33 @@ export function buildInsightCaptureContent(text, options = {}) {
   return `---\ntitle: Raw Insight\ncapture_type: insight\nsource: mole CLI\ncaptured_by: ${capturedBy}\ncreated_at: ${createdAt}\nsummary: ${text}\ntags: []\n---\n\n# Raw Insight\n\n## Insight\n${text}\n\n## Context / why it matters\n\n## Optional follow-up questions\n- \n`;
 }
 
-function installCodexPrompts() {
-  const codexHome = getCodexHome();
-  const promptsDir = path.join(codexHome, 'prompts');
-  const sourceDir = path.join(repoRoot, 'cli', 'prompts', 'codex');
-  ensureDir(promptsDir);
+export function installMoleSkills(options = {}) {
+  const { silent = false } = options;
+  const agentsHome = getAgentsHome();
+  const skillsDir = path.join(agentsHome, 'skills');
+  const sourceDir = path.join(repoRoot, 'cli', 'skills');
+  ensureDir(skillsDir);
 
-  const files = fs.readdirSync(sourceDir).filter(name => name.endsWith('.md'));
-  for (const file of files) {
-    copyFile(path.join(sourceDir, file), path.join(promptsDir, file));
+  const skills = fs
+    .readdirSync(sourceDir, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && exists(path.join(sourceDir, entry.name, 'SKILL.md')))
+    .map(entry => entry.name)
+    .sort();
+
+  for (const skill of skills) {
+    copyDirRecursive(path.join(sourceDir, skill), path.join(skillsDir, skill));
   }
 
-  console.log(getInstallBanner());
-  console.log(`Installed ${files.length} Codex prompt commands to: ${promptsDir}`);
-  console.log('Available commands should now include:');
-  for (const file of files) {
-    console.log(`- /${file.replace(/\.md$/, '')}`);
+  if (!silent) {
+    console.log(getInstallBanner());
+    console.log(`Installed ${skills.length} Mole agent skills to: ${skillsDir}`);
+    console.log('Available skills should now include:');
+    for (const skill of skills) {
+      console.log(`- ${skill}`);
+    }
   }
+
+  return { skillsDir, skills };
 }
 
 function outputDraftInstruction(kind) {
@@ -491,10 +508,13 @@ if (isDirectRun) {
       runInboxCommand(subcommand, rest);
       break;
     case 'install':
-      if (subcommand === 'codex') {
-        installCodexPrompts();
+      if (subcommand === 'skills') {
+        installMoleSkills();
+      } else if (subcommand === 'codex') {
+        console.warn('`mole install codex` is deprecated. Installing agent skills instead. Use `mole install skills` next time.');
+        installMoleSkills();
       } else {
-        console.error('Supported install targets: codex');
+        console.error('Supported install targets: skills');
         process.exit(1);
       }
       break;

@@ -26,15 +26,15 @@ cd my-mole
 
 This creates a clean workspace scaffold with bootstrap guidance, routing rules, summaries, indexes, context/evidence folders, an inbox, and lightweight governance files. You do not need to clone the Mole repository to create or use a workspace.
 
-### 3. Install Codex prompt commands
+### 3. Install agent skills
 
-Install the optional Codex slash-command prompts:
+Install the optional Mole agent skills:
 
 ```bash
-mole install codex
+mole install skills
 ```
 
-This copies prompt files into `~/.codex/prompts/`, or `$CODEX_HOME/prompts/` when `CODEX_HOME` is set. The installer prints the Mole mascot and lists the installed slash commands.
+This copies skill directories into `~/.agents/skills/`, or `$AGENTS_HOME/skills/` when `AGENTS_HOME` is set. The installer prints the Mole mascot and lists the installed skills.
 
 ### 4. Try the CLI
 
@@ -44,16 +44,16 @@ mole insight "Users trust CSV export more than dashboard totals"
 mole create roadmap
 ```
 
-### 5. Try the Codex commands
+### 5. Try the skills
 
-After installing prompts, use these in Codex chat:
+After installing skills, ask your agent for Mole-specific work such as:
 
-- `/mole-insight Users trust CSV export more than dashboard totals`
-- `/mole-synthesise-inbox`
-- `/mole-create-roadmap`
-- `/mole-create-spec`
-- `/mole-review-input-queue`
-- `/mole-critique`
+- Capture this Mole insight: users trust CSV export more than dashboard totals.
+- Synthesise the Mole inbox.
+- Create a Mole roadmap.
+- Create a Mole product spec.
+- Review the Mole input queue.
+- Critique this idea using the current Mole context.
 
 ## Commands
 
@@ -62,7 +62,7 @@ After installing prompts, use these in Codex chat:
 | `mole --help` | Prints CLI usage, examples, and supported commands. |
 | `mole new <workspace-name>` | Creates a new Mole workspace from the bundled scaffold. |
 | `mole init [target-dir]` | Backwards-compatible alias for `mole new`. |
-| `mole install codex` | Installs Mole Codex prompt commands into `~/.codex/prompts/` or `$CODEX_HOME/prompts/`. |
+| `mole install skills` | Installs Mole agent skills into `~/.agents/skills/` or `$AGENTS_HOME/skills/`. |
 | `mole doctor` | Checks source and instance versions plus required instance folders. |
 | `mole check-updates` | Reports whether the installed Mole source is newer than the current workspace. |
 | `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/quick-notes/`. |
@@ -99,16 +99,16 @@ When the source/tool changes, update the global install:
 
 ```bash
 npm install -g github:simplybenuk/product-mole#main
-mole install codex
+mole install skills
 ```
 
 If your installed `mole upgrade` only prints upgrade documentation, you are on an older placeholder build. Run the `npm install -g ...` command once; after `0.2.1`, `mole upgrade` performs that update for you.
 
 Why both?
-- `npm install -g ...` refreshes the CLI, bundled scaffold, docs, and prompt files
-- `mole install codex` refreshes the prompt files in Codex so new commands and updates actually appear
+- `npm install -g ...` refreshes the CLI, bundled scaffold, docs, and skill files
+- `mole install skills` refreshes the agent skills so new workflows and updates actually appear
 
-Then reopen or retry in Codex if needed.
+Then restart or refresh your agent session if needed.
 
 To inspect a working instance before upgrading it, run these from inside the workspace folder:
 
@@ -140,7 +140,7 @@ That remains a first-class workflow.
 ### Command capture flow
 You can also capture through commands:
 - `mole insight "..."`
-- `/mole-insight ...` in Codex after prompt install
+- `mole-insight` skill after running `mole install skills`
 
 ### Creation flow
 You can create draft artifacts such as:
@@ -157,7 +157,7 @@ This is early but usable.
 What exists now:
 - file-native mole structure
 - CLI scaffold
-- Codex prompt installation
+- agent skill installation
 - source/instance version checks
 - read-only update report using `upgrade-ownership.json`
 - raw insight capture
