@@ -8,6 +8,15 @@ It gives teams a file-based place to capture messy product inputs, distil them i
 
 ## Installation
 
+### Install from GitHub
+
+```bash
+npm install -g github:simplybenuk/product-mole#main
+mole --help
+```
+
+This installs the `mole` command globally from the `main` branch.
+
 ### 1. Clone the repo
 
 ```bash
@@ -39,9 +48,9 @@ This copies prompt files into `~/.codex/prompts/`, or `$CODEX_HOME/prompts/` whe
 
 ```bash
 cd my-mole
-node ../cli/mole.mjs doctor
-node ../cli/mole.mjs insight "Users trust CSV export more than dashboard totals"
-node ../cli/mole.mjs create roadmap
+mole doctor
+mole insight "Users trust CSV export more than dashboard totals"
+mole create roadmap
 ```
 
 ### 5. Try the Codex commands

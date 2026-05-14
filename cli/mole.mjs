@@ -12,7 +12,7 @@ const [command, subcommand, ...rest] = args;
 const cwd = process.cwd();
 const thisFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(thisFile), '..');
-const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === thisFile;
+const isDirectRun = process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(thisFile);
 
 export function getHelpOutput() {
   return `Mole CLI v0.2.0
@@ -177,7 +177,7 @@ function initInstance(targetDir) {
   ensureDir(target);
 
   copyDirRecursive(repoRoot, target, {
-    excludeNames: new Set(['.git', 'cli', 'node_modules'])
+    excludeNames: new Set(['.git', 'cli', 'node_modules', 'package.json', 'package-lock.json'])
   });
 
   if (exists(path.join(target, 'mole.instance-template.yaml'))) {
@@ -185,7 +185,7 @@ function initInstance(targetDir) {
   }
 
   console.log(`Initialised Mole instance at: ${target}`);
-  console.log('Copied a full working Mole scaffold (excluding .git, cli, and node_modules).');
+  console.log('Copied a full working Mole scaffold (excluding source package files).');
   console.log('Next steps:');
   console.log('- customise 0-bootstrap/repo-purpose.md');
   console.log('- fill key summaries in 2-summaries/');

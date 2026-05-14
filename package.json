@@ -1,0 +1,36 @@
+{
+  "name": "product-mole",
+  "version": "0.2.0",
+  "description": "A portable, local-first context operating system for product managers and AI assistants.",
+  "type": "module",
+  "bin": {
+    "mole": "./cli/mole.mjs"
+  },
+  "files": [
+    ".agents",
+    "0-bootstrap",
+    "1-routing",
+    "2-summaries",
+    "3-indexes",
+    "6-raw",
+    "agents.md",
+    "cli",
+    "docs",
+    "examples",
+    "governance",
+    "lib",
+    "plans",
+    "spec",
+    "templates",
+    "ui",
+    "CHANGELOG.md",
+    "README.md",
+    "VERSION",
+    "mole.instance-template.yaml",
+    "upgrade-ownership.json"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}

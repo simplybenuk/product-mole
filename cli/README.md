@@ -13,6 +13,13 @@ node cli/mole.mjs --help
 node cli/mole.mjs init my-mole
 ```
 
+## Install from GitHub
+
+```bash
+npm install -g github:simplybenuk/product-mole#main
+mole --help
+```
+
 To install Codex prompt commands:
 
 ```bash
