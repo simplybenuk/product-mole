@@ -12,6 +12,8 @@
     "1-routing",
     "2-summaries",
     "3-indexes",
+    "4-context",
+    "5-evidence",
     "6-raw",
     "agents.md",
     "cli",

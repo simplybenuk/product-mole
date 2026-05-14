@@ -14,6 +14,25 @@ const thisFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(thisFile), '..');
 const isDirectRun = process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(thisFile);
 
+const WORKSPACE_SCAFFOLD_DIRS = Object.freeze([
+  '0-bootstrap',
+  '1-routing',
+  '2-summaries',
+  '3-indexes',
+  '4-context',
+  '5-evidence',
+  '6-raw'
+]);
+
+const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
+  ['agents.md', 'agents.md'],
+  ['governance/change-log.md', 'governance/change-log.md'],
+  ['governance/input-queue.md', 'governance/input-queue.md'],
+  ['governance/quality-checklist.md', 'governance/quality-checklist.md'],
+  ['governance/run-receipts/README.md', 'governance/run-receipts/README.md'],
+  ['mole.instance-template.yaml', 'mole.instance.yaml']
+]);
+
 export function getHelpOutput() {
   return `Mole CLI v0.2.0
 
@@ -93,6 +112,25 @@ function copyDirRecursive(from, to, options = {}) {
     } else if (entry.isFile()) {
       copyFile(sourcePath, targetPath);
     }
+  }
+}
+
+export function createWorkspaceScaffold(target) {
+  ensureDir(target);
+
+  for (const dir of WORKSPACE_SCAFFOLD_DIRS) {
+    const sourcePath = path.join(repoRoot, dir);
+    const targetPath = path.join(target, dir);
+
+    if (exists(sourcePath)) {
+      copyDirRecursive(sourcePath, targetPath);
+    } else {
+      ensureDir(targetPath);
+    }
+  }
+
+  for (const [source, destination] of WORKSPACE_SCAFFOLD_FILES) {
+    copyFile(path.join(repoRoot, source), path.join(target, destination));
   }
 }
 
@@ -176,18 +214,10 @@ function getCodexHome() {
 
 function initInstance(targetDir) {
   const target = path.resolve(cwd, targetDir || 'mole-instance');
-  ensureDir(target);
+  createWorkspaceScaffold(target);
 
-  copyDirRecursive(repoRoot, target, {
-    excludeNames: new Set(['.git', 'cli', 'node_modules', 'package.json', 'package-lock.json'])
-  });
-
-  if (exists(path.join(target, 'mole.instance-template.yaml'))) {
-    copyFile(path.join(target, 'mole.instance-template.yaml'), path.join(target, 'mole.instance.yaml'));
-  }
-
-  console.log(`Initialised Mole instance at: ${target}`);
-  console.log('Copied a full working Mole scaffold (excluding source package files).');
+  console.log(`Initialised Mole workspace at: ${target}`);
+  console.log('Created a clean Mole workspace scaffold.');
   console.log('Next steps:');
   console.log('- customise 0-bootstrap/repo-purpose.md');
   console.log('- fill key summaries in 2-summaries/');
@@ -304,6 +334,9 @@ export function getDoctorOutput(instanceRoot = cwd) {
     ['0-bootstrap/', exists(path.join(instanceRoot, '0-bootstrap'))],
     ['1-routing/', exists(path.join(instanceRoot, '1-routing'))],
     ['2-summaries/', exists(path.join(instanceRoot, '2-summaries'))],
+    ['3-indexes/', exists(path.join(instanceRoot, '3-indexes'))],
+    ['4-context/', exists(path.join(instanceRoot, '4-context'))],
+    ['5-evidence/', exists(path.join(instanceRoot, '5-evidence'))],
     ['6-raw/inbox/', exists(path.join(instanceRoot, '6-raw', 'inbox'))]
   ];
 

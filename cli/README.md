@@ -4,6 +4,8 @@ The Mole CLI is the lightweight command surface for creating Mole instances, cap
 
 It is intentionally thin: the CLI manages files and prompts, while synthesis and review are still agent-guided.
 
+Generated workspaces are clean Mole instances, not copies of the Product Mole source repository. The scaffold is copied from an explicit allowlist of workspace paths.
+
 ## Installation
 
 Install from GitHub:

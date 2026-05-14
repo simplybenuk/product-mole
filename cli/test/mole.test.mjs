@@ -8,6 +8,7 @@ import { createCaptureFileName, resolveCapturedBy } from '../../lib/capture.mjs'
 import { claimInboxProcessing, completeInboxProcessing } from '../../lib/inbox-processing.mjs';
 import {
   buildInsightCaptureContent,
+  createWorkspaceScaffold,
   getCheckUpdatesOutput,
   getDoctorOutput,
   getHelpOutput,
@@ -66,6 +67,51 @@ describe('help', () => {
     assert.match(output, /mole create spec drafts\/spec\.md/);
     assert.match(output, /mole check-updates/);
     assert.doesNotMatch(output, /Cascade/);
+  });
+});
+
+describe('workspace scaffold', () => {
+  it('creates a clean Mole workspace without source-repo files', () => {
+    withTempInstance((dir) => {
+      createWorkspaceScaffold(dir);
+
+      for (const relPath of [
+        '0-bootstrap',
+        '1-routing',
+        '2-summaries',
+        '3-indexes',
+        '4-context',
+        '5-evidence',
+        '6-raw',
+        'mole.instance.yaml'
+      ]) {
+        assert.ok(fs.existsSync(path.join(dir, relPath)), `${relPath} should exist`);
+      }
+
+      for (const relPath of [
+        'cli',
+        'lib',
+        'docs',
+        '.agents',
+        '.github',
+        'node_modules',
+        'package.json',
+        'package-lock.json',
+        'plans',
+        'spec',
+        'ui',
+        'upgrade-ownership.json',
+        'mole.instance-template.yaml',
+        'governance/contribution-guide.md'
+      ]) {
+        assert.equal(fs.existsSync(path.join(dir, relPath)), false, `${relPath} should not exist`);
+      }
+
+      const metadata = fs.readFileSync(path.join(dir, 'mole.instance.yaml'), 'utf8');
+      assert.doesNotMatch(metadata, /docs\//);
+      assert.doesNotMatch(metadata, /templates\//);
+      assert.doesNotMatch(metadata, /cli\//);
+    });
   });
 });
 

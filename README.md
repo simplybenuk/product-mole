@@ -24,7 +24,7 @@ mole new my-mole
 cd my-mole
 ```
 
-This creates a starter workspace with bootstrap guidance, summaries, indexes, an inbox, governance files, and templates. You do not need to clone the Mole repository to create or use a workspace.
+This creates a clean workspace scaffold with bootstrap guidance, routing rules, summaries, indexes, context/evidence folders, an inbox, and lightweight governance files. You do not need to clone the Mole repository to create or use a workspace.
 
 ### 3. Install Codex prompt commands
 

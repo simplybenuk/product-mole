@@ -1,5 +1,5 @@
-# Copy this into your working mole instance as `mole.instance.yaml`.
-# It gives the instance a version anchor and records local customisations.
+# Mole writes this template into new workspaces as `mole.instance.yaml`.
+# It gives the workspace a version anchor and records local customisations.
 
 instance_name: your-project-name
 cascade_version: 0.2.0
@@ -20,12 +20,8 @@ local_ownership:
   upstream_owned:
     - 0-bootstrap/
     - 1-routing/
-    - templates/
-    - docs/
-    - governance/contribution-guide.md
     - governance/quality-checklist.md
   merge_carefully:
-    - README.md
     - governance/change-log.md
     - governance/input-queue.md
     - 2-summaries/
