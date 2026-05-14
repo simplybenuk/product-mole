@@ -18,6 +18,7 @@ export function getHelpOutput() {
   return `Mole CLI v0.2.0
 
 Usage:
+  mole new <workspace-name>
   mole init [target-dir]
   mole create <artifact> [output-path]
   mole insight <text>
@@ -31,6 +32,7 @@ Usage:
   mole doctor
 
 Examples:
+  mole new my-mole
   mole init my-mole
   mole create roadmap
   mole create spec drafts/spec.md
@@ -190,8 +192,8 @@ function initInstance(targetDir) {
   console.log('- customise 0-bootstrap/repo-purpose.md');
   console.log('- fill key summaries in 2-summaries/');
   console.log('- start capturing in 6-raw/inbox/ or with `mole insight "..."`');
-  console.log('- open the new instance folder in your editor, not the source/tool repo');
-  console.log('- optionally install Codex prompts with `mole install codex` from the source/tool repo');
+  console.log('- open the new workspace folder in your editor');
+  console.log('- optionally install Codex prompts with `mole install codex`');
 }
 
 function createArtifact(kind, outputPath) {
@@ -403,6 +405,7 @@ if (isDirectRun) {
     case '-h':
       printHelp();
       break;
+    case 'new':
     case 'init':
       initInstance(subcommand);
       break;

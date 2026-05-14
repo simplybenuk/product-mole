@@ -8,7 +8,7 @@ It gives teams a file-based place to capture messy product inputs, distil them i
 
 ## Installation
 
-### Install from GitHub
+### 1. Install from GitHub
 
 ```bash
 npm install -g github:simplybenuk/product-mole#main
@@ -17,29 +17,21 @@ mole --help
 
 This installs the `mole` command globally from the `main` branch.
 
-### 1. Clone the repo
+### 2. Create a Mole workspace
 
 ```bash
-git clone git@github.com:simplybenuk/product-mole.git
-cd product-mole
-```
-
-### 2. Create a Mole instance
-
-```bash
-node cli/mole.mjs init my-mole
+mole new my-mole
 cd my-mole
 ```
 
-This creates a starter instance with bootstrap guidance, summaries, indexes, an inbox, governance files, and templates.
+This creates a starter workspace with bootstrap guidance, summaries, indexes, an inbox, governance files, and templates. You do not need to clone the Mole repository to create or use a workspace.
 
 ### 3. Install Codex prompt commands
 
-From the source/tool repo root, install the Codex slash-command prompts:
+Install the optional Codex slash-command prompts:
 
 ```bash
-cd ..
-node cli/mole.mjs install codex
+mole install codex
 ```
 
 This copies prompt files into `~/.codex/prompts/`, or `$CODEX_HOME/prompts/` when `CODEX_HOME` is set. The installer prints the Mole mascot and lists the installed slash commands.
@@ -47,7 +39,6 @@ This copies prompt files into `~/.codex/prompts/`, or `$CODEX_HOME/prompts/` whe
 ### 4. Try the CLI
 
 ```bash
-cd my-mole
 mole doctor
 mole insight "Users trust CSV export more than dashboard totals"
 mole create roadmap
@@ -68,22 +59,23 @@ After installing prompts, use these in Codex chat:
 
 | Command | What it does |
 | --- | --- |
-| `node cli/mole.mjs --help` | Prints CLI usage, examples, and supported commands. |
-| `node cli/mole.mjs init [target-dir]` | Creates a new Mole working instance from the repo scaffold. |
-| `node cli/mole.mjs install codex` | Installs Mole Codex prompt commands into `~/.codex/prompts/` or `$CODEX_HOME/prompts/`. |
-| `node cli/mole.mjs doctor` | Checks source and instance versions plus required instance folders. |
-| `node cli/mole.mjs check-updates` | Reports whether the source repo is newer than the current instance. |
-| `node cli/mole.mjs insight "<text>"` | Captures a raw insight into `6-raw/inbox/quick-notes/`. |
-| `node cli/mole.mjs create roadmap [output-path]` | Creates a roadmap draft from the roadmap template. |
-| `node cli/mole.mjs create spec [output-path]` | Creates a product spec draft from the spec template. |
-| `node cli/mole.mjs create decision-brief [output-path]` | Creates a decision brief draft. |
-| `node cli/mole.mjs create strategy-memo [output-path]` | Creates a strategy memo draft. |
-| `node cli/mole.mjs create prioritisation-draft [output-path]` | Creates a prioritisation draft. |
-| `node cli/mole.mjs synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
-| `node cli/mole.mjs review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
-| `node cli/mole.mjs inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
-| `node cli/mole.mjs inbox complete [summary]` | Writes a processing receipt and releases the inbox lock. |
-| `node cli/mole.mjs upgrade` | Points to the conservative manual upgrade docs. |
+| `mole --help` | Prints CLI usage, examples, and supported commands. |
+| `mole new <workspace-name>` | Creates a new Mole workspace from the bundled scaffold. |
+| `mole init [target-dir]` | Backwards-compatible alias for `mole new`. |
+| `mole install codex` | Installs Mole Codex prompt commands into `~/.codex/prompts/` or `$CODEX_HOME/prompts/`. |
+| `mole doctor` | Checks source and instance versions plus required instance folders. |
+| `mole check-updates` | Reports whether the installed Mole source is newer than the current workspace. |
+| `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/quick-notes/`. |
+| `mole create roadmap [output-path]` | Creates a roadmap draft from the roadmap template. |
+| `mole create spec [output-path]` | Creates a product spec draft from the spec template. |
+| `mole create decision-brief [output-path]` | Creates a decision brief draft. |
+| `mole create strategy-memo [output-path]` | Creates a strategy memo draft. |
+| `mole create prioritisation-draft [output-path]` | Creates a prioritisation draft. |
+| `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
+| `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
+| `mole inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
+| `mole inbox complete [summary]` | Writes a processing receipt and releases the inbox lock. |
+| `mole upgrade` | Points to the conservative manual upgrade docs. |
 
 ## How Mole Works
 
@@ -101,26 +93,26 @@ Humans capture quickly, agents structure and synthesise, humans review and steer
 
 ## Updating after new changes
 
-Mole separates the source/tool repo from generated working instances.
+Mole separates the installed tool from generated working instances.
 
-When the source/tool repo changes, do this from the `product-mole` folder:
+When the source/tool changes, update the global install:
 
 ```bash
-git pull
-node cli/mole.mjs install codex
+npm install -g github:simplybenuk/product-mole#main
+mole install codex
 ```
 
 Why both?
-- `git pull` gets the latest CLI/docs/prompt changes
-- `install codex` refreshes the prompt files in Codex so new commands and updates actually appear
+- `npm install -g ...` refreshes the CLI, bundled scaffold, docs, and prompt files
+- `mole install codex` refreshes the prompt files in Codex so new commands and updates actually appear
 
 Then reopen or retry in Codex if needed.
 
-To inspect a working instance before upgrading it, run these from inside the instance folder using the source repo CLI:
+To inspect a working instance before upgrading it, run these from inside the workspace folder:
 
 ```bash
-node ../cli/mole.mjs doctor
-node ../cli/mole.mjs check-updates
+mole doctor
+mole check-updates
 ```
 
 `doctor` reports:

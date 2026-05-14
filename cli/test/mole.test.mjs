@@ -61,6 +61,7 @@ describe('help', () => {
     const output = getHelpOutput();
 
     assert.match(output, /^Mole CLI v0\.2\.0/m);
+    assert.match(output, /mole new my-mole/);
     assert.match(output, /mole create roadmap/);
     assert.match(output, /mole create spec drafts\/spec\.md/);
     assert.match(output, /mole check-updates/);
