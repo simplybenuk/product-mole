@@ -43,7 +43,9 @@ Usage:
   mole new <workspace-name>            Create a clean Mole workspace scaffold.
   mole init [target-dir]               Alias for "mole new" for older docs/scripts.
   mole create <artifact> [output-path] Create a draft artifact from a Mole template.
-  mole insight <text>                  Capture a raw product insight into the inbox.
+  mole insight [options] <text>        Capture a raw product insight into the inbox.
+  mole product-update <audience> <timescale> [--format email|teams|blog|brief]
+                                      Print an agent instruction for a stakeholder update.
   mole synthesise <target>             Print an agent instruction for synthesis work.
   mole review <target>                 Print an agent instruction for review work.
   mole inbox claim [processor]         Claim inbox processing with a file lock.
@@ -54,7 +56,7 @@ Usage:
   mole doctor                          Check workspace metadata and required folders.
 
 Artifacts:
-  roadmap, spec, decision-brief, strategy-memo, prioritisation-draft
+  roadmap, spec, decision-brief, strategy-memo, prioritisation-draft, product-update
 
 Examples:
   mole new my-mole
@@ -62,6 +64,8 @@ Examples:
   mole create roadmap
   mole create spec drafts/spec.md
   mole insight "Users trust CSV export more than dashboard totals"
+  mole insight --stakeholder CEO "Asked whether enterprise onboarding is improving"
+  mole product-update CEO 2-weeks --format email
   mole install skills
   mole synthesise inbox
   mole review input-queue
@@ -241,7 +245,8 @@ function createArtifact(kind, outputPath) {
     spec: 'spec-template.md',
     'decision-brief': 'decision-brief-template.md',
     'strategy-memo': 'strategy-memo-template.md',
-    'prioritisation-draft': 'prioritisation-draft-template.md'
+    'prioritisation-draft': 'prioritisation-draft-template.md',
+    'product-update': 'product-update-template.md'
   };
 
   const file = templateMap[kind];
@@ -256,7 +261,8 @@ function createArtifact(kind, outputPath) {
     spec: '4-context/product/spec-draft.md',
     'decision-brief': '4-context/decisions/decision-brief-draft.md',
     'strategy-memo': '4-context/strategy/strategy-memo-draft.md',
-    'prioritisation-draft': '4-context/product/prioritisation-draft.md'
+    'prioritisation-draft': '4-context/product/prioritisation-draft.md',
+    'product-update': '4-context/product/product-update-draft.md'
   }[kind];
 
   const target = path.resolve(cwd, outputPath || defaultOutput);
@@ -271,8 +277,45 @@ function createArtifact(kind, outputPath) {
   outputDraftInstruction(kind);
 }
 
-function captureInsight(textParts) {
-  const text = textParts.join(' ').trim();
+function parseInsightArgs(values) {
+  const metadata = {
+    audience: [],
+    interestAreas: []
+  };
+  const textParts = [];
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+
+    if (value === '--stakeholder' && next) {
+      metadata.stakeholder = next;
+      index += 1;
+    } else if (value === '--requested-by' && next) {
+      metadata.requestedBy = next;
+      index += 1;
+    } else if (value === '--audience' && next) {
+      metadata.audience.push(next);
+      index += 1;
+    } else if (value === '--interest-area' && next) {
+      metadata.interestAreas.push(next);
+      index += 1;
+    } else if (value === '--visibility' && next) {
+      metadata.visibility = next;
+      index += 1;
+    } else if (value === '--follow-up-by' && next) {
+      metadata.followUpBy = next;
+      index += 1;
+    } else {
+      textParts.push(value);
+    }
+  }
+
+  return { text: textParts.join(' ').trim(), metadata };
+}
+
+function captureInsight(values) {
+  const { text, metadata } = parseInsightArgs(values);
   if (!text) {
     console.error('Missing insight text. Example: mole insight "Users trust CSV export more than dashboard totals"');
     process.exit(1);
@@ -283,7 +326,7 @@ function captureInsight(textParts) {
   const fileName = createCaptureFileName(text);
   const target = path.join(dir, fileName);
 
-  const content = buildInsightCaptureContent(text);
+  const content = buildInsightCaptureContent(text, metadata);
 
   try {
     fs.writeFileSync(target, content, { encoding: 'utf8', flag: 'wx' });
@@ -299,11 +342,46 @@ function captureInsight(textParts) {
   console.log('mole synthesise inbox');
 }
 
+function yamlScalar(value) {
+  const text = String(value || '').trim();
+  return text ? JSON.stringify(text) : '';
+}
+
+function yamlInlineList(values = []) {
+  const items = values.map(value => String(value || '').trim()).filter(Boolean);
+  return `[${items.map(item => JSON.stringify(item)).join(', ')}]`;
+}
+
 export function buildInsightCaptureContent(text, options = {}) {
   const createdAt = options.createdAt || nowUtc();
   const capturedBy = resolveCapturedBy(options.capturedBy);
 
-  return `---\ntitle: Raw Insight\ncapture_type: insight\nsource: mole CLI\ncaptured_by: ${capturedBy}\ncreated_at: ${createdAt}\nsummary: ${text}\ntags: []\n---\n\n# Raw Insight\n\n## Insight\n${text}\n\n## Context / why it matters\n\n## Optional follow-up questions\n- \n`;
+  return `---
+title: Raw Insight
+capture_type: insight
+source: mole CLI
+captured_by: ${capturedBy}
+created_at: ${createdAt}
+summary: ${text}
+stakeholder: ${yamlScalar(options.stakeholder)}
+requested_by: ${yamlScalar(options.requestedBy)}
+audience: ${yamlInlineList(options.audience)}
+interest_areas: ${yamlInlineList(options.interestAreas)}
+visibility: ${yamlScalar(options.visibility || 'internal')}
+follow_up_by: ${yamlScalar(options.followUpBy)}
+tags: []
+---
+
+# Raw Insight
+
+## Insight
+${text}
+
+## Context / why it matters
+
+## Optional follow-up questions
+-
+`;
 }
 
 export function installMoleSkills(options = {}) {
@@ -341,10 +419,55 @@ function outputDraftInstruction(kind) {
     spec: 'Create a product spec draft using relevant summaries, indexes, context modules, and evidence. Update the created markdown draft in place and note assumptions, open questions, and missing human inputs.',
     'strategy-memo': 'Create a strategy memo using the highest-signal relevant context first, descending only as needed.',
     'decision-brief': 'Create a decision brief with recommendation, options, trade-offs, and missing inputs.',
-    'prioritisation-draft': 'Create a prioritisation draft with criteria, ranked items, and uncertainties.'
+    'prioritisation-draft': 'Create a prioritisation draft with criteria, ranked items, and uncertainties.',
+    'product-update': 'Create a stakeholder-specific product update using stakeholder memory, relevant summaries, product context, and evidence. Tailor the format and include a retrieval receipt.'
   };
   const instruction = map[kind] || `Create a ${kind} draft from Mole using progressive retrieval.`;
   console.log(instruction);
+}
+
+function parseProductUpdateArgs(values) {
+  const positional = [];
+  let format = 'brief';
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    const next = values[index + 1];
+
+    if (value === '--format' && next) {
+      format = next;
+      index += 1;
+    } else {
+      positional.push(value);
+    }
+  }
+
+  return {
+    audience: positional[0] || '',
+    timescale: positional[1] || '',
+    format
+  };
+}
+
+export function buildProductUpdateInstruction(audience, timescale, format = 'brief') {
+  const targetAudience = String(audience || '').trim() || 'the requested stakeholder or group';
+  const updateTimescale = String(timescale || '').trim() || 'the requested timescale';
+  const outputFormat = String(format || '').trim() || 'brief';
+
+  return `Suggested agent instruction:
+
+Generate a product update for ${targetAudience} covering ${updateTimescale} in ${outputFormat} format. Use the Mole operating model: retrieve top-down, descend only as needed, and keep claims evidence-backed. Start with stakeholder memory in \`4-context/stakeholders.md\`, then read relevant \`2-summaries/\`, \`3-indexes/\`, product context in \`4-context/\`, evidence in \`5-evidence/\`, and recent raw or synthesised items matching ${updateTimescale}. Tailor the update to the audience's product interests, decision authority, communication preferences, known concerns, and likely asks. Separate headline summary, progress, what changed, risks or blockers, decisions needed, asks, and suggested follow-up. Include a concise retrieval receipt.`;
+}
+
+function productUpdate(values) {
+  const { audience, timescale, format } = parseProductUpdateArgs(values);
+
+  if (!audience || !timescale) {
+    console.error('Missing product update target. Example: mole product-update CEO 2-weeks --format email');
+    process.exit(1);
+  }
+
+  console.log(buildProductUpdateInstruction(audience, timescale, format));
 }
 
 export function getDoctorOutput(instanceRoot = cwd) {
@@ -498,9 +621,12 @@ if (isDirectRun) {
     case 'signal':
       captureInsight([subcommand, ...rest].filter(Boolean));
       break;
+    case 'product-update':
+      productUpdate([subcommand, ...rest].filter(Boolean));
+      break;
     case 'synthesise': {
       const target = subcommand || 'the requested target';
-      const personaInstruction = subcommand === 'inbox' ? ' If user/customer signals are relevant to a durable user type, update or create evidence-backed personas in `4-context/personas.md`.' : '';
+      const personaInstruction = subcommand === 'inbox' ? ' If user/customer signals are relevant to a durable user type, update or create evidence-backed personas in `4-context/personas.md`. If internal stakeholder signals, org-chart facts, leadership asks, or update preferences are relevant, update or create evidence-backed stakeholder memory in `4-context/stakeholders.md`.' : '';
       console.log(`Suggested agent instruction:\n\nSynthesise ${target} using the Mole operating model: capture low, distil up, retrieve top-down.${personaInstruction}`);
       break;
     }

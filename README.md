@@ -41,6 +41,8 @@ This copies skill directories into `~/.agents/skills/`, or `$AGENTS_HOME/skills/
 ```bash
 mole doctor
 mole insight "Users trust CSV export more than dashboard totals"
+mole insight --stakeholder CEO "Asked whether enterprise onboarding is improving"
+mole product-update CEO 2-weeks --format email
 mole create roadmap
 ```
 
@@ -54,6 +56,7 @@ After installing skills, ask your agent for Mole-specific work such as:
 - Create a Mole product spec.
 - Review the Mole input queue.
 - Critique this idea using the current Mole context.
+- Generate a product update for the CEO for the last two weeks in email format.
 
 ## Commands
 
@@ -66,16 +69,33 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole doctor` | Checks source and instance versions plus required instance folders. |
 | `mole check-updates` | Reports whether the installed Mole source is newer than the current workspace. |
 | `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/quick-notes/`. |
+| `mole insight --stakeholder CEO "<text>"` | Captures an insight with stakeholder metadata for later synthesis. |
+| `mole product-update <audience> <timescale> --format <format>` | Prints an agent instruction for a stakeholder-specific product update. |
 | `mole create roadmap [output-path]` | Creates a roadmap draft from the roadmap template. |
 | `mole create spec [output-path]` | Creates a product spec draft from the spec template. |
 | `mole create decision-brief [output-path]` | Creates a decision brief draft. |
 | `mole create strategy-memo [output-path]` | Creates a strategy memo draft. |
 | `mole create prioritisation-draft [output-path]` | Creates a prioritisation draft. |
+| `mole create product-update [output-path]` | Creates a product update draft from the product update template. |
 | `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
 | `mole inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
 | `mole inbox complete [summary]` | Writes a processing receipt and releases the inbox lock. |
 | `mole upgrade` | Updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`. |
+
+## Stakeholder memory and product updates
+
+Mole can maintain internal stakeholder context alongside user personas. Use `4-context/stakeholders.md` to capture people, groups, org-chart relationships, product interests, recurring questions, communication preferences, decision authority, and evidence links.
+
+A typical workflow is:
+
+```bash
+mole insight --stakeholder CEO "Asked for clearer enterprise onboarding metrics"
+mole synthesise inbox
+mole product-update CEO 2-weeks --format email
+```
+
+Inbox synthesis should promote durable stakeholder signals into `4-context/stakeholders.md`. Product update generation then retrieves that stakeholder memory, relevant summaries, indexes, product context, evidence, and recent raw material to tailor an update for the audience and requested format. Supported formats are intentionally flexible, for example email, Teams message, blog post, or executive brief.
 
 ## How Mole Works
 
@@ -149,6 +169,7 @@ You can create draft artifacts such as:
 - decision brief
 - strategy memo
 - prioritisation draft
+- product update
 
 ## Current prototype status
 
@@ -162,6 +183,7 @@ What exists now:
 - read-only update report using `upgrade-ownership.json`
 - raw insight capture
 - draft artifact generation
+- stakeholder memory and product update guidance
 - docs for upgrade/adoption/command UX
 
 What is still lightweight:
