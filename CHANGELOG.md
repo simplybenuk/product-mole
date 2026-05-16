@@ -4,6 +4,18 @@ All notable changes to Mole should be documented here.
 
 The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
+## [0.2.4] - 2026-05-16
+
+### Added
+- Added `4-context/stakeholders.md` as a living, evidence-backed stakeholder and organisation context file for Mole workspaces.
+- Added `mole product-update <audience> <timescale> --format <format>` to generate stakeholder-specific product update instructions.
+- Added a product update artifact template and packaged `mole-product-update` skill.
+- Added stakeholder metadata fields for raw insight capture.
+
+### Changed
+- Inbox synthesis guidance now includes stakeholder memory updates for internal signals, leadership asks, update preferences, decision authority, and org-chart facts.
+- README and CLI docs now describe stakeholder capture and product update workflows.
+
 ## [0.2.3] - 2026-05-16
 
 ### Added
