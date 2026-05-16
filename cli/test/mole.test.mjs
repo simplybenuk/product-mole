@@ -9,6 +9,7 @@ import { createCaptureFileName, resolveCapturedBy } from '../../lib/capture.mjs'
 import { claimInboxProcessing, completeInboxProcessing } from '../../lib/inbox-processing.mjs';
 import {
   buildInsightCaptureContent,
+  buildProductUpdateInstruction,
   createWorkspaceScaffold,
   getCheckUpdatesOutput,
   getDoctorOutput,
@@ -43,7 +44,7 @@ describe('doctor', () => {
       const output = getDoctorOutput(dir);
 
       assert.match(output, /Mole doctor/);
-      assert.match(output, /source version\s+0\.2\.3/);
+      assert.match(output, /source version\s+0\.2\.4/);
       assert.match(output, /instance version\s+0\.1\.0/);
       assert.doesNotMatch(output, /missing instance metadata/i);
     });
@@ -53,7 +54,7 @@ describe('doctor', () => {
     withTempInstance((dir) => {
       const output = getDoctorOutput(dir);
 
-      assert.match(output, /source version\s+0\.2\.3/);
+      assert.match(output, /source version\s+0\.2\.4/);
       assert.match(output, /instance version\s+not found/);
       assert.match(output, /missing instance metadata/i);
     });
@@ -64,10 +65,11 @@ describe('help', () => {
   it('uses consistent Mole naming and documented command examples', () => {
     const output = getHelpOutput();
 
-    assert.match(output, /^Mole CLI v0\.2\.3/m);
+    assert.match(output, /^Mole CLI v0\.2\.4/m);
     assert.match(output, /mole new my-mole/);
     assert.match(output, /mole create roadmap/);
     assert.match(output, /mole create spec drafts\/spec\.md/);
+    assert.match(output, /mole product-update CEO 2-weeks --format email/);
     assert.match(output, /mole install skills\s+Install Mole agent skills into ~\/\.agents\/skills/);
     assert.match(output, /More help:\n  https:\/\/github\.com\/simplybenuk\/product-mole#readme/);
     assert.match(output, /mole check-updates/);
@@ -85,6 +87,32 @@ describe('synthesise guidance', () => {
     assert.equal(result.status, 0);
     assert.match(result.stdout, /4-context\/personas\.md/);
     assert.match(result.stdout, /update or create evidence-backed personas/);
+    assert.match(result.stdout, /4-context\/stakeholders\.md/);
+    assert.match(result.stdout, /stakeholder memory/);
+  });
+});
+
+
+describe('product updates', () => {
+  it('builds stakeholder-specific product update instructions', () => {
+    const output = buildProductUpdateInstruction('CEO', '2-weeks', 'email');
+
+    assert.match(output, /Generate a product update for CEO covering 2-weeks in email format/);
+    assert.match(output, /4-context\/stakeholders\.md/);
+    assert.match(output, /decision authority/);
+    assert.match(output, /retrieval receipt/);
+  });
+
+  it('prints product update instructions from the CLI command', () => {
+    const result = spawnSync(process.execPath, [path.join(repoRoot, 'cli', 'mole.mjs'), 'product-update', 'CEO', '2-weeks', '--format', 'email'], {
+      encoding: 'utf8'
+    });
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /CEO/);
+    assert.match(result.stdout, /2-weeks/);
+    assert.match(result.stdout, /email format/);
+    assert.match(result.stdout, /4-context\/stakeholders\.md/);
   });
 });
 
@@ -100,6 +128,7 @@ describe('workspace scaffold', () => {
         '3-indexes',
         '4-context',
         path.join('4-context', 'personas.md'),
+        path.join('4-context', 'stakeholders.md'),
         '5-evidence',
         '6-raw',
         'mole.instance.yaml'
@@ -129,6 +158,10 @@ describe('workspace scaffold', () => {
       const personas = fs.readFileSync(path.join(dir, '4-context', 'personas.md'), 'utf8');
       assert.match(personas, /living set of living user personas|living user personas/i);
       assert.match(personas, /Inbox synthesis rules/);
+
+      const stakeholders = fs.readFileSync(path.join(dir, '4-context', 'stakeholders.md'), 'utf8');
+      assert.match(stakeholders, /Living stakeholder map/i);
+      assert.match(stakeholders, /Inbox synthesis rules/);
 
       const metadata = fs.readFileSync(path.join(dir, 'mole.instance.yaml'), 'utf8');
       assert.doesNotMatch(metadata, /docs\//);
@@ -169,6 +202,7 @@ describe('skills installer', () => {
         'mole-create-spec',
         'mole-critique',
         'mole-insight',
+        'mole-product-update',
         'mole-review-input-queue',
         'mole-synthesise-inbox'
       ]) {
@@ -213,15 +247,15 @@ describe('check-updates', () => {
     withTempInstance((dir) => {
       fs.writeFileSync(
         path.join(dir, 'mole.instance.yaml'),
-        'instance_name: test-instance\ncascade_version: 0.2.3\n',
+        'instance_name: test-instance\ncascade_version: 0.2.4\n',
         'utf8'
       );
 
       const output = getCheckUpdatesOutput(dir);
 
       assert.match(output, /Mole update check/);
-      assert.match(output, /source version\s+0\.2\.3/);
-      assert.match(output, /instance version\s+0\.2\.3/);
+      assert.match(output, /source version\s+0\.2\.4/);
+      assert.match(output, /instance version\s+0\.2\.4/);
       assert.match(output, /status\s+up to date/);
       assert.match(output, /read-only report/i);
     });
@@ -292,6 +326,26 @@ describe('capture attribution metadata', () => {
 
     assert.match(content, /captured_by: Ada/);
     assert.match(content, /source: mole CLI/);
+    assert.match(content, /visibility: \"internal\"/);
+  });
+
+
+  it('emits optional stakeholder metadata in CLI capture frontmatter', () => {
+    const content = buildInsightCaptureContent('CEO asked about onboarding', {
+      capturedBy: 'Ada',
+      createdAt: '2026-05-13T10:11:12.345Z',
+      stakeholder: 'CEO',
+      requestedBy: 'CEO',
+      audience: ['exec'],
+      interestAreas: ['enterprise onboarding'],
+      followUpBy: '2026-05-20'
+    });
+
+    assert.match(content, /stakeholder: "CEO"/);
+    assert.match(content, /requested_by: "CEO"/);
+    assert.match(content, /audience: \["exec"\]/);
+    assert.match(content, /interest_areas: \["enterprise onboarding"\]/);
+    assert.match(content, /follow_up_by: "2026-05-20"/);
   });
 
   it('emits captured_by in UI capture frontmatter', () => {
