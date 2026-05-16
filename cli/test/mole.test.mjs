@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -42,7 +43,7 @@ describe('doctor', () => {
       const output = getDoctorOutput(dir);
 
       assert.match(output, /Mole doctor/);
-      assert.match(output, /source version\s+0\.2\.2/);
+      assert.match(output, /source version\s+0\.2\.3/);
       assert.match(output, /instance version\s+0\.1\.0/);
       assert.doesNotMatch(output, /missing instance metadata/i);
     });
@@ -52,7 +53,7 @@ describe('doctor', () => {
     withTempInstance((dir) => {
       const output = getDoctorOutput(dir);
 
-      assert.match(output, /source version\s+0\.2\.2/);
+      assert.match(output, /source version\s+0\.2\.3/);
       assert.match(output, /instance version\s+not found/);
       assert.match(output, /missing instance metadata/i);
     });
@@ -63,7 +64,7 @@ describe('help', () => {
   it('uses consistent Mole naming and documented command examples', () => {
     const output = getHelpOutput();
 
-    assert.match(output, /^Mole CLI v0\.2\.2/m);
+    assert.match(output, /^Mole CLI v0\.2\.3/m);
     assert.match(output, /mole new my-mole/);
     assert.match(output, /mole create roadmap/);
     assert.match(output, /mole create spec drafts\/spec\.md/);
@@ -72,6 +73,18 @@ describe('help', () => {
     assert.match(output, /mole check-updates/);
     assert.doesNotMatch(output, /Cascade/);
     assert.doesNotMatch(output, /mole install codex/);
+  });
+});
+
+describe('synthesise guidance', () => {
+  it('points inbox synthesis at living personas', () => {
+    const result = spawnSync(process.execPath, [path.join(repoRoot, 'cli', 'mole.mjs'), 'synthesise', 'inbox'], {
+      encoding: 'utf8'
+    });
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /4-context\/personas\.md/);
+    assert.match(result.stdout, /update or create evidence-backed personas/);
   });
 });
 
@@ -86,6 +99,7 @@ describe('workspace scaffold', () => {
         '2-summaries',
         '3-indexes',
         '4-context',
+        path.join('4-context', 'personas.md'),
         '5-evidence',
         '6-raw',
         'mole.instance.yaml'
@@ -111,6 +125,10 @@ describe('workspace scaffold', () => {
       ]) {
         assert.equal(fs.existsSync(path.join(dir, relPath)), false, `${relPath} should not exist`);
       }
+
+      const personas = fs.readFileSync(path.join(dir, '4-context', 'personas.md'), 'utf8');
+      assert.match(personas, /living set of living user personas|living user personas/i);
+      assert.match(personas, /Inbox synthesis rules/);
 
       const metadata = fs.readFileSync(path.join(dir, 'mole.instance.yaml'), 'utf8');
       assert.doesNotMatch(metadata, /docs\//);
@@ -195,15 +213,15 @@ describe('check-updates', () => {
     withTempInstance((dir) => {
       fs.writeFileSync(
         path.join(dir, 'mole.instance.yaml'),
-        'instance_name: test-instance\ncascade_version: 0.2.2\n',
+        'instance_name: test-instance\ncascade_version: 0.2.3\n',
         'utf8'
       );
 
       const output = getCheckUpdatesOutput(dir);
 
       assert.match(output, /Mole update check/);
-      assert.match(output, /source version\s+0\.2\.2/);
-      assert.match(output, /instance version\s+0\.2\.2/);
+      assert.match(output, /source version\s+0\.2\.3/);
+      assert.match(output, /instance version\s+0\.2\.3/);
       assert.match(output, /status\s+up to date/);
       assert.match(output, /read-only report/i);
     });

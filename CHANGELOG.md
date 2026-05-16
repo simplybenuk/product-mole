@@ -4,6 +4,15 @@ All notable changes to Mole should be documented here.
 
 The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
+## [0.2.3] - 2026-05-16
+
+### Added
+- Added `4-context/personas.md` as a living, evidence-backed persona context file for Mole workspaces.
+- `mole synthesise inbox` now reminds agents to update or create personas when inbox material contains durable user/customer signals.
+
+### Changed
+- Inbox synthesis guidance now includes persona maintenance and user-summary refresh rules.
+
 ## [0.2.2] - 2026-05-14
 
 ### Added
