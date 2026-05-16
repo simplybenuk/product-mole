@@ -498,9 +498,12 @@ if (isDirectRun) {
     case 'signal':
       captureInsight([subcommand, ...rest].filter(Boolean));
       break;
-    case 'synthesise':
-      console.log(`Suggested agent instruction:\n\nSynthesise ${subcommand || 'the requested target'} using the Mole operating model: capture low, distil up, retrieve top-down.`);
+    case 'synthesise': {
+      const target = subcommand || 'the requested target';
+      const personaInstruction = subcommand === 'inbox' ? ' If user/customer signals are relevant to a durable user type, update or create evidence-backed personas in `4-context/personas.md`.' : '';
+      console.log(`Suggested agent instruction:\n\nSynthesise ${target} using the Mole operating model: capture low, distil up, retrieve top-down.${personaInstruction}`);
       break;
+    }
     case 'review':
       console.log(`Suggested agent instruction:\n\nReview ${subcommand || 'the requested target'} and return the highest-value next actions or missing human inputs.`);
       break;

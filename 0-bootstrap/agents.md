@@ -17,4 +17,5 @@ Rules:
 - If blocked by missing human input, add an item to `governance/input-queue.md`.
 - In shared inboxes, treat `6-raw/inbox/new/` and legacy direct inbox folders as unprocessed input; claim `governance/inbox-processing.lock.json` before processing, move claimed batches through processing states, and never delete raw inputs before a retrieval receipt exists.
 - After promoting an inbox artefact, update relevant indexes and summaries, write a retrieval receipt, and only then remove or archive the inbox copy.
+- During inbox synthesis, treat user/persona-relevant signals as candidates for `4-context/personas.md`; update an existing persona or create a new one when the evidence indicates a durable user type.
 - End substantive outputs with a retrieval receipt.

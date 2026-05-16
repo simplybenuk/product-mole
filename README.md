@@ -135,7 +135,7 @@ mole check-updates
 You can still drop files manually into:
 - `6-raw/inbox/`
 
-That remains a first-class workflow.
+That remains a first-class workflow. When the inbox contains user/customer signals, synthesis should also update `4-context/personas.md` so the workspace builds a living set of evidence-backed personas over time.
 
 ### Command capture flow
 You can also capture through commands:
