@@ -79,17 +79,15 @@ More help:
 
 export function getInstallBanner() {
   return String.raw`
-        __
-     __/  \__
-   _/  .--.  \_
-  /   (o  o)   \
- |      \/      |
- |  /\  __  /\  |
-  \   '----'   /
-   '._  ||  _.'
-      '-||-'
-        ||
-     ___||___
+          ▄▄▄▄▄▄▄              Product Mole
+       ▄███████████▄           Local-first product context
+     ▄██▀         ▀██▄         for teams and AI agents
+    ██               ██
+   ██     ●     ●     ██
+   ██                 ██
+   ██       ▄█▄       ██
+   ██                 ██
+   ██   ▄██▄   ▄██▄   ██
 
 Mole is a local-first product context system for teams and AI agents.
 It helps you capture raw inputs, distil them into evidence, and generate
