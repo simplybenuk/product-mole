@@ -176,7 +176,8 @@ describe('install banner', () => {
     const output = getInstallBanner();
 
     assert.match(output, /Mole is a local-first product context system/);
-    assert.match(output, /o  o/);
+    assert.match(output, /Product Mole/);
+    assert.match(output, /●\s+●/);
     assert.match(output, /better roadmaps, specs, decisions/);
   });
 });
