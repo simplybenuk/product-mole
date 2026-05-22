@@ -57,6 +57,7 @@ After installing skills, ask your agent for Mole-specific work such as:
 - Review the Mole input queue.
 - Critique this idea using the current Mole context.
 - Generate a product update for the CEO for the last two weeks in email format.
+- Upgrade this Mole workspace from an older version using a safe apply + manual review plan.
 
 ## Commands
 

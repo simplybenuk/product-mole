@@ -4,6 +4,15 @@ All notable changes to Mole should be documented here.
 
 The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
+## [0.2.5] - 2026-05-22
+
+### Added
+- Added `cli/skills/mole-upgrade-workspace/SKILL.md` with a conservative workflow for upgrading older Mole workspaces.
+- The new skill includes preflight checks, tooling refresh guidance, `mole doctor`/`mole check-updates` assessment, and ownership-based upgrade classification.
+
+### Changed
+- Upgrade guidance now explicitly codifies safe-only apply behavior (`safe-copy`) plus manual review requirements for `merge-carefully` and `never-overwrite` paths.
+
 ## [0.2.4] - 2026-05-16
 
 ### Added
