@@ -89,6 +89,15 @@ mole synthesise signals
 mole synthesise evidence
 ```
 
+### Bootstrap / refresh top layers
+Used to populate or reconcile `2-summaries/` and `3-indexes/` when they are blank, starter-template-only, stale, or incomplete.
+
+Examples:
+```bash
+mole bootstrap-context
+mole refresh top-layers
+```
+
 ### Review
 Used to inspect what needs human input or validation.
 

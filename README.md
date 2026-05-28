@@ -42,6 +42,7 @@ This copies skill directories into `~/.agents/skills/`, or `$AGENTS_HOME/skills/
 mole doctor
 mole insight "Users trust CSV export more than dashboard totals"
 mole insight --stakeholder CEO "Asked whether enterprise onboarding is improving"
+mole bootstrap-context
 mole product-update CEO 2-weeks --format email
 mole create roadmap
 ```
@@ -51,7 +52,9 @@ mole create roadmap
 After installing skills, ask your agent for Mole-specific work such as:
 
 - Capture this Mole insight: users trust CSV export more than dashboard totals.
+- Bootstrap this Mole workspace context.
 - Synthesise the Mole inbox.
+- Refresh the Mole top layers.
 - Create a Mole roadmap.
 - Create a Mole product spec.
 - Review the Mole input queue.
@@ -72,6 +75,8 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/quick-notes/`. |
 | `mole insight --stakeholder CEO "<text>"` | Captures an insight with stakeholder metadata for later synthesis. |
 | `mole product-update <audience> <timescale> --format <format>` | Prints an agent instruction for a stakeholder-specific product update. |
+| `mole bootstrap-context` | Prints an agent instruction for first-time summary/index population. |
+| `mole refresh top-layers` | Prints an agent instruction for refreshing stale, blank, or incomplete summaries and indexes. |
 | `mole create roadmap [output-path]` | Creates a roadmap draft from the roadmap template. |
 | `mole create spec [output-path]` | Creates a product spec draft from the spec template. |
 | `mole create decision-brief [output-path]` | Creates a decision brief draft. |
@@ -97,6 +102,24 @@ mole product-update CEO 2-weeks --format email
 ```
 
 Inbox synthesis should promote durable stakeholder signals into `4-context/stakeholders.md`. Product update generation then retrieves that stakeholder memory, relevant summaries, indexes, product context, evidence, and recent raw material to tailor an update for the audience and requested format. Supported formats are intentionally flexible, for example email, Teams message, blog post, or executive brief.
+
+## Summary and index setup
+
+New or migrated workspaces often start with blank or starter-template files in `2-summaries/` and `3-indexes/`. Populate those top layers explicitly before relying on daily inbox synthesis:
+
+```bash
+mole bootstrap-context
+```
+
+Use the printed instruction with your agent. It should read the lower layers and inbox material, then create the first useful summaries and indexes without inventing unsupported facts.
+
+After larger synthesis passes, or whenever the top layers feel stale, run:
+
+```bash
+mole refresh top-layers
+```
+
+Daily `mole synthesise inbox` remains focused on promoting new material, but blank or placeholder summaries and indexes now count as material gaps that should be filled when relevant durable context is synthesised.
 
 ## How Mole Works
 

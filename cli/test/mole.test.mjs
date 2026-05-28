@@ -44,7 +44,7 @@ describe('doctor', () => {
       const output = getDoctorOutput(dir);
 
       assert.match(output, /Mole doctor/);
-      assert.match(output, /source version\s+0\.2\.4/);
+      assert.match(output, /source version\s+0\.2\.6/);
       assert.match(output, /instance version\s+0\.1\.0/);
       assert.doesNotMatch(output, /missing instance metadata/i);
     });
@@ -54,7 +54,7 @@ describe('doctor', () => {
     withTempInstance((dir) => {
       const output = getDoctorOutput(dir);
 
-      assert.match(output, /source version\s+0\.2\.4/);
+      assert.match(output, /source version\s+0\.2\.6/);
       assert.match(output, /instance version\s+not found/);
       assert.match(output, /missing instance metadata/i);
     });
@@ -65,11 +65,13 @@ describe('help', () => {
   it('uses consistent Mole naming and documented command examples', () => {
     const output = getHelpOutput();
 
-    assert.match(output, /^Mole CLI v0\.2\.4/m);
+    assert.match(output, /^Mole CLI v0\.2\.6/m);
     assert.match(output, /mole new my-mole/);
     assert.match(output, /mole create roadmap/);
     assert.match(output, /mole create spec drafts\/spec\.md/);
     assert.match(output, /mole product-update CEO 2-weeks --format email/);
+    assert.match(output, /mole bootstrap-context/);
+    assert.match(output, /mole refresh top-layers/);
     assert.match(output, /mole install skills\s+Install Mole agent skills into ~\/\.agents\/skills/);
     assert.match(output, /More help:\n  https:\/\/github\.com\/simplybenuk\/product-mole#readme/);
     assert.match(output, /mole check-updates/);
@@ -89,6 +91,30 @@ describe('synthesise guidance', () => {
     assert.match(result.stdout, /update or create evidence-backed personas/);
     assert.match(result.stdout, /4-context\/stakeholders\.md/);
     assert.match(result.stdout, /stakeholder memory/);
+    assert.match(result.stdout, /blank, placeholder-only/);
+    assert.match(result.stdout, /material top-layer gap/);
+  });
+
+  it('prints first-time bootstrap guidance for blank top layers', () => {
+    const result = spawnSync(process.execPath, [path.join(repoRoot, 'cli', 'mole.mjs'), 'bootstrap-context'], {
+      encoding: 'utf8'
+    });
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Bootstrap this Mole workspace context/);
+    assert.match(result.stdout, /starter-template files in `2-summaries\/` and `3-indexes\/`/);
+    assert.match(result.stdout, /governance\/input-queue\.md/);
+  });
+
+  it('prints top-layer refresh guidance', () => {
+    const result = spawnSync(process.execPath, [path.join(repoRoot, 'cli', 'mole.mjs'), 'refresh', 'top-layers'], {
+      encoding: 'utf8'
+    });
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Refresh the Mole top layers/);
+    assert.match(result.stdout, /blank, placeholder, stale, or incomplete summaries and indexes/);
+    assert.match(result.stdout, /future retrieval/);
   });
 });
 
@@ -204,6 +230,8 @@ describe('skills installer', () => {
         'mole-critique',
         'mole-insight',
         'mole-product-update',
+        'mole-bootstrap-context',
+        'mole-refresh-top-layers',
         'mole-review-input-queue',
         'mole-synthesise-inbox'
       ]) {
@@ -248,15 +276,15 @@ describe('check-updates', () => {
     withTempInstance((dir) => {
       fs.writeFileSync(
         path.join(dir, 'mole.instance.yaml'),
-        'instance_name: test-instance\ncascade_version: 0.2.4\n',
+        'instance_name: test-instance\ncascade_version: 0.2.6\n',
         'utf8'
       );
 
       const output = getCheckUpdatesOutput(dir);
 
       assert.match(output, /Mole update check/);
-      assert.match(output, /source version\s+0\.2\.4/);
-      assert.match(output, /instance version\s+0\.2\.4/);
+      assert.match(output, /source version\s+0\.2\.6/);
+      assert.match(output, /instance version\s+0\.2\.6/);
       assert.match(output, /status\s+up to date/);
       assert.match(output, /read-only report/i);
     });

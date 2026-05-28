@@ -39,9 +39,31 @@ Use `mole.instance.yaml`, version tags, and upgrade notes to evolve safely.
 ## Fastest path to value
 
 The fastest path is usually:
-1. customise bootstrap + summaries,
-2. capture real notes for a week,
-3. synthesise them,
-4. generate one useful output (spec / roadmap / decision brief).
+1. customise bootstrap guidance,
+2. run `mole bootstrap-context` with an agent to populate initial summaries and indexes,
+3. capture real notes for a week,
+4. synthesise them,
+5. run `mole refresh top-layers` after large synthesis passes,
+6. generate one useful output (spec / roadmap / decision brief).
 
 That is enough to prove the loop.
+
+## When top layers are blank
+
+Blank or starter-template `2-summaries/` and `3-indexes/` files need an explicit setup pass. Daily inbox synthesis is incremental; it should fill relevant blank files when it encounters durable context, but it is not a full workspace onboarding pass.
+
+Use:
+
+```bash
+mole bootstrap-context
+```
+
+Then use the printed instruction with your agent to read lower-layer context and populate the first useful summaries and indexes.
+
+Use this for maintenance:
+
+```bash
+mole refresh top-layers
+```
+
+Run it weekly, after large inbox synthesis, or whenever the top layers no longer match the lower layers.

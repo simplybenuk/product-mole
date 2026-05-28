@@ -4,6 +4,16 @@ All notable changes to Mole should be documented here.
 
 The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
+## [0.2.6] - 2026-05-28
+
+### Added
+- Added `mole bootstrap-context` guidance for first-time population of blank or starter-template `2-summaries/` and `3-indexes/`.
+- Added `mole refresh top-layers` guidance for periodically reconciling summaries and indexes with lower-layer context.
+- Added packaged `mole-bootstrap-context` and `mole-refresh-top-layers` skills.
+
+### Changed
+- Inbox synthesis guidance now treats blank, placeholder-only, or starter-template summaries and indexes as material top-layer gaps that should be populated from durable synthesis.
+
 ## [0.2.5] - 2026-05-22
 
 ### Added

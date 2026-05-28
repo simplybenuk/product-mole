@@ -46,6 +46,8 @@ Usage:
   mole insight [options] <text>        Capture a raw product insight into the inbox.
   mole product-update <audience> <timescale> [--format email|teams|blog|brief]
                                       Print an agent instruction for a stakeholder update.
+  mole bootstrap-context              Print an agent instruction for first-time top-layer setup.
+  mole refresh top-layers             Print an agent instruction for summary/index refresh.
   mole synthesise <target>             Print an agent instruction for synthesis work.
   mole review <target>                 Print an agent instruction for review work.
   mole inbox claim [processor]         Claim inbox processing with a file lock.
@@ -66,6 +68,8 @@ Examples:
   mole insight "Users trust CSV export more than dashboard totals"
   mole insight --stakeholder CEO "Asked whether enterprise onboarding is improving"
   mole product-update CEO 2-weeks --format email
+  mole bootstrap-context
+  mole refresh top-layers
   mole install skills
   mole synthesise inbox
   mole review input-queue
@@ -457,6 +461,18 @@ export function buildProductUpdateInstruction(audience, timescale, format = 'bri
 Generate a product update for ${targetAudience} covering ${updateTimescale} in ${outputFormat} format. Use the Mole operating model: retrieve top-down, descend only as needed, and keep claims evidence-backed. Start with stakeholder memory in \`4-context/stakeholders.md\`, then read relevant \`2-summaries/\`, \`3-indexes/\`, product context in \`4-context/\`, evidence in \`5-evidence/\`, and recent raw or synthesised items matching ${updateTimescale}. Tailor the update to the audience's product interests, decision authority, communication preferences, known concerns, and likely asks. Separate headline summary, progress, what changed, risks or blockers, decisions needed, asks, and suggested follow-up. Include a concise retrieval receipt.`;
 }
 
+export function buildBootstrapContextInstruction() {
+  return `Suggested agent instruction:
+
+Bootstrap this Mole workspace context. Treat blank, placeholder, or starter-template files in \`2-summaries/\` and \`3-indexes/\` as missing top-layer context. Read \`0-bootstrap/\`, \`1-routing/\`, all existing \`4-context/\` modules, useful \`5-evidence/\` material, and current unprocessed inbox material in \`6-raw/inbox/\`. Populate the initial domain summaries and indexes with concise, evidence-backed context, preserving uncertainty and adding missing human questions to \`governance/input-queue.md\`. Do not invent product facts; mark low-confidence conclusions as hypotheses and link to supporting files.`;
+}
+
+export function buildRefreshTopLayersInstruction() {
+  return `Suggested agent instruction:
+
+Refresh the Mole top layers. Compare \`2-summaries/\` and \`3-indexes/\` with lower-layer context in \`4-context/\`, evidence in \`5-evidence/\`, recent processed inbox outputs, and any relevant unprocessed \`6-raw/inbox/\` material. Update blank, placeholder, stale, or incomplete summaries and indexes so they accurately route future retrieval. Keep changes compact and evidence-backed, avoid copying raw detail upward, and add missing human questions to \`governance/input-queue.md\` when the lower layers do not justify a confident summary.`;
+}
+
 function productUpdate(values) {
   const { audience, timescale, format } = parseProductUpdateArgs(values);
 
@@ -622,9 +638,19 @@ if (isDirectRun) {
     case 'product-update':
       productUpdate([subcommand, ...rest].filter(Boolean));
       break;
+    case 'bootstrap-context':
+      console.log(buildBootstrapContextInstruction());
+      break;
+    case 'refresh':
+      if (subcommand !== 'top-layers') {
+        console.error('Supported refresh targets: top-layers');
+        process.exit(1);
+      }
+      console.log(buildRefreshTopLayersInstruction());
+      break;
     case 'synthesise': {
       const target = subcommand || 'the requested target';
-      const personaInstruction = subcommand === 'inbox' ? ' If user/customer signals are relevant to a durable user type, update or create evidence-backed personas in `4-context/personas.md`. If internal stakeholder signals, org-chart facts, leadership asks, or update preferences are relevant, update or create evidence-backed stakeholder memory in `4-context/stakeholders.md`.' : '';
+      const personaInstruction = subcommand === 'inbox' ? ' If user/customer signals are relevant to a durable user type, update or create evidence-backed personas in `4-context/personas.md`. If internal stakeholder signals, org-chart facts, leadership asks, or update preferences are relevant, update or create evidence-backed stakeholder memory in `4-context/stakeholders.md`. If relevant `2-summaries/` or `3-indexes/` files are blank, placeholder-only, or still contain starter-template content, treat that as a material top-layer gap and populate them from the synthesised durable context.' : '';
       console.log(`Suggested agent instruction:\n\nSynthesise ${target} using the Mole operating model: capture low, distil up, retrieve top-down.${personaInstruction}`);
       break;
     }
