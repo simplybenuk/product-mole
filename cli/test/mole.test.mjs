@@ -17,7 +17,8 @@ import {
   getHelpOutput,
   getInstallBanner,
   getUpgradeCommand,
-  installMoleSkills
+  installMoleSkills,
+  parseInboxCompleteValues
 } from '../mole.mjs';
 import { buildUiCaptureContent, createCaptureRelPath } from '../../ui/server.mjs';
 
@@ -442,6 +443,98 @@ describe('inbox processing lock and receipt', () => {
         lockId: 'lock-2'
       });
       assert.equal(next.ok, true);
+    });
+  });
+
+  it('parses repeated processed paths while preserving completion summary text', () => {
+    const parsed = parseInboxCompleteValues([
+      '--processed',
+      '6-raw/inbox/new/quick-notes/a.md',
+      '--processed',
+      '6-raw/inbox/new/messages/b.md',
+      'Promoted',
+      'two',
+      'notes.'
+    ]);
+
+    assert.deepEqual(parsed.processed, [
+      '6-raw/inbox/new/quick-notes/a.md',
+      '6-raw/inbox/new/messages/b.md'
+    ]);
+    assert.equal(parsed.summary, 'Promoted two notes.');
+  });
+
+  it('records processed paths in metrics when the CLI completes inbox processing', () => {
+    withTempInstance((dir) => {
+      const claim = spawnSync(process.execPath, [
+        path.join(repoRoot, 'cli', 'mole.mjs'),
+        'inbox',
+        'claim',
+        'Ada'
+      ], {
+        cwd: dir,
+        encoding: 'utf8'
+      });
+      const complete = spawnSync(process.execPath, [
+        path.join(repoRoot, 'cli', 'mole.mjs'),
+        'inbox',
+        'complete',
+        '--processed',
+        '6-raw/inbox/new/quick-notes/a.md',
+        '--processed',
+        '6-raw/inbox/new/messages/b.md',
+        'Promoted',
+        'two',
+        'notes.'
+      ], {
+        cwd: dir,
+        encoding: 'utf8'
+      });
+
+      const paths = getMetricsPaths(dir);
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      const receiptFile = fs.readdirSync(receiptsDir).find((file) => file.endsWith('.json'));
+      const receipt = JSON.parse(fs.readFileSync(path.join(receiptsDir, receiptFile), 'utf8'));
+      const daily = JSON.parse(fs.readFileSync(paths.dailyPath, 'utf8'));
+
+      assert.equal(claim.status, 0);
+      assert.equal(complete.status, 0);
+      assert.deepEqual(receipt.processed, [
+        '6-raw/inbox/new/quick-notes/a.md',
+        '6-raw/inbox/new/messages/b.md'
+      ]);
+      assert.equal(daily.records.at(-1).count, 2);
+    });
+  });
+
+  it('keeps inbox completion successful when metrics update fails', () => {
+    withTempInstance((dir) => {
+      claimInboxProcessing(dir, {
+        claimedBy: 'Ada',
+        now: new Date('2026-06-11T10:00:00.000Z'),
+        lockId: 'lock-1'
+      });
+      fs.mkdirSync(path.join(dir, 'governance', 'metrics'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'governance', 'metrics', 'daily.json'), '{broken', 'utf8');
+
+      const result = spawnSync(process.execPath, [
+        path.join(repoRoot, 'cli', 'mole.mjs'),
+        'inbox',
+        'complete',
+        '--processed',
+        '6-raw/inbox/new/quick-notes/a.md',
+        'Promoted',
+        'one',
+        'note.'
+      ], {
+        cwd: dir,
+        encoding: 'utf8'
+      });
+
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /receipt written/);
+      assert.match(result.stderr, /metrics update failed/);
+      assert.equal(fs.existsSync(path.join(dir, 'governance', 'inbox-processing.lock.json')), false);
     });
   });
 });

@@ -186,6 +186,24 @@
       "validation": [
         "npm test"
       ]
+    },
+    {
+      "id": "molehill-metrics-002",
+      "title": "Record metrics from inbox completion receipts",
+      "category": "molehill-metrics",
+      "chunk": "metrics-inbox-integration",
+      "description": "Extend mole inbox complete so agents can provide processed paths and successful completions update metrics without blocking the receipt flow.",
+      "acceptance_criteria": [
+        "mole inbox complete accepts repeated --processed <path> flags while preserving summary behavior.",
+        "Supplied processed paths are written into completion receipt processed arrays.",
+        "Successful receipt creation calls the metrics recorder for processed paths.",
+        "Metrics update failures warn without failing inbox completion or leaving the lock in place."
+      ],
+      "passes": true,
+      "completed_at": "2026-06-11",
+      "validation": [
+        "npm test"
+      ]
     }
   ]
 }

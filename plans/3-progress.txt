@@ -88,3 +88,11 @@
 - Added tests for unique counting, same-day dedupe, UTC date reset, daily retention, weekly/monthly retention, and preserving historical rollups.
 - Validation: `npm test` from `cli/` passed.
 - Next priority: `metrics-inbox-integration` / `molehill-metrics-002`.
+
+2026-06-11
+
+- Completed `molehill-metrics-002`: extended `mole inbox complete` with repeated `--processed <path>` support.
+- Completion receipts now preserve processed paths and successful completions update local metrics after the receipt is written.
+- Metrics update failures are reported as warnings and do not fail completion or prevent lock release.
+- Validation: `npm test` from `cli/` passed.
+- Next priority: `metrics-dashboard` / `molehill-metrics-003`.

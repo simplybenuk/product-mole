@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
 import { claimInboxProcessing, completeInboxProcessing } from '../lib/inbox-processing.mjs';
+import { recordProcessedInboxItems } from '../lib/metrics.mjs';
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
@@ -51,7 +52,8 @@ Usage:
   mole synthesise <target>             Print an agent instruction for synthesis work.
   mole review <target>                 Print an agent instruction for review work.
   mole inbox claim [processor]         Claim inbox processing with a file lock.
-  mole inbox complete [summary]        Write a receipt and release the inbox lock.
+  mole inbox complete [--processed path] [summary]
+                                      Write a receipt, record processed paths, and release the lock.
   mole install skills                  Install Mole agent skills into ~/.agents/skills.
   mole check-updates                   Compare this CLI version with the workspace.
   mole upgrade                         Update the globally installed Mole CLI.
@@ -74,7 +76,7 @@ Examples:
   mole synthesise inbox
   mole review input-queue
   mole inbox claim
-  mole inbox complete "Promoted this week's research notes"
+  mole inbox complete --processed 6-raw/inbox/new/quick-notes/a.md "Promoted one note"
 
 More help:
   ${HELP_URL}
@@ -599,17 +601,51 @@ function runInboxCommand(action, values = []) {
   }
 
   if (action === 'complete') {
+    const parsed = parseInboxCompleteValues(values);
     const result = completeInboxProcessing(cwd, {
-      summary: values.join(' ').trim() || undefined
+      processed: parsed.processed,
+      summary: parsed.summary || undefined
     });
     const output = result.ok ? console.log : console.error;
     output(result.message);
     if (!result.ok) process.exit(1);
+
+    try {
+      recordProcessedInboxItems(cwd, result.receipt.processed);
+    } catch (err) {
+      console.warn(`Warning: inbox metrics update failed: ${err.message}`);
+    }
     return;
   }
 
   console.error('Supported inbox commands: claim, complete');
   process.exit(1);
+}
+
+export function parseInboxCompleteValues(values = []) {
+  const processed = [];
+  const summaryParts = [];
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+
+    if (value === '--processed') {
+      const processedPath = values[index + 1];
+      if (!processedPath || processedPath.startsWith('--')) {
+        throw new Error('Missing value for --processed.');
+      }
+      processed.push(processedPath);
+      index += 1;
+      continue;
+    }
+
+    summaryParts.push(value);
+  }
+
+  return {
+    processed,
+    summary: summaryParts.join(' ').trim()
+  };
 }
 
 if (isDirectRun) {
