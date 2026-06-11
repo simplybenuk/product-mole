@@ -57,6 +57,8 @@ mole product-update "Sales leadership" quarter --format teams
 | `mole doctor` | Checks source and instance versions plus required instance folders. |
 | `mole check-updates` | Reports whether the installed Mole source is newer than the current workspace. |
 | `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/quick-notes/`. |
+| `mole note "<text>"` | Alias for `mole insight`. |
+| `mole signal "<text>"` | Alias for `mole insight`. |
 | `mole insight --stakeholder CEO "<text>"` | Captures an insight with stakeholder metadata for later synthesis. |
 | `mole product-update <audience> <timescale> --format <format>` | Prints an agent instruction for a stakeholder-specific product update. |
 | `mole bootstrap-context` | Prints an agent instruction for first-time summary/index population. |
@@ -70,5 +72,24 @@ mole product-update "Sales leadership" quarter --format teams
 | `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
 | `mole inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
-| `mole inbox complete [summary]` | Writes a processing receipt and releases the inbox lock. |
+| `mole inbox complete [--processed <path>] [summary]` | Writes a processing receipt, records processed inbox paths in local metrics, and releases the inbox lock. |
+| `mole metrics backfill` | Rebuilds local metrics from inbox processing receipts that already contain processed paths. |
 | `mole upgrade` | Updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`. |
+
+## Inbox completion metrics
+
+`mole inbox complete` can record lightweight local metrics for processed inbox items:
+
+```bash
+mole inbox complete --processed 6-raw/inbox/new/quick-notes/a.md "Promoted one note"
+```
+
+Use one `--processed <path>` flag for each inbox item actually processed. Metrics are stored under `governance/metrics/` and shown in `governance/metrics/dashboard.html`. Metrics files store paths and aggregate counts only; do not put raw insight content in them.
+
+For upgraded existing workspaces, run:
+
+```bash
+mole metrics backfill
+```
+
+Backfill reads `governance/run-receipts/inbox-processing/*.json` and counts only receipt `processed` paths with valid completion dates. It does not infer from raw folders.

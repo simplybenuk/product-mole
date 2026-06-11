@@ -20,6 +20,9 @@ Turn raw inbox material into more useful, higher-signal outputs while preserving
 5. For internal stakeholder signals, executive asks, leadership concerns, update preferences, decision authority, or org-chart facts, check `4-context/stakeholders.md`; update a matching stakeholder profile or create a new stakeholder section when the inbox material is relevant to a durable person, group, forum, or function. Keep stakeholder changes evidence-backed and mark weak signals as hypotheses.
 6. Update `3-indexes/` or `2-summaries/` when the new signal materially changes higher-level context. If relevant summary or index files are blank, placeholder-only, or still contain starter-template content, treat that as a material top-layer gap and populate them from the synthesised durable context. Update `2-summaries/user-summary.md` when persona changes materially affect user understanding.
 7. Add missing human questions to `governance/input-queue.md` if important decisions cannot be made from the available context.
-8. Report what was synthesised, what personas were created or updated, what stakeholders were created or updated, what other files changed, and what still needs human input.
+8. Complete the inbox run with `mole inbox complete --processed <path> ... "summary"`, including one `--processed` flag for each inbox item actually processed. Do not include items that were only inspected, skipped, or left for later.
+9. Report what was synthesised, what personas were created or updated, what stakeholders were created or updated, what other files changed, and what still needs human input.
 
 Avoid over-promoting weak signals. Distil responsibly.
+
+Metrics count processed inbox item paths in `governance/metrics/`. They must not contain raw insight text or source content.

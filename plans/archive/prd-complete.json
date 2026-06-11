@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-13",
+  "updated_at": "2026-06-11",
   "completed": [
     {
       "id": "instance-lifecycle-001",
@@ -167,6 +167,98 @@
       "validation": [
         "npm test",
         "node cli/mole.mjs --help"
+      ]
+    },
+    {
+      "id": "molehill-metrics-001",
+      "title": "Add processed inbox metrics storage and recorder",
+      "category": "molehill-metrics",
+      "chunk": "metrics-foundation",
+      "description": "Create the local metrics data foundation for processed inbox item counts under governance/metrics.",
+      "acceptance_criteria": [
+        "Starter JSON files exist for daily, weekly, monthly, and seen-today metrics under governance/metrics.",
+        "lib/metrics.mjs records unique processed inbox relative paths for the current UTC date.",
+        "Daily, weekly, and monthly retention rules are implemented with persistent weekly and monthly rollups.",
+        "Tests cover counting, same-day dedupe, date reset, starter file creation, and retention behavior."
+      ],
+      "passes": true,
+      "completed_at": "2026-06-11",
+      "validation": [
+        "npm test"
+      ]
+    },
+    {
+      "id": "molehill-metrics-002",
+      "title": "Record metrics from inbox completion receipts",
+      "category": "molehill-metrics",
+      "chunk": "metrics-inbox-integration",
+      "description": "Extend mole inbox complete so agents can provide processed paths and successful completions update metrics without blocking the receipt flow.",
+      "acceptance_criteria": [
+        "mole inbox complete accepts repeated --processed <path> flags while preserving summary behavior.",
+        "Supplied processed paths are written into completion receipt processed arrays.",
+        "Successful receipt creation calls the metrics recorder for processed paths.",
+        "Metrics update failures warn without failing inbox completion or leaving the lock in place."
+      ],
+      "passes": true,
+      "completed_at": "2026-06-11",
+      "validation": [
+        "npm test"
+      ]
+    },
+    {
+      "id": "molehill-metrics-003",
+      "title": "Add a static Molehill Metrics dashboard",
+      "category": "molehill-metrics",
+      "chunk": "metrics-dashboard",
+      "description": "Create a local static dashboard that reads the metrics JSON files and displays daily, weekly, and monthly processing activity.",
+      "acceptance_criteria": [
+        "governance/metrics/dashboard.html exists with no external dependencies.",
+        "The dashboard loads daily, weekly, and monthly metrics JSON files.",
+        "The dashboard provides view switching, date range filtering, totals, averages, latest-period values, a table, and a simple bar display.",
+        "Generated Mole workspaces include the metrics dashboard and starter JSON files."
+      ],
+      "passes": true,
+      "completed_at": "2026-06-11",
+      "validation": [
+        "npm test"
+      ]
+    },
+    {
+      "id": "molehill-metrics-004",
+      "title": "Document processed path metrics workflow",
+      "category": "molehill-metrics",
+      "chunk": "metrics-guidance",
+      "description": "Update user and agent guidance so inbox processors complete work with processed paths and understand what metrics count.",
+      "acceptance_criteria": [
+        "README and CLI docs explain mole inbox complete --processed usage.",
+        "mole-synthesise-inbox skill guidance tells agents to include processed paths when completing inbox work.",
+        "Bootstrap agent guidance says to count only actually processed inbox items and avoid raw content in metrics files.",
+        "Documentation checks and the CLI test suite pass."
+      ],
+      "passes": true,
+      "completed_at": "2026-06-11",
+      "validation": [
+        "rg -n \"mole inbox complete --processed|governance/metrics|dashboard.html|actually processed|raw insight content|Metrics count\" README.md cli/README.md cli/skills/mole-synthesise-inbox/SKILL.md 0-bootstrap/agents.md cli/mole.mjs",
+        "npm test"
+      ]
+    },
+    {
+      "id": "molehill-metrics-005",
+      "title": "Backfill metrics from inbox processing receipts",
+      "category": "molehill-metrics",
+      "chunk": "metrics-backfill",
+      "description": "Add an explicit command that rebuilds local metrics from historical inbox processing receipts with processed paths.",
+      "acceptance_criteria": [
+        "A metrics backfill function reads governance/run-receipts/inbox-processing JSON receipts.",
+        "Backfill counts only receipt processed paths with valid completed_at dates and does not infer from raw folders.",
+        "mole metrics backfill reports scanned, counted, skipped, and processed path totals.",
+        "Tests cover backfill aggregation, dedupe, rollups, and CLI output."
+      ],
+      "passes": true,
+      "completed_at": "2026-06-11",
+      "validation": [
+        "npm test",
+        "rg -n \"mole metrics backfill|run-receipts/inbox-processing|does not infer\" README.md cli/README.md spec/architecture/spec-product-mole-lightweight-metrics-spec.md"
       ]
     }
   ]

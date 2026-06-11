@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-13",
+  "updated_at": "2026-06-11",
   "categories": [
     {
       "id": "instance-lifecycle",
@@ -60,6 +60,45 @@
         {
           "id": "inbox-processing-coordination",
           "title": "Inbox processing coordination",
+          "status": "complete",
+          "tasks": []
+        }
+      ]
+    },
+    {
+      "id": "molehill-metrics",
+      "title": "Molehill Metrics",
+      "status": "complete",
+      "summary": "Add lightweight local metrics for processed inbox items so Mole workspaces can show daily, weekly, and monthly processing activity without hosted analytics.",
+      "priority_notes": "This builds on the completed inbox processing lock and receipt workflow, keeps the local-first architecture, and improves confidence that teams are feeding the mole consistently.",
+      "chunks": [
+        {
+          "id": "metrics-foundation",
+          "title": "Metrics data foundation",
+          "status": "complete",
+          "tasks": []
+        },
+        {
+          "id": "metrics-inbox-integration",
+          "title": "Inbox completion integration",
+          "status": "complete",
+          "tasks": []
+        },
+        {
+          "id": "metrics-dashboard",
+          "title": "Local metrics dashboard",
+          "status": "complete",
+          "tasks": []
+        },
+        {
+          "id": "metrics-guidance",
+          "title": "Metrics guidance",
+          "status": "complete",
+          "tasks": []
+        },
+        {
+          "id": "metrics-backfill",
+          "title": "Metrics backfill",
           "status": "complete",
           "tasks": []
         }

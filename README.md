@@ -73,6 +73,8 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole doctor` | Checks source and instance versions plus required instance folders. |
 | `mole check-updates` | Reports whether the installed Mole source is newer than the current workspace. |
 | `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/quick-notes/`. |
+| `mole note "<text>"` | Alias for `mole insight`. |
+| `mole signal "<text>"` | Alias for `mole insight`. |
 | `mole insight --stakeholder CEO "<text>"` | Captures an insight with stakeholder metadata for later synthesis. |
 | `mole product-update <audience> <timescale> --format <format>` | Prints an agent instruction for a stakeholder-specific product update. |
 | `mole bootstrap-context` | Prints an agent instruction for first-time summary/index population. |
@@ -86,7 +88,8 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
 | `mole inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
-| `mole inbox complete [summary]` | Writes a processing receipt and releases the inbox lock. |
+| `mole inbox complete [--processed <path>] [summary]` | Writes a processing receipt, records processed inbox paths in local metrics, and releases the inbox lock. |
+| `mole metrics backfill` | Rebuilds local metrics from inbox processing receipts that already contain processed paths. |
 | `mole upgrade` | Updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`. |
 
 ## Stakeholder memory and product updates
@@ -120,6 +123,20 @@ mole refresh top-layers
 ```
 
 Daily `mole synthesise inbox` remains focused on promoting new material, but blank or placeholder summaries and indexes now count as material gaps that should be filled when relevant durable context is synthesised.
+
+## Molehill Metrics
+
+Mole tracks lightweight local processing metrics under `governance/metrics/`. Metrics count processed inbox item paths, not raw insight content and not individual users.
+
+When finishing inbox work, include each inbox item that was actually processed:
+
+```bash
+mole inbox complete --processed 6-raw/inbox/new/quick-notes/a.md "Promoted one customer signal"
+```
+
+Use repeated `--processed` flags for multiple items. Do not include items that were only inspected, skipped, or left for later. The local dashboard is available at `governance/metrics/dashboard.html`.
+
+For existing workspaces, run `mole metrics backfill` after upgrading to rebuild metrics from historical `governance/run-receipts/inbox-processing/` receipts. Backfill counts only receipt `processed` paths with valid completion dates; it does not infer from raw inbox folders or read raw insight content.
 
 ## How Mole Works
 
@@ -208,6 +225,7 @@ What exists now:
 - raw insight capture
 - draft artifact generation
 - stakeholder memory and product update guidance
+- lightweight local Molehill Metrics for processed inbox items
 - docs for upgrade/adoption/command UX
 
 What is still lightweight:

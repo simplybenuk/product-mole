@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
 import { claimInboxProcessing, completeInboxProcessing } from '../lib/inbox-processing.mjs';
+import { backfillProcessedInboxMetrics, recordProcessedInboxItems } from '../lib/metrics.mjs';
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
@@ -31,6 +32,11 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
   ['agents.md', 'agents.md'],
   ['governance/change-log.md', 'governance/change-log.md'],
   ['governance/input-queue.md', 'governance/input-queue.md'],
+  ['governance/metrics/daily.json', 'governance/metrics/daily.json'],
+  ['governance/metrics/weekly.json', 'governance/metrics/weekly.json'],
+  ['governance/metrics/monthly.json', 'governance/metrics/monthly.json'],
+  ['governance/metrics/seen-today.json', 'governance/metrics/seen-today.json'],
+  ['governance/metrics/dashboard.html', 'governance/metrics/dashboard.html'],
   ['governance/quality-checklist.md', 'governance/quality-checklist.md'],
   ['governance/run-receipts/README.md', 'governance/run-receipts/README.md'],
   ['mole.instance-template.yaml', 'mole.instance.yaml']
@@ -44,6 +50,8 @@ Usage:
   mole init [target-dir]               Alias for "mole new" for older docs/scripts.
   mole create <artifact> [output-path] Create a draft artifact from a Mole template.
   mole insight [options] <text>        Capture a raw product insight into the inbox.
+  mole note [options] <text>           Alias for "mole insight".
+  mole signal [options] <text>         Alias for "mole insight".
   mole product-update <audience> <timescale> [--format email|teams|blog|brief]
                                       Print an agent instruction for a stakeholder update.
   mole bootstrap-context              Print an agent instruction for first-time top-layer setup.
@@ -51,7 +59,9 @@ Usage:
   mole synthesise <target>             Print an agent instruction for synthesis work.
   mole review <target>                 Print an agent instruction for review work.
   mole inbox claim [processor]         Claim inbox processing with a file lock.
-  mole inbox complete [summary]        Write a receipt and release the inbox lock.
+  mole inbox complete [--processed path] [summary]
+                                      Write a receipt, record processed paths, and release the lock.
+  mole metrics backfill               Rebuild metrics from inbox processing receipts.
   mole install skills                  Install Mole agent skills into ~/.agents/skills.
   mole check-updates                   Compare this CLI version with the workspace.
   mole upgrade                         Update the globally installed Mole CLI.
@@ -66,6 +76,8 @@ Examples:
   mole create roadmap
   mole create spec drafts/spec.md
   mole insight "Users trust CSV export more than dashboard totals"
+  mole note "Support team heard onboarding confusion"
+  mole signal "Trial users miss the export button"
   mole insight --stakeholder CEO "Asked whether enterprise onboarding is improving"
   mole product-update CEO 2-weeks --format email
   mole bootstrap-context
@@ -74,7 +86,8 @@ Examples:
   mole synthesise inbox
   mole review input-queue
   mole inbox claim
-  mole inbox complete "Promoted this week's research notes"
+  mole inbox complete --processed 6-raw/inbox/new/quick-notes/a.md "Promoted one note"
+  mole metrics backfill
 
 More help:
   ${HELP_URL}
@@ -599,17 +612,66 @@ function runInboxCommand(action, values = []) {
   }
 
   if (action === 'complete') {
+    const parsed = parseInboxCompleteValues(values);
     const result = completeInboxProcessing(cwd, {
-      summary: values.join(' ').trim() || undefined
+      processed: parsed.processed,
+      summary: parsed.summary || undefined
     });
     const output = result.ok ? console.log : console.error;
     output(result.message);
     if (!result.ok) process.exit(1);
+
+    try {
+      recordProcessedInboxItems(cwd, result.receipt.processed);
+    } catch (err) {
+      console.warn(`Warning: inbox metrics update failed: ${err.message}`);
+    }
     return;
   }
 
   console.error('Supported inbox commands: claim, complete');
   process.exit(1);
+}
+
+function runMetricsCommand(action) {
+  if (action === 'backfill') {
+    const result = backfillProcessedInboxMetrics(cwd);
+    console.log('Mole metrics backfill complete.');
+    console.log(`Receipts scanned: ${result.receipts_scanned}`);
+    console.log(`Receipts counted: ${result.receipts_counted}`);
+    console.log(`Receipts skipped: ${result.receipts_skipped}`);
+    console.log(`Processed paths counted: ${result.processed_paths_counted}`);
+    return;
+  }
+
+  console.error('Supported metrics commands: backfill');
+  process.exit(1);
+}
+
+export function parseInboxCompleteValues(values = []) {
+  const processed = [];
+  const summaryParts = [];
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+
+    if (value === '--processed') {
+      const processedPath = values[index + 1];
+      if (!processedPath || processedPath.startsWith('--')) {
+        throw new Error('Missing value for --processed.');
+      }
+      processed.push(processedPath);
+      index += 1;
+      continue;
+    }
+
+    summaryParts.push(value);
+  }
+
+  return {
+    processed,
+    summary: summaryParts.join(' ').trim()
+  };
 }
 
 if (isDirectRun) {
@@ -650,7 +712,7 @@ if (isDirectRun) {
       break;
     case 'synthesise': {
       const target = subcommand || 'the requested target';
-      const personaInstruction = subcommand === 'inbox' ? ' If user/customer signals are relevant to a durable user type, update or create evidence-backed personas in `4-context/personas.md`. If internal stakeholder signals, org-chart facts, leadership asks, or update preferences are relevant, update or create evidence-backed stakeholder memory in `4-context/stakeholders.md`. If relevant `2-summaries/` or `3-indexes/` files are blank, placeholder-only, or still contain starter-template content, treat that as a material top-layer gap and populate them from the synthesised durable context.' : '';
+      const personaInstruction = subcommand === 'inbox' ? ' If user/customer signals are relevant to a durable user type, update or create evidence-backed personas in `4-context/personas.md`. If internal stakeholder signals, org-chart facts, leadership asks, or update preferences are relevant, update or create evidence-backed stakeholder memory in `4-context/stakeholders.md`. If relevant `2-summaries/` or `3-indexes/` files are blank, placeholder-only, or still contain starter-template content, treat that as a material top-layer gap and populate them from the synthesised durable context. When complete, run `mole inbox complete --processed <path> ... "summary"` with one processed path for each inbox item actually processed.' : '';
       console.log(`Suggested agent instruction:\n\nSynthesise ${target} using the Mole operating model: capture low, distil up, retrieve top-down.${personaInstruction}`);
       break;
     }
@@ -659,6 +721,9 @@ if (isDirectRun) {
       break;
     case 'inbox':
       runInboxCommand(subcommand, rest);
+      break;
+    case 'metrics':
+      runMetricsCommand(subcommand);
       break;
     case 'install':
       if (subcommand === 'skills') {

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "metric": "processed_inbox_items",
+  "retention": {
+    "unit": "week",
+    "limit": 52
+  },
+  "week_start_day": "monday",
+  "updated_at": null,
+  "records": []
+}
