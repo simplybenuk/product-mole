@@ -561,6 +561,8 @@ describe('processed inbox metrics', () => {
     withTempInstance((dir) => {
       const first = recordProcessedInboxItems(dir, [
         '6-raw/inbox/new/quick-notes/a.md',
+        './6-raw/inbox/new/quick-notes/a.md',
+        path.join(dir, '6-raw', 'inbox', 'new', 'quick-notes', 'a.md'),
         '6-raw/inbox/new/quick-notes/a.md',
         '6-raw/inbox/new/messages/b.md'
       ], {
@@ -594,6 +596,10 @@ describe('processed inbox metrics', () => {
       }]);
       assert.equal(seenToday.date, '2026-06-11');
       assert.equal(seenToday.seen.length, 2);
+      assert.deepEqual(seenToday.seen.map((entry) => entry.key), [
+        '6-raw/inbox/new/quick-notes/a.md',
+        '6-raw/inbox/new/messages/b.md'
+      ]);
     });
   });
 
@@ -737,6 +743,8 @@ describe('processed inbox metrics', () => {
         completed_at: '2026-06-10T10:00:00.000Z',
         processed: [
           '6-raw/inbox/new/quick-notes/a.md',
+          './6-raw/inbox/new/quick-notes/a.md',
+          path.join(dir, '6-raw', 'inbox', 'new', 'quick-notes', 'a.md'),
           '6-raw/inbox/new/quick-notes/a.md',
           '6-raw/inbox/new/messages/b.md'
         ]
