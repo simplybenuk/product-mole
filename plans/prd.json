@@ -68,7 +68,7 @@
     {
       "id": "molehill-metrics",
       "title": "Molehill Metrics",
-      "status": "active",
+      "status": "complete",
       "summary": "Add lightweight local metrics for processed inbox items so Mole workspaces can show daily, weekly, and monthly processing activity without hosted analytics.",
       "priority_notes": "This builds on the completed inbox processing lock and receipt workflow, keeps the local-first architecture, and improves confidence that teams are feeding the mole consistently.",
       "chunks": [
@@ -93,22 +93,8 @@
         {
           "id": "metrics-guidance",
           "title": "Metrics guidance",
-          "status": "active",
-          "tasks": [
-            {
-              "id": "molehill-metrics-004",
-              "title": "Document processed path metrics workflow",
-              "chunk": "metrics-guidance",
-              "description": "Update user and agent guidance so inbox processors complete work with processed paths and understand what metrics count.",
-              "steps": [
-                "Document mole inbox complete --processed usage in README and CLI docs.",
-                "Update mole-synthesise-inbox skill guidance to include processed paths when completing inbox work.",
-                "Update bootstrap agent guidance so agents count only actually processed inbox items and avoid raw content in metrics files.",
-                "Run documentation checks and the CLI test suite."
-              ],
-              "passes": false
-            }
-          ]
+          "status": "complete",
+          "tasks": []
         }
       ]
     }

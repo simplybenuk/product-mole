@@ -95,6 +95,7 @@ describe('synthesise guidance', () => {
     assert.match(result.stdout, /stakeholder memory/);
     assert.match(result.stdout, /blank, placeholder-only/);
     assert.match(result.stdout, /material top-layer gap/);
+    assert.match(result.stdout, /mole inbox complete --processed <path>/);
   });
 
   it('prints first-time bootstrap guidance for blank top layers', () => {

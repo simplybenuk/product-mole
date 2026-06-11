@@ -222,6 +222,25 @@
       "validation": [
         "npm test"
       ]
+    },
+    {
+      "id": "molehill-metrics-004",
+      "title": "Document processed path metrics workflow",
+      "category": "molehill-metrics",
+      "chunk": "metrics-guidance",
+      "description": "Update user and agent guidance so inbox processors complete work with processed paths and understand what metrics count.",
+      "acceptance_criteria": [
+        "README and CLI docs explain mole inbox complete --processed usage.",
+        "mole-synthesise-inbox skill guidance tells agents to include processed paths when completing inbox work.",
+        "Bootstrap agent guidance says to count only actually processed inbox items and avoid raw content in metrics files.",
+        "Documentation checks and the CLI test suite pass."
+      ],
+      "passes": true,
+      "completed_at": "2026-06-11",
+      "validation": [
+        "rg -n \"mole inbox complete --processed|governance/metrics|dashboard.html|actually processed|raw insight content|Metrics count\" README.md cli/README.md cli/skills/mole-synthesise-inbox/SKILL.md 0-bootstrap/agents.md cli/mole.mjs",
+        "npm test"
+      ]
     }
   ]
 }

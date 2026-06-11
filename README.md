@@ -86,7 +86,7 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
 | `mole inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
-| `mole inbox complete [summary]` | Writes a processing receipt and releases the inbox lock. |
+| `mole inbox complete [--processed <path>] [summary]` | Writes a processing receipt, records processed inbox paths in local metrics, and releases the inbox lock. |
 | `mole upgrade` | Updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`. |
 
 ## Stakeholder memory and product updates
@@ -120,6 +120,18 @@ mole refresh top-layers
 ```
 
 Daily `mole synthesise inbox` remains focused on promoting new material, but blank or placeholder summaries and indexes now count as material gaps that should be filled when relevant durable context is synthesised.
+
+## Molehill Metrics
+
+Mole tracks lightweight local processing metrics under `governance/metrics/`. Metrics count processed inbox item paths, not raw insight content and not individual users.
+
+When finishing inbox work, include each inbox item that was actually processed:
+
+```bash
+mole inbox complete --processed 6-raw/inbox/new/quick-notes/a.md "Promoted one customer signal"
+```
+
+Use repeated `--processed` flags for multiple items. Do not include items that were only inspected, skipped, or left for later. The local dashboard is available at `governance/metrics/dashboard.html`.
 
 ## How Mole Works
 
@@ -208,6 +220,7 @@ What exists now:
 - raw insight capture
 - draft artifact generation
 - stakeholder memory and product update guidance
+- lightweight local Molehill Metrics for processed inbox items
 - docs for upgrade/adoption/command UX
 
 What is still lightweight:

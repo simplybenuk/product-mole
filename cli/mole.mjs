@@ -691,7 +691,7 @@ if (isDirectRun) {
       break;
     case 'synthesise': {
       const target = subcommand || 'the requested target';
-      const personaInstruction = subcommand === 'inbox' ? ' If user/customer signals are relevant to a durable user type, update or create evidence-backed personas in `4-context/personas.md`. If internal stakeholder signals, org-chart facts, leadership asks, or update preferences are relevant, update or create evidence-backed stakeholder memory in `4-context/stakeholders.md`. If relevant `2-summaries/` or `3-indexes/` files are blank, placeholder-only, or still contain starter-template content, treat that as a material top-layer gap and populate them from the synthesised durable context.' : '';
+      const personaInstruction = subcommand === 'inbox' ? ' If user/customer signals are relevant to a durable user type, update or create evidence-backed personas in `4-context/personas.md`. If internal stakeholder signals, org-chart facts, leadership asks, or update preferences are relevant, update or create evidence-backed stakeholder memory in `4-context/stakeholders.md`. If relevant `2-summaries/` or `3-indexes/` files are blank, placeholder-only, or still contain starter-template content, treat that as a material top-layer gap and populate them from the synthesised durable context. When complete, run `mole inbox complete --processed <path> ... "summary"` with one processed path for each inbox item actually processed.' : '';
       console.log(`Suggested agent instruction:\n\nSynthesise ${target} using the Mole operating model: capture low, distil up, retrieve top-down.${personaInstruction}`);
       break;
     }

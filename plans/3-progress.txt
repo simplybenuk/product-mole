@@ -104,3 +104,10 @@
 - Updated workspace scaffolding so new Mole workspaces include the dashboard and starter metrics files.
 - Validation: `npm test` from `cli/` passed.
 - Next priority: `metrics-guidance` / `molehill-metrics-004`.
+
+2026-06-11
+
+- Completed `molehill-metrics-004`: documented the processed-path metrics workflow in README, CLI docs, inbox synthesis skill guidance, and bootstrap agent rules.
+- Updated `mole synthesise inbox` output so generated agent instructions include `mole inbox complete --processed <path> ... "summary"`.
+- Validation: documentation checks with `rg` passed; `npm test` from `cli/` passed.
+- Category `molehill-metrics` is complete. No incomplete PRD tasks remain in the category.

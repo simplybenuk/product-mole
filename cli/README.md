@@ -70,5 +70,15 @@ mole product-update "Sales leadership" quarter --format teams
 | `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
 | `mole inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
-| `mole inbox complete [summary]` | Writes a processing receipt and releases the inbox lock. |
+| `mole inbox complete [--processed <path>] [summary]` | Writes a processing receipt, records processed inbox paths in local metrics, and releases the inbox lock. |
 | `mole upgrade` | Updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`. |
+
+## Inbox completion metrics
+
+`mole inbox complete` can record lightweight local metrics for processed inbox items:
+
+```bash
+mole inbox complete --processed 6-raw/inbox/new/quick-notes/a.md "Promoted one note"
+```
+
+Use one `--processed <path>` flag for each inbox item actually processed. Metrics are stored under `governance/metrics/` and shown in `governance/metrics/dashboard.html`. Metrics files store paths and aggregate counts only; do not put raw insight content in them.
