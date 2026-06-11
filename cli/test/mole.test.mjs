@@ -159,6 +159,11 @@ describe('workspace scaffold', () => {
         path.join('4-context', 'stakeholders.md'),
         '5-evidence',
         '6-raw',
+        path.join('governance', 'metrics', 'daily.json'),
+        path.join('governance', 'metrics', 'weekly.json'),
+        path.join('governance', 'metrics', 'monthly.json'),
+        path.join('governance', 'metrics', 'seen-today.json'),
+        path.join('governance', 'metrics', 'dashboard.html'),
         'mole.instance.yaml'
       ]) {
         assert.ok(fs.existsSync(path.join(dir, relPath)), `${relPath} should exist`);
@@ -697,5 +702,18 @@ describe('processed inbox metrics', () => {
       assert.equal(monthly.records.length, 24);
       assert.equal(monthly.records.at(-1).month, '2026-06');
     });
+  });
+
+  it('includes a static dashboard wired to local metrics files', () => {
+    const dashboard = fs.readFileSync(path.join(repoRoot, 'governance', 'metrics', 'dashboard.html'), 'utf8');
+
+    assert.match(dashboard, /Molehill Metrics/);
+    assert.match(dashboard, /daily\.json/);
+    assert.match(dashboard, /weekly\.json/);
+    assert.match(dashboard, /monthly\.json/);
+    assert.match(dashboard, /viewSelect/);
+    assert.match(dashboard, /fromDate/);
+    assert.match(dashboard, /toDate/);
+    assert.match(dashboard, /fileInput/);
   });
 });

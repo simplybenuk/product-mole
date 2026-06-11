@@ -204,6 +204,24 @@
       "validation": [
         "npm test"
       ]
+    },
+    {
+      "id": "molehill-metrics-003",
+      "title": "Add a static Molehill Metrics dashboard",
+      "category": "molehill-metrics",
+      "chunk": "metrics-dashboard",
+      "description": "Create a local static dashboard that reads the metrics JSON files and displays daily, weekly, and monthly processing activity.",
+      "acceptance_criteria": [
+        "governance/metrics/dashboard.html exists with no external dependencies.",
+        "The dashboard loads daily, weekly, and monthly metrics JSON files.",
+        "The dashboard provides view switching, date range filtering, totals, averages, latest-period values, a table, and a simple bar display.",
+        "Generated Mole workspaces include the metrics dashboard and starter JSON files."
+      ],
+      "passes": true,
+      "completed_at": "2026-06-11",
+      "validation": [
+        "npm test"
+      ]
     }
   ]
 }

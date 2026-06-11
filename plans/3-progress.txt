@@ -96,3 +96,11 @@
 - Metrics update failures are reported as warnings and do not fail completion or prevent lock release.
 - Validation: `npm test` from `cli/` passed.
 - Next priority: `metrics-dashboard` / `molehill-metrics-003`.
+
+2026-06-11
+
+- Completed `molehill-metrics-003`: added the static Molehill Metrics dashboard at `governance/metrics/dashboard.html`.
+- The dashboard reads daily, weekly, and monthly metrics JSON, supports view switching and date filtering, and displays totals, averages, latest values, a table, and a simple bar chart.
+- Updated workspace scaffolding so new Mole workspaces include the dashboard and starter metrics files.
+- Validation: `npm test` from `cli/` passed.
+- Next priority: `metrics-guidance` / `molehill-metrics-004`.

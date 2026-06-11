@@ -87,27 +87,13 @@
         {
           "id": "metrics-dashboard",
           "title": "Local metrics dashboard",
-          "status": "active",
-          "tasks": [
-            {
-              "id": "molehill-metrics-003",
-              "title": "Add a static Molehill Metrics dashboard",
-              "chunk": "metrics-dashboard",
-              "description": "Create a local static dashboard that reads the metrics JSON files and displays daily, weekly, and monthly processing activity.",
-              "steps": [
-                "Add governance/metrics/dashboard.html with no external dependencies.",
-                "Load daily, weekly, and monthly JSON files from the local metrics directory.",
-                "Provide view switching, date range filtering, totals, averages, latest-period values, a table, and a simple bar display.",
-                "Add lightweight validation or tests that confirm the dashboard file exists and references the expected metrics files."
-              ],
-              "passes": false
-            }
-          ]
+          "status": "complete",
+          "tasks": []
         },
         {
           "id": "metrics-guidance",
           "title": "Metrics guidance",
-          "status": "planned",
+          "status": "active",
           "tasks": [
             {
               "id": "molehill-metrics-004",

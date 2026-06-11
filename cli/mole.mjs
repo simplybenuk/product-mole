@@ -32,6 +32,11 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
   ['agents.md', 'agents.md'],
   ['governance/change-log.md', 'governance/change-log.md'],
   ['governance/input-queue.md', 'governance/input-queue.md'],
+  ['governance/metrics/daily.json', 'governance/metrics/daily.json'],
+  ['governance/metrics/weekly.json', 'governance/metrics/weekly.json'],
+  ['governance/metrics/monthly.json', 'governance/metrics/monthly.json'],
+  ['governance/metrics/seen-today.json', 'governance/metrics/seen-today.json'],
+  ['governance/metrics/dashboard.html', 'governance/metrics/dashboard.html'],
   ['governance/quality-checklist.md', 'governance/quality-checklist.md'],
   ['governance/run-receipts/README.md', 'governance/run-receipts/README.md'],
   ['mole.instance-template.yaml', 'mole.instance.yaml']
