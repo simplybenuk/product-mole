@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-13",
+  "updated_at": "2026-06-11",
   "completed": [
     {
       "id": "instance-lifecycle-001",
@@ -167,6 +167,24 @@
       "validation": [
         "npm test",
         "node cli/mole.mjs --help"
+      ]
+    },
+    {
+      "id": "molehill-metrics-001",
+      "title": "Add processed inbox metrics storage and recorder",
+      "category": "molehill-metrics",
+      "chunk": "metrics-foundation",
+      "description": "Create the local metrics data foundation for processed inbox item counts under governance/metrics.",
+      "acceptance_criteria": [
+        "Starter JSON files exist for daily, weekly, monthly, and seen-today metrics under governance/metrics.",
+        "lib/metrics.mjs records unique processed inbox relative paths for the current UTC date.",
+        "Daily, weekly, and monthly retention rules are implemented with persistent weekly and monthly rollups.",
+        "Tests cover counting, same-day dedupe, date reset, starter file creation, and retention behavior."
+      ],
+      "passes": true,
+      "completed_at": "2026-06-11",
+      "validation": [
+        "npm test"
       ]
     }
   ]

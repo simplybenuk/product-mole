@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-13",
+  "updated_at": "2026-06-11",
   "categories": [
     {
       "id": "instance-lifecycle",
@@ -62,6 +62,81 @@
           "title": "Inbox processing coordination",
           "status": "complete",
           "tasks": []
+        }
+      ]
+    },
+    {
+      "id": "molehill-metrics",
+      "title": "Molehill Metrics",
+      "status": "active",
+      "summary": "Add lightweight local metrics for processed inbox items so Mole workspaces can show daily, weekly, and monthly processing activity without hosted analytics.",
+      "priority_notes": "This builds on the completed inbox processing lock and receipt workflow, keeps the local-first architecture, and improves confidence that teams are feeding the mole consistently.",
+      "chunks": [
+        {
+          "id": "metrics-foundation",
+          "title": "Metrics data foundation",
+          "status": "complete",
+          "tasks": []
+        },
+        {
+          "id": "metrics-inbox-integration",
+          "title": "Inbox completion integration",
+          "status": "active",
+          "tasks": [
+            {
+              "id": "molehill-metrics-002",
+              "title": "Record metrics from inbox completion receipts",
+              "chunk": "metrics-inbox-integration",
+              "description": "Extend mole inbox complete so agents can provide processed paths and successful completions update metrics without blocking the receipt flow.",
+              "steps": [
+                "Add repeated --processed <path> support to mole inbox complete while preserving existing summary behavior.",
+                "Write supplied processed paths into the completion receipt processed array.",
+                "Call the metrics recorder after successful receipt creation and log a warning instead of failing if metrics update fails.",
+                "Update CLI help and tests for processed path parsing, receipt output, metrics integration, and non-blocking failure behavior."
+              ],
+              "passes": false
+            }
+          ]
+        },
+        {
+          "id": "metrics-dashboard",
+          "title": "Local metrics dashboard",
+          "status": "planned",
+          "tasks": [
+            {
+              "id": "molehill-metrics-003",
+              "title": "Add a static Molehill Metrics dashboard",
+              "chunk": "metrics-dashboard",
+              "description": "Create a local static dashboard that reads the metrics JSON files and displays daily, weekly, and monthly processing activity.",
+              "steps": [
+                "Add governance/metrics/dashboard.html with no external dependencies.",
+                "Load daily, weekly, and monthly JSON files from the local metrics directory.",
+                "Provide view switching, date range filtering, totals, averages, latest-period values, a table, and a simple bar display.",
+                "Add lightweight validation or tests that confirm the dashboard file exists and references the expected metrics files."
+              ],
+              "passes": false
+            }
+          ]
+        },
+        {
+          "id": "metrics-guidance",
+          "title": "Metrics guidance",
+          "status": "planned",
+          "tasks": [
+            {
+              "id": "molehill-metrics-004",
+              "title": "Document processed path metrics workflow",
+              "chunk": "metrics-guidance",
+              "description": "Update user and agent guidance so inbox processors complete work with processed paths and understand what metrics count.",
+              "steps": [
+                "Document mole inbox complete --processed usage in README and CLI docs.",
+                "Update mole-synthesise-inbox skill guidance to include processed paths when completing inbox work.",
+                "Update bootstrap agent guidance so agents count only actually processed inbox items and avoid raw content in metrics files.",
+                "Run documentation checks and the CLI test suite."
+              ],
+              "passes": false
+            }
+          ]
         }
       ]
     }

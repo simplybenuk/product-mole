@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "metric": "processed_inbox_items",
+  "retention": {
+    "unit": "day",
+    "limit": 100
+  },
+  "updated_at": null,
+  "records": []
+}

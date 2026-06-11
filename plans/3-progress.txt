@@ -80,3 +80,11 @@
 - Added tests for one active claim, safe concurrent-claim failure, receipt creation, and lock release.
 - Validation: `npm test` from `cli/` passed; `node cli/mole.mjs --help` lists the inbox commands.
 - Category `team-collaboration` is complete. No incomplete PRD tasks remain.
+
+2026-06-11
+
+- Completed `molehill-metrics-001`: added the processed inbox metrics data foundation under `governance/metrics`.
+- Added `lib/metrics.mjs` with UTC daily counting, same-day path dedupe, starter file creation, ISO week rollups, calendar month rollups, and retention trimming.
+- Added tests for unique counting, same-day dedupe, UTC date reset, daily retention, weekly/monthly retention, and preserving historical rollups.
+- Validation: `npm test` from `cli/` passed.
+- Next priority: `metrics-inbox-integration` / `molehill-metrics-002`.

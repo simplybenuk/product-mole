@@ -7,6 +7,7 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../../lib/capture.mjs';
 import { claimInboxProcessing, completeInboxProcessing } from '../../lib/inbox-processing.mjs';
+import { getMetricsPaths, recordProcessedInboxItems } from '../../lib/metrics.mjs';
 import {
   buildInsightCaptureContent,
   buildProductUpdateInstruction,
@@ -441,6 +442,167 @@ describe('inbox processing lock and receipt', () => {
         lockId: 'lock-2'
       });
       assert.equal(next.ok, true);
+    });
+  });
+});
+
+describe('processed inbox metrics', () => {
+  it('creates starter metric files and counts unique processed paths once per UTC day', () => {
+    withTempInstance((dir) => {
+      const first = recordProcessedInboxItems(dir, [
+        '6-raw/inbox/new/quick-notes/a.md',
+        '6-raw/inbox/new/quick-notes/a.md',
+        '6-raw/inbox/new/messages/b.md'
+      ], {
+        now: new Date('2026-06-11T10:00:00.000Z')
+      });
+      const second = recordProcessedInboxItems(dir, [
+        '6-raw/inbox/new/quick-notes/a.md'
+      ], {
+        now: new Date('2026-06-11T11:00:00.000Z')
+      });
+
+      const paths = getMetricsPaths(dir);
+      const daily = JSON.parse(fs.readFileSync(paths.dailyPath, 'utf8'));
+      const weekly = JSON.parse(fs.readFileSync(paths.weeklyPath, 'utf8'));
+      const monthly = JSON.parse(fs.readFileSync(paths.monthlyPath, 'utf8'));
+      const seenToday = JSON.parse(fs.readFileSync(paths.seenTodayPath, 'utf8'));
+
+      assert.equal(first.counted, 2);
+      assert.equal(second.counted, 0);
+      assert.deepEqual(daily.records, [{ date: '2026-06-11', count: 2 }]);
+      assert.deepEqual(weekly.records, [{
+        week_start: '2026-06-08',
+        week_end: '2026-06-14',
+        count: 2
+      }]);
+      assert.deepEqual(monthly.records, [{
+        month: '2026-06',
+        month_start: '2026-06-01',
+        month_end: '2026-06-30',
+        count: 2
+      }]);
+      assert.equal(seenToday.date, '2026-06-11');
+      assert.equal(seenToday.seen.length, 2);
+    });
+  });
+
+  it('resets same-day dedupe when the UTC date changes', () => {
+    withTempInstance((dir) => {
+      recordProcessedInboxItems(dir, ['6-raw/inbox/new/quick-notes/a.md'], {
+        now: new Date('2026-06-11T23:55:00.000Z')
+      });
+      const result = recordProcessedInboxItems(dir, ['6-raw/inbox/new/quick-notes/a.md'], {
+        now: new Date('2026-06-12T00:05:00.000Z')
+      });
+
+      const daily = JSON.parse(fs.readFileSync(getMetricsPaths(dir).dailyPath, 'utf8'));
+
+      assert.equal(result.counted, 1);
+      assert.deepEqual(daily.records, [
+        { date: '2026-06-11', count: 1 },
+        { date: '2026-06-12', count: 1 }
+      ]);
+    });
+  });
+
+  it('trims daily records while preserving older weekly and monthly rollups', () => {
+    withTempInstance((dir) => {
+      const paths = getMetricsPaths(dir);
+      fs.mkdirSync(paths.metricsDir, { recursive: true });
+      const oldDailyRecords = Array.from({ length: 100 }, (_, index) => {
+        const date = new Date(Date.UTC(2026, 0, 1 + index));
+        return {
+          date: date.toISOString().slice(0, 10),
+          count: 1
+        };
+      });
+      fs.writeFileSync(paths.dailyPath, `${JSON.stringify({
+        schema_version: 1,
+        metric: 'processed_inbox_items',
+        retention: { unit: 'day', limit: 100 },
+        updated_at: '2026-06-11T00:00:00.000Z',
+        records: oldDailyRecords
+      }, null, 2)}\n`);
+      fs.writeFileSync(paths.weeklyPath, `${JSON.stringify({
+        schema_version: 1,
+        metric: 'processed_inbox_items',
+        retention: { unit: 'week', limit: 52 },
+        week_start_day: 'monday',
+        updated_at: '2026-06-11T00:00:00.000Z',
+        records: [{ week_start: '2025-06-02', week_end: '2025-06-08', count: 9 }]
+      }, null, 2)}\n`);
+      fs.writeFileSync(paths.monthlyPath, `${JSON.stringify({
+        schema_version: 1,
+        metric: 'processed_inbox_items',
+        retention: { unit: 'month', limit: 24 },
+        updated_at: '2026-06-11T00:00:00.000Z',
+        records: [{ month: '2025-06', month_start: '2025-06-01', month_end: '2025-06-30', count: 42 }]
+      }, null, 2)}\n`);
+
+      recordProcessedInboxItems(dir, ['6-raw/inbox/new/quick-notes/latest.md'], {
+        now: new Date('2026-06-11T10:00:00.000Z')
+      });
+
+      const daily = JSON.parse(fs.readFileSync(paths.dailyPath, 'utf8'));
+      const weekly = JSON.parse(fs.readFileSync(paths.weeklyPath, 'utf8'));
+      const monthly = JSON.parse(fs.readFileSync(paths.monthlyPath, 'utf8'));
+
+      assert.equal(daily.records.length, 100);
+      assert.equal(daily.records.at(-1).date, '2026-06-11');
+      assert.ok(weekly.records.some((record) => record.week_start === '2025-06-02' && record.count === 9));
+      assert.ok(monthly.records.some((record) => record.month === '2025-06' && record.count === 42));
+    });
+  });
+
+  it('trims weekly and monthly records to their retention limits', () => {
+    withTempInstance((dir) => {
+      const paths = getMetricsPaths(dir);
+      fs.mkdirSync(paths.metricsDir, { recursive: true });
+      fs.writeFileSync(paths.weeklyPath, `${JSON.stringify({
+        schema_version: 1,
+        metric: 'processed_inbox_items',
+        retention: { unit: 'week', limit: 52 },
+        week_start_day: 'monday',
+        updated_at: '2026-06-11T00:00:00.000Z',
+        records: Array.from({ length: 52 }, (_, index) => {
+          const start = new Date(Date.UTC(2025, 0, 6 + index * 7));
+          const end = new Date(start);
+          end.setUTCDate(end.getUTCDate() + 6);
+          return {
+            week_start: start.toISOString().slice(0, 10),
+            week_end: end.toISOString().slice(0, 10),
+            count: 1
+          };
+        })
+      }, null, 2)}\n`);
+      fs.writeFileSync(paths.monthlyPath, `${JSON.stringify({
+        schema_version: 1,
+        metric: 'processed_inbox_items',
+        retention: { unit: 'month', limit: 24 },
+        updated_at: '2026-06-11T00:00:00.000Z',
+        records: Array.from({ length: 24 }, (_, index) => {
+          const month = new Date(Date.UTC(2024, index, 1)).toISOString().slice(0, 7);
+          return {
+            month,
+            month_start: `${month}-01`,
+            month_end: `${month}-28`,
+            count: 1
+          };
+        })
+      }, null, 2)}\n`);
+
+      recordProcessedInboxItems(dir, ['6-raw/inbox/new/quick-notes/latest.md'], {
+        now: new Date('2026-06-11T10:00:00.000Z')
+      });
+
+      const weekly = JSON.parse(fs.readFileSync(paths.weeklyPath, 'utf8'));
+      const monthly = JSON.parse(fs.readFileSync(paths.monthlyPath, 'utf8'));
+
+      assert.equal(weekly.records.length, 52);
+      assert.equal(weekly.records.at(-1).week_start, '2026-06-08');
+      assert.equal(monthly.records.length, 24);
+      assert.equal(monthly.records.at(-1).month, '2026-06');
     });
   });
 });
