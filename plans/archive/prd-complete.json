@@ -241,6 +241,25 @@
         "rg -n \"mole inbox complete --processed|governance/metrics|dashboard.html|actually processed|raw insight content|Metrics count\" README.md cli/README.md cli/skills/mole-synthesise-inbox/SKILL.md 0-bootstrap/agents.md cli/mole.mjs",
         "npm test"
       ]
+    },
+    {
+      "id": "molehill-metrics-005",
+      "title": "Backfill metrics from inbox processing receipts",
+      "category": "molehill-metrics",
+      "chunk": "metrics-backfill",
+      "description": "Add an explicit command that rebuilds local metrics from historical inbox processing receipts with processed paths.",
+      "acceptance_criteria": [
+        "A metrics backfill function reads governance/run-receipts/inbox-processing JSON receipts.",
+        "Backfill counts only receipt processed paths with valid completed_at dates and does not infer from raw folders.",
+        "mole metrics backfill reports scanned, counted, skipped, and processed path totals.",
+        "Tests cover backfill aggregation, dedupe, rollups, and CLI output."
+      ],
+      "passes": true,
+      "completed_at": "2026-06-11",
+      "validation": [
+        "npm test",
+        "rg -n \"mole metrics backfill|run-receipts/inbox-processing|does not infer\" README.md cli/README.md spec/architecture/spec-product-mole-lightweight-metrics-spec.md"
+      ]
     }
   ]
 }

@@ -87,6 +87,7 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
 | `mole inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
 | `mole inbox complete [--processed <path>] [summary]` | Writes a processing receipt, records processed inbox paths in local metrics, and releases the inbox lock. |
+| `mole metrics backfill` | Rebuilds local metrics from inbox processing receipts that already contain processed paths. |
 | `mole upgrade` | Updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`. |
 
 ## Stakeholder memory and product updates
@@ -132,6 +133,8 @@ mole inbox complete --processed 6-raw/inbox/new/quick-notes/a.md "Promoted one c
 ```
 
 Use repeated `--processed` flags for multiple items. Do not include items that were only inspected, skipped, or left for later. The local dashboard is available at `governance/metrics/dashboard.html`.
+
+For existing workspaces, run `mole metrics backfill` after upgrading to rebuild metrics from historical `governance/run-receipts/inbox-processing/` receipts. Backfill counts only receipt `processed` paths with valid completion dates; it does not infer from raw inbox folders or read raw insight content.
 
 ## How Mole Works
 

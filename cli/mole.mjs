@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
 import { claimInboxProcessing, completeInboxProcessing } from '../lib/inbox-processing.mjs';
-import { recordProcessedInboxItems } from '../lib/metrics.mjs';
+import { backfillProcessedInboxMetrics, recordProcessedInboxItems } from '../lib/metrics.mjs';
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
@@ -59,6 +59,7 @@ Usage:
   mole inbox claim [processor]         Claim inbox processing with a file lock.
   mole inbox complete [--processed path] [summary]
                                       Write a receipt, record processed paths, and release the lock.
+  mole metrics backfill               Rebuild metrics from inbox processing receipts.
   mole install skills                  Install Mole agent skills into ~/.agents/skills.
   mole check-updates                   Compare this CLI version with the workspace.
   mole upgrade                         Update the globally installed Mole CLI.
@@ -82,6 +83,7 @@ Examples:
   mole review input-queue
   mole inbox claim
   mole inbox complete --processed 6-raw/inbox/new/quick-notes/a.md "Promoted one note"
+  mole metrics backfill
 
 More help:
   ${HELP_URL}
@@ -627,6 +629,21 @@ function runInboxCommand(action, values = []) {
   process.exit(1);
 }
 
+function runMetricsCommand(action) {
+  if (action === 'backfill') {
+    const result = backfillProcessedInboxMetrics(cwd);
+    console.log('Mole metrics backfill complete.');
+    console.log(`Receipts scanned: ${result.receipts_scanned}`);
+    console.log(`Receipts counted: ${result.receipts_counted}`);
+    console.log(`Receipts skipped: ${result.receipts_skipped}`);
+    console.log(`Processed paths counted: ${result.processed_paths_counted}`);
+    return;
+  }
+
+  console.error('Supported metrics commands: backfill');
+  process.exit(1);
+}
+
 export function parseInboxCompleteValues(values = []) {
   const processed = [];
   const summaryParts = [];
@@ -700,6 +717,9 @@ if (isDirectRun) {
       break;
     case 'inbox':
       runInboxCommand(subcommand, rest);
+      break;
+    case 'metrics':
+      runMetricsCommand(subcommand);
       break;
     case 'install':
       if (subcommand === 'skills') {

@@ -111,3 +111,11 @@
 - Updated `mole synthesise inbox` output so generated agent instructions include `mole inbox complete --processed <path> ... "summary"`.
 - Validation: documentation checks with `rg` passed; `npm test` from `cli/` passed.
 - Category `molehill-metrics` is complete. No incomplete PRD tasks remain in the category.
+
+2026-06-11
+
+- Completed `molehill-metrics-005`: added explicit historical metrics backfill with `mole metrics backfill`.
+- Backfill reads `governance/run-receipts/inbox-processing/*.json`, counts only receipt `processed` paths with valid `completed_at` dates, dedupes per UTC day, and rebuilds daily, weekly, monthly, and current-day dedupe metrics.
+- Documented backfill for upgraded existing workspaces and clarified that it does not infer from raw folders or read raw insight content.
+- Validation: `npm test` from `cli/` passed; documentation checks with `rg` passed.
+- Category `molehill-metrics` is complete. No incomplete PRD tasks remain in the category.

@@ -71,6 +71,7 @@ mole product-update "Sales leadership" quarter --format teams
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
 | `mole inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
 | `mole inbox complete [--processed <path>] [summary]` | Writes a processing receipt, records processed inbox paths in local metrics, and releases the inbox lock. |
+| `mole metrics backfill` | Rebuilds local metrics from inbox processing receipts that already contain processed paths. |
 | `mole upgrade` | Updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`. |
 
 ## Inbox completion metrics
@@ -82,3 +83,11 @@ mole inbox complete --processed 6-raw/inbox/new/quick-notes/a.md "Promoted one n
 ```
 
 Use one `--processed <path>` flag for each inbox item actually processed. Metrics are stored under `governance/metrics/` and shown in `governance/metrics/dashboard.html`. Metrics files store paths and aggregate counts only; do not put raw insight content in them.
+
+For upgraded existing workspaces, run:
+
+```bash
+mole metrics backfill
+```
+
+Backfill reads `governance/run-receipts/inbox-processing/*.json` and counts only receipt `processed` paths with valid completion dates. It does not infer from raw folders.

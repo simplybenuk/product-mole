@@ -113,6 +113,22 @@ Requirements:
 - Keep `mole inbox complete "summary"` valid and non-counting when no processed paths are supplied.
 - Show processed-path usage in CLI help.
 
+Add an explicit historical backfill command:
+
+```text
+mole metrics backfill
+```
+
+Requirements:
+
+- Read historical `governance/run-receipts/inbox-processing/*.json` receipt files.
+- Count only receipts with valid `completed_at` dates and non-empty `processed` path arrays.
+- Dedupe processed paths per UTC completion date.
+- Rebuild daily, weekly, monthly, and current-day dedupe files from receipt data.
+- Print receipts scanned, receipts counted, receipts skipped, and processed paths counted.
+- Do not infer processed items from raw inbox folders.
+- Do not read or store raw insight content.
+
 ## Storage Design
 
 Create committed starter files:
@@ -337,6 +353,7 @@ Likely files:
 - Repeating the same processed path on the same UTC date does not double count it.
 - Running inbox completion without processed paths remains valid and does not increment metrics.
 - Metrics update failure does not make inbox completion fail.
+- `mole metrics backfill` rebuilds metrics from historical receipts that contain processed paths.
 
 ### Retention And Rollups
 
@@ -362,6 +379,7 @@ Add tests covering:
 - repeated `--processed` CLI parsing
 - receipt `processed` array population
 - counting new processed paths
+- backfilling from historical receipts with processed paths
 - same-day dedupe
 - date-change reset of `seen-today.json`
 - daily retention trimming

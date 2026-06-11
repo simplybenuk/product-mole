@@ -7,7 +7,7 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../../lib/capture.mjs';
 import { claimInboxProcessing, completeInboxProcessing } from '../../lib/inbox-processing.mjs';
-import { getMetricsPaths, recordProcessedInboxItems } from '../../lib/metrics.mjs';
+import { backfillProcessedInboxMetrics, getMetricsPaths, recordProcessedInboxItems } from '../../lib/metrics.mjs';
 import {
   buildInsightCaptureContent,
   buildProductUpdateInstruction,
@@ -716,5 +716,83 @@ describe('processed inbox metrics', () => {
     assert.match(dashboard, /fromDate/);
     assert.match(dashboard, /toDate/);
     assert.match(dashboard, /fileInput/);
+  });
+
+  it('backfills metrics from historical inbox processing receipts', () => {
+    withTempInstance((dir) => {
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, '20260610T100000000Z-a.json'), `${JSON.stringify({
+        completed_at: '2026-06-10T10:00:00.000Z',
+        processed: [
+          '6-raw/inbox/new/quick-notes/a.md',
+          '6-raw/inbox/new/quick-notes/a.md',
+          '6-raw/inbox/new/messages/b.md'
+        ]
+      }, null, 2)}\n`);
+      fs.writeFileSync(path.join(receiptsDir, '20260611T100000000Z-b.json'), `${JSON.stringify({
+        completed_at: '2026-06-11T10:00:00.000Z',
+        processed: ['6-raw/inbox/new/quick-notes/a.md']
+      }, null, 2)}\n`);
+      fs.writeFileSync(path.join(receiptsDir, '20260611T110000000Z-empty.json'), `${JSON.stringify({
+        completed_at: '2026-06-11T11:00:00.000Z',
+        processed: []
+      }, null, 2)}\n`);
+
+      const result = backfillProcessedInboxMetrics(dir, {
+        now: new Date('2026-06-11T12:00:00.000Z')
+      });
+      const paths = getMetricsPaths(dir);
+      const daily = JSON.parse(fs.readFileSync(paths.dailyPath, 'utf8'));
+      const weekly = JSON.parse(fs.readFileSync(paths.weeklyPath, 'utf8'));
+      const monthly = JSON.parse(fs.readFileSync(paths.monthlyPath, 'utf8'));
+      const seenToday = JSON.parse(fs.readFileSync(paths.seenTodayPath, 'utf8'));
+
+      assert.equal(result.receipts_scanned, 3);
+      assert.equal(result.receipts_counted, 2);
+      assert.equal(result.receipts_skipped, 1);
+      assert.equal(result.processed_paths_counted, 3);
+      assert.deepEqual(daily.records, [
+        { date: '2026-06-10', count: 2 },
+        { date: '2026-06-11', count: 1 }
+      ]);
+      assert.deepEqual(weekly.records, [{
+        week_start: '2026-06-08',
+        week_end: '2026-06-14',
+        count: 3
+      }]);
+      assert.deepEqual(monthly.records, [{
+        month: '2026-06',
+        month_start: '2026-06-01',
+        month_end: '2026-06-30',
+        count: 3
+      }]);
+      assert.deepEqual(seenToday.seen.map((entry) => entry.key), ['6-raw/inbox/new/quick-notes/a.md']);
+    });
+  });
+
+  it('runs metrics backfill from the CLI', () => {
+    withTempInstance((dir) => {
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), `${JSON.stringify({
+        completed_at: '2026-06-11T10:00:00.000Z',
+        processed: ['6-raw/inbox/new/quick-notes/a.md']
+      }, null, 2)}\n`);
+
+      const result = spawnSync(process.execPath, [
+        path.join(repoRoot, 'cli', 'mole.mjs'),
+        'metrics',
+        'backfill'
+      ], {
+        cwd: dir,
+        encoding: 'utf8'
+      });
+
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /Mole metrics backfill complete/);
+      assert.match(result.stdout, /Receipts scanned: 1/);
+      assert.match(result.stdout, /Processed paths counted: 1/);
+    });
   });
 });
