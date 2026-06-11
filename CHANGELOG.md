@@ -4,6 +4,18 @@ All notable changes to Mole should be documented here.
 
 The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
+## [0.2.7] - 2026-06-11
+
+### Added
+- Added Molehill Metrics for local processed inbox item counts under `governance/metrics/`.
+- Added `mole inbox complete --processed <path>` support so processing receipts can record processed inbox items and update daily, weekly, and monthly metrics.
+- Added `mole metrics backfill` to rebuild metrics from historical inbox processing receipts that already contain processed paths.
+- Added a static local metrics dashboard at `governance/metrics/dashboard.html`.
+
+### Changed
+- CLI help, README, CLI docs, and inbox synthesis guidance now include the full current command surface and metrics workflow.
+- Metrics dedupe canonicalizes processed paths so relative, `./`, and workspace-absolute spellings count as the same inbox item.
+
 ## [0.2.6] - 2026-05-28
 
 ### Added

@@ -46,7 +46,7 @@ describe('doctor', () => {
       const output = getDoctorOutput(dir);
 
       assert.match(output, /Mole doctor/);
-      assert.match(output, /source version\s+0\.2\.6/);
+      assert.match(output, /source version\s+0\.2\.7/);
       assert.match(output, /instance version\s+0\.1\.0/);
       assert.doesNotMatch(output, /missing instance metadata/i);
     });
@@ -56,7 +56,7 @@ describe('doctor', () => {
     withTempInstance((dir) => {
       const output = getDoctorOutput(dir);
 
-      assert.match(output, /source version\s+0\.2\.6/);
+      assert.match(output, /source version\s+0\.2\.7/);
       assert.match(output, /instance version\s+not found/);
       assert.match(output, /missing instance metadata/i);
     });
@@ -67,7 +67,7 @@ describe('help', () => {
   it('uses consistent Mole naming and documented command examples', () => {
     const output = getHelpOutput();
 
-    assert.match(output, /^Mole CLI v0\.2\.6/m);
+    assert.match(output, /^Mole CLI v0\.2\.7/m);
     assert.match(output, /mole new my-mole/);
     assert.match(output, /mole init my-mole/);
     assert.match(output, /mole create roadmap/);
@@ -295,15 +295,15 @@ describe('check-updates', () => {
     withTempInstance((dir) => {
       fs.writeFileSync(
         path.join(dir, 'mole.instance.yaml'),
-        'instance_name: test-instance\ncascade_version: 0.2.6\n',
+        'instance_name: test-instance\ncascade_version: 0.2.7\n',
         'utf8'
       );
 
       const output = getCheckUpdatesOutput(dir);
 
       assert.match(output, /Mole update check/);
-      assert.match(output, /source version\s+0\.2\.6/);
-      assert.match(output, /instance version\s+0\.2\.6/);
+      assert.match(output, /source version\s+0\.2\.7/);
+      assert.match(output, /instance version\s+0\.2\.7/);
       assert.match(output, /status\s+up to date/);
       assert.match(output, /read-only report/i);
     });
