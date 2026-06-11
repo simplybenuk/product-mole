@@ -69,14 +69,25 @@ describe('help', () => {
 
     assert.match(output, /^Mole CLI v0\.2\.6/m);
     assert.match(output, /mole new my-mole/);
+    assert.match(output, /mole init my-mole/);
     assert.match(output, /mole create roadmap/);
     assert.match(output, /mole create spec drafts\/spec\.md/);
+    assert.match(output, /mole insight "Users trust CSV export more than dashboard totals"/);
+    assert.match(output, /mole note "Support team heard onboarding confusion"/);
+    assert.match(output, /mole signal "Trial users miss the export button"/);
     assert.match(output, /mole product-update CEO 2-weeks --format email/);
     assert.match(output, /mole bootstrap-context/);
     assert.match(output, /mole refresh top-layers/);
+    assert.match(output, /mole synthesise inbox/);
+    assert.match(output, /mole review input-queue/);
+    assert.match(output, /mole inbox claim/);
+    assert.match(output, /mole inbox complete --processed/);
+    assert.match(output, /mole metrics backfill/);
     assert.match(output, /mole install skills\s+Install Mole agent skills into ~\/\.agents\/skills/);
     assert.match(output, /More help:\n  https:\/\/github\.com\/simplybenuk\/product-mole#readme/);
     assert.match(output, /mole check-updates/);
+    assert.match(output, /mole upgrade/);
+    assert.match(output, /mole doctor/);
     assert.doesNotMatch(output, /Cascade/);
     assert.doesNotMatch(output, /mole install codex/);
   });

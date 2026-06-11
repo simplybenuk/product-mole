@@ -50,6 +50,8 @@ Usage:
   mole init [target-dir]               Alias for "mole new" for older docs/scripts.
   mole create <artifact> [output-path] Create a draft artifact from a Mole template.
   mole insight [options] <text>        Capture a raw product insight into the inbox.
+  mole note [options] <text>           Alias for "mole insight".
+  mole signal [options] <text>         Alias for "mole insight".
   mole product-update <audience> <timescale> [--format email|teams|blog|brief]
                                       Print an agent instruction for a stakeholder update.
   mole bootstrap-context              Print an agent instruction for first-time top-layer setup.
@@ -74,6 +76,8 @@ Examples:
   mole create roadmap
   mole create spec drafts/spec.md
   mole insight "Users trust CSV export more than dashboard totals"
+  mole note "Support team heard onboarding confusion"
+  mole signal "Trial users miss the export button"
   mole insight --stakeholder CEO "Asked whether enterprise onboarding is improving"
   mole product-update CEO 2-weeks --format email
   mole bootstrap-context
