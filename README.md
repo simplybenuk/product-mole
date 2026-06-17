@@ -2,6 +2,8 @@
 
 Mole is a portable, local-first context operating system for product managers and AI assistants.
 
+Current version: `0.2.8`
+
 It gives teams a file-based place to capture messy product inputs, distil them into structured evidence, and generate better roadmaps, specs, decisions, and prioritisation work from shared context. Mole is designed to work locally, in synced folders such as SharePoint/OneDrive or Google Drive, or alongside a codebase in Git.
 
 ---
