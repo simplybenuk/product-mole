@@ -101,7 +101,7 @@ Extend `mole inbox complete` so users and agents can provide processed paths.
 Supported shape:
 
 ```text
-mole inbox complete --processed 6-raw/inbox/new/quick-notes/a.md --processed 6-raw/inbox/new/messages/b.md "Promoted two customer signals"
+mole inbox complete --processed 6-raw/inbox/a.md --processed 6-raw/inbox/b.md "Promoted two customer signals"
 ```
 
 Requirements:
@@ -235,7 +235,7 @@ Stores short-lived daily dedupe evidence without raw content.
   "updated_at": "2026-06-11T09:00:00Z",
   "seen": [
     {
-      "key": "6-raw/inbox/new/quick-notes/a.md",
+      "key": "6-raw/inbox/a.md",
       "first_seen_at": "2026-06-11T08:31:00Z"
     }
   ]

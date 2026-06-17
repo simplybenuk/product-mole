@@ -24,12 +24,39 @@ import { buildUiCaptureContent, createCaptureRelPath } from '../../ui/server.mjs
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, '..', '..');
+const moleCliPath = path.join(repoRoot, 'cli', 'mole.mjs');
 
 function withTempInstance(callback) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-test-'));
   try {
     return callback(dir);
   } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+function runCli(args, options = {}) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-cli-test-'));
+  const stdoutPath = path.join(dir, 'stdout.txt');
+  const stderrPath = path.join(dir, 'stderr.txt');
+  const stdoutFd = fs.openSync(stdoutPath, 'w');
+  const stderrFd = fs.openSync(stderrPath, 'w');
+
+  try {
+    const result = spawnSync(process.execPath, [moleCliPath, ...args], {
+      cwd: options.cwd,
+      env: options.env,
+      stdio: ['ignore', stdoutFd, stderrFd]
+    });
+
+    return {
+      ...result,
+      stdout: fs.readFileSync(stdoutPath, 'utf8'),
+      stderr: fs.readFileSync(stderrPath, 'utf8')
+    };
+  } finally {
+    fs.closeSync(stdoutFd);
+    fs.closeSync(stderrFd);
     fs.rmSync(dir, { recursive: true, force: true });
   }
 }
@@ -46,7 +73,7 @@ describe('doctor', () => {
       const output = getDoctorOutput(dir);
 
       assert.match(output, /Mole doctor/);
-      assert.match(output, /source version\s+0\.2\.7/);
+      assert.match(output, /source version\s+0\.2\.8/);
       assert.match(output, /instance version\s+0\.1\.0/);
       assert.doesNotMatch(output, /missing instance metadata/i);
     });
@@ -56,7 +83,7 @@ describe('doctor', () => {
     withTempInstance((dir) => {
       const output = getDoctorOutput(dir);
 
-      assert.match(output, /source version\s+0\.2\.7/);
+      assert.match(output, /source version\s+0\.2\.8/);
       assert.match(output, /instance version\s+not found/);
       assert.match(output, /missing instance metadata/i);
     });
@@ -67,7 +94,7 @@ describe('help', () => {
   it('uses consistent Mole naming and documented command examples', () => {
     const output = getHelpOutput();
 
-    assert.match(output, /^Mole CLI v0\.2\.7/m);
+    assert.match(output, /^Mole CLI v0\.2\.8/m);
     assert.match(output, /mole new my-mole/);
     assert.match(output, /mole init my-mole/);
     assert.match(output, /mole create roadmap/);
@@ -95,9 +122,7 @@ describe('help', () => {
 
 describe('synthesise guidance', () => {
   it('points inbox synthesis at living personas', () => {
-    const result = spawnSync(process.execPath, [path.join(repoRoot, 'cli', 'mole.mjs'), 'synthesise', 'inbox'], {
-      encoding: 'utf8'
-    });
+    const result = runCli(['synthesise', 'inbox']);
 
     assert.equal(result.status, 0);
     assert.match(result.stdout, /4-context\/personas\.md/);
@@ -106,13 +131,13 @@ describe('synthesise guidance', () => {
     assert.match(result.stdout, /stakeholder memory/);
     assert.match(result.stdout, /blank, placeholder-only/);
     assert.match(result.stdout, /material top-layer gap/);
+    assert.match(result.stdout, /flat capture\/drop zone/);
+    assert.match(result.stdout, /JSON receipt and metrics/);
     assert.match(result.stdout, /mole inbox complete --processed <path>/);
   });
 
   it('prints first-time bootstrap guidance for blank top layers', () => {
-    const result = spawnSync(process.execPath, [path.join(repoRoot, 'cli', 'mole.mjs'), 'bootstrap-context'], {
-      encoding: 'utf8'
-    });
+    const result = runCli(['bootstrap-context']);
 
     assert.equal(result.status, 0);
     assert.match(result.stdout, /Bootstrap this Mole workspace context/);
@@ -121,9 +146,7 @@ describe('synthesise guidance', () => {
   });
 
   it('prints top-layer refresh guidance', () => {
-    const result = spawnSync(process.execPath, [path.join(repoRoot, 'cli', 'mole.mjs'), 'refresh', 'top-layers'], {
-      encoding: 'utf8'
-    });
+    const result = runCli(['refresh', 'top-layers']);
 
     assert.equal(result.status, 0);
     assert.match(result.stdout, /Refresh the Mole top layers/);
@@ -144,9 +167,7 @@ describe('product updates', () => {
   });
 
   it('prints product update instructions from the CLI command', () => {
-    const result = spawnSync(process.execPath, [path.join(repoRoot, 'cli', 'mole.mjs'), 'product-update', 'CEO', '2-weeks', '--format', 'email'], {
-      encoding: 'utf8'
-    });
+    const result = runCli(['product-update', 'CEO', '2-weeks', '--format', 'email']);
 
     assert.equal(result.status, 0);
     assert.match(result.stdout, /CEO/);
@@ -295,15 +316,15 @@ describe('check-updates', () => {
     withTempInstance((dir) => {
       fs.writeFileSync(
         path.join(dir, 'mole.instance.yaml'),
-        'instance_name: test-instance\ncascade_version: 0.2.7\n',
+        'instance_name: test-instance\ncascade_version: 0.2.8\n',
         'utf8'
       );
 
       const output = getCheckUpdatesOutput(dir);
 
       assert.match(output, /Mole update check/);
-      assert.match(output, /source version\s+0\.2\.7/);
-      assert.match(output, /instance version\s+0\.2\.7/);
+      assert.match(output, /source version\s+0\.2\.8/);
+      assert.match(output, /instance version\s+0\.2\.8/);
       assert.match(output, /status\s+up to date/);
       assert.match(output, /read-only report/i);
     });
@@ -353,7 +374,7 @@ describe('team-safe capture filenames', () => {
 
     assert.equal(
       relPath,
-      path.join('6-raw', 'inbox', 'quick-notes', '20260513T101112345Z-repeated-note-abc12345.md')
+      path.join('6-raw', 'inbox', '20260513T101112345Z-repeated-note-abc12345.md')
     );
   });
 });
@@ -444,14 +465,14 @@ describe('inbox processing lock and receipt', () => {
 
       const result = completeInboxProcessing(dir, {
         completedAt: new Date('2026-05-13T10:21:12.345Z'),
-        processed: ['6-raw/inbox/new/quick-notes/a.md'],
+        processed: ['6-raw/inbox/a.md'],
         summary: 'Promoted one note.'
       });
 
       assert.equal(result.ok, true);
       assert.equal(result.receipt.lock_id, 'lock-1');
       assert.equal(result.receipt.claimed_by, 'Ada');
-      assert.deepEqual(result.receipt.processed, ['6-raw/inbox/new/quick-notes/a.md']);
+      assert.deepEqual(result.receipt.processed, ['6-raw/inbox/a.md']);
       assert.match(result.receiptPath, /governance\/run-receipts\/inbox-processing\//);
 
       const next = claimInboxProcessing(dir, {
@@ -463,49 +484,64 @@ describe('inbox processing lock and receipt', () => {
     });
   });
 
+  it('writes a metrics-compatible receipt without a lock for synthesis runs', () => {
+    withTempInstance((dir) => {
+      const result = completeInboxProcessing(dir, {
+        allowMissingLock: true,
+        claimedBy: 'Ada',
+        completedAt: new Date('2026-05-13T10:21:12.345Z'),
+        processed: ['6-raw/inbox/a.md'],
+        summary: 'Promoted one note.'
+      });
+
+      assert.equal(result.ok, true);
+      assert.match(result.receipt.lock_id, /^unclaimed-/);
+      assert.equal(result.receipt.claimed_by, 'Ada');
+      assert.deepEqual(result.receipt.processed, ['6-raw/inbox/a.md']);
+      assert.match(result.receiptPath, /governance\/run-receipts\/inbox-processing\//);
+      assert.equal(fs.existsSync(path.join(dir, 'governance', 'inbox-processing.lock.json')), false);
+    });
+  });
+
   it('parses repeated processed paths while preserving completion summary text', () => {
     const parsed = parseInboxCompleteValues([
       '--processed',
-      '6-raw/inbox/new/quick-notes/a.md',
+      '6-raw/inbox/a.md',
       '--processed',
-      '6-raw/inbox/new/messages/b.md',
+      '6-raw/inbox/b.md',
       'Promoted',
       'two',
       'notes.'
     ]);
 
     assert.deepEqual(parsed.processed, [
-      '6-raw/inbox/new/quick-notes/a.md',
-      '6-raw/inbox/new/messages/b.md'
+      '6-raw/inbox/a.md',
+      '6-raw/inbox/b.md'
     ]);
     assert.equal(parsed.summary, 'Promoted two notes.');
   });
 
   it('records processed paths in metrics when the CLI completes inbox processing', () => {
     withTempInstance((dir) => {
-      const claim = spawnSync(process.execPath, [
-        path.join(repoRoot, 'cli', 'mole.mjs'),
+      const claim = runCli([
         'inbox',
         'claim',
         'Ada'
       ], {
-        cwd: dir,
-        encoding: 'utf8'
+        cwd: dir
       });
-      const complete = spawnSync(process.execPath, [
-        path.join(repoRoot, 'cli', 'mole.mjs'),
+      const complete = runCli([
         'inbox',
         'complete',
         '--processed',
-        '6-raw/inbox/new/quick-notes/a.md',
+        '6-raw/inbox/a.md',
         '--processed',
-        '6-raw/inbox/new/messages/b.md',
+        '6-raw/inbox/b.md',
         'Promoted',
         'two',
         'notes.'
       ], {
-        cwd: dir,
-        encoding: 'utf8'
+        cwd: dir
       });
 
       const paths = getMetricsPaths(dir);
@@ -517,10 +553,40 @@ describe('inbox processing lock and receipt', () => {
       assert.equal(claim.status, 0);
       assert.equal(complete.status, 0);
       assert.deepEqual(receipt.processed, [
-        '6-raw/inbox/new/quick-notes/a.md',
-        '6-raw/inbox/new/messages/b.md'
+        '6-raw/inbox/a.md',
+        '6-raw/inbox/b.md'
       ]);
       assert.equal(daily.records.at(-1).count, 2);
+    });
+  });
+
+  it('records processed paths and writes a receipt when the CLI completes without a prior claim', () => {
+    withTempInstance((dir) => {
+      const complete = runCli([
+        'inbox',
+        'complete',
+        '--processed',
+        '6-raw/inbox/a.md',
+        'Promoted',
+        'one',
+        'note.'
+      ], {
+        cwd: dir,
+        env: { ...process.env, MOLE_CAPTURED_BY: 'Ada' }
+      });
+
+      const paths = getMetricsPaths(dir);
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      const receiptFile = fs.readdirSync(receiptsDir).find((file) => file.endsWith('.json'));
+      const receipt = JSON.parse(fs.readFileSync(path.join(receiptsDir, receiptFile), 'utf8'));
+      const daily = JSON.parse(fs.readFileSync(paths.dailyPath, 'utf8'));
+
+      assert.equal(complete.status, 0);
+      assert.match(complete.stdout, /receipt written/);
+      assert.match(receipt.lock_id, /^unclaimed-/);
+      assert.equal(receipt.claimed_by, 'Ada');
+      assert.deepEqual(receipt.processed, ['6-raw/inbox/a.md']);
+      assert.equal(daily.records.at(-1).count, 1);
     });
   });
 
@@ -534,18 +600,16 @@ describe('inbox processing lock and receipt', () => {
       fs.mkdirSync(path.join(dir, 'governance', 'metrics'), { recursive: true });
       fs.writeFileSync(path.join(dir, 'governance', 'metrics', 'daily.json'), '{broken', 'utf8');
 
-      const result = spawnSync(process.execPath, [
-        path.join(repoRoot, 'cli', 'mole.mjs'),
+      const result = runCli([
         'inbox',
         'complete',
         '--processed',
-        '6-raw/inbox/new/quick-notes/a.md',
+        '6-raw/inbox/a.md',
         'Promoted',
         'one',
         'note.'
       ], {
-        cwd: dir,
-        encoding: 'utf8'
+        cwd: dir
       });
 
       assert.equal(result.status, 0);
@@ -560,16 +624,16 @@ describe('processed inbox metrics', () => {
   it('creates starter metric files and counts unique processed paths once per UTC day', () => {
     withTempInstance((dir) => {
       const first = recordProcessedInboxItems(dir, [
-        '6-raw/inbox/new/quick-notes/a.md',
-        './6-raw/inbox/new/quick-notes/a.md',
-        path.join(dir, '6-raw', 'inbox', 'new', 'quick-notes', 'a.md'),
-        '6-raw/inbox/new/quick-notes/a.md',
-        '6-raw/inbox/new/messages/b.md'
+        '6-raw/inbox/a.md',
+        './6-raw/inbox/a.md',
+        path.join(dir, '6-raw', 'inbox', 'a.md'),
+        '6-raw/inbox/a.md',
+        '6-raw/inbox/b.md'
       ], {
         now: new Date('2026-06-11T10:00:00.000Z')
       });
       const second = recordProcessedInboxItems(dir, [
-        '6-raw/inbox/new/quick-notes/a.md'
+        '6-raw/inbox/a.md'
       ], {
         now: new Date('2026-06-11T11:00:00.000Z')
       });
@@ -597,18 +661,18 @@ describe('processed inbox metrics', () => {
       assert.equal(seenToday.date, '2026-06-11');
       assert.equal(seenToday.seen.length, 2);
       assert.deepEqual(seenToday.seen.map((entry) => entry.key), [
-        '6-raw/inbox/new/quick-notes/a.md',
-        '6-raw/inbox/new/messages/b.md'
+        '6-raw/inbox/a.md',
+        '6-raw/inbox/b.md'
       ]);
     });
   });
 
   it('resets same-day dedupe when the UTC date changes', () => {
     withTempInstance((dir) => {
-      recordProcessedInboxItems(dir, ['6-raw/inbox/new/quick-notes/a.md'], {
+      recordProcessedInboxItems(dir, ['6-raw/inbox/a.md'], {
         now: new Date('2026-06-11T23:55:00.000Z')
       });
-      const result = recordProcessedInboxItems(dir, ['6-raw/inbox/new/quick-notes/a.md'], {
+      const result = recordProcessedInboxItems(dir, ['6-raw/inbox/a.md'], {
         now: new Date('2026-06-12T00:05:00.000Z')
       });
 
@@ -656,7 +720,7 @@ describe('processed inbox metrics', () => {
         records: [{ month: '2025-06', month_start: '2025-06-01', month_end: '2025-06-30', count: 42 }]
       }, null, 2)}\n`);
 
-      recordProcessedInboxItems(dir, ['6-raw/inbox/new/quick-notes/latest.md'], {
+      recordProcessedInboxItems(dir, ['6-raw/inbox/latest.md'], {
         now: new Date('2026-06-11T10:00:00.000Z')
       });
 
@@ -708,7 +772,7 @@ describe('processed inbox metrics', () => {
         })
       }, null, 2)}\n`);
 
-      recordProcessedInboxItems(dir, ['6-raw/inbox/new/quick-notes/latest.md'], {
+      recordProcessedInboxItems(dir, ['6-raw/inbox/latest.md'], {
         now: new Date('2026-06-11T10:00:00.000Z')
       });
 
@@ -742,16 +806,16 @@ describe('processed inbox metrics', () => {
       fs.writeFileSync(path.join(receiptsDir, '20260610T100000000Z-a.json'), `${JSON.stringify({
         completed_at: '2026-06-10T10:00:00.000Z',
         processed: [
-          '6-raw/inbox/new/quick-notes/a.md',
-          './6-raw/inbox/new/quick-notes/a.md',
-          path.join(dir, '6-raw', 'inbox', 'new', 'quick-notes', 'a.md'),
-          '6-raw/inbox/new/quick-notes/a.md',
-          '6-raw/inbox/new/messages/b.md'
+          '6-raw/inbox/a.md',
+          './6-raw/inbox/a.md',
+          path.join(dir, '6-raw', 'inbox', 'a.md'),
+          '6-raw/inbox/a.md',
+          '6-raw/inbox/b.md'
         ]
       }, null, 2)}\n`);
       fs.writeFileSync(path.join(receiptsDir, '20260611T100000000Z-b.json'), `${JSON.stringify({
         completed_at: '2026-06-11T10:00:00.000Z',
-        processed: ['6-raw/inbox/new/quick-notes/a.md']
+        processed: ['6-raw/inbox/a.md']
       }, null, 2)}\n`);
       fs.writeFileSync(path.join(receiptsDir, '20260611T110000000Z-empty.json'), `${JSON.stringify({
         completed_at: '2026-06-11T11:00:00.000Z',
@@ -786,7 +850,7 @@ describe('processed inbox metrics', () => {
         month_end: '2026-06-30',
         count: 3
       }]);
-      assert.deepEqual(seenToday.seen.map((entry) => entry.key), ['6-raw/inbox/new/quick-notes/a.md']);
+      assert.deepEqual(seenToday.seen.map((entry) => entry.key), ['6-raw/inbox/a.md']);
     });
   });
 
@@ -796,16 +860,14 @@ describe('processed inbox metrics', () => {
       fs.mkdirSync(receiptsDir, { recursive: true });
       fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), `${JSON.stringify({
         completed_at: '2026-06-11T10:00:00.000Z',
-        processed: ['6-raw/inbox/new/quick-notes/a.md']
+        processed: ['6-raw/inbox/a.md']
       }, null, 2)}\n`);
 
-      const result = spawnSync(process.execPath, [
-        path.join(repoRoot, 'cli', 'mole.mjs'),
+      const result = runCli([
         'metrics',
         'backfill'
       ], {
-        cwd: dir,
-        encoding: 'utf8'
+        cwd: dir
       });
 
       assert.equal(result.status, 0);

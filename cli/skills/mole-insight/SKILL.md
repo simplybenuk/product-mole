@@ -14,7 +14,7 @@ Interpret the user input as a short raw product insight and capture it before an
 ## Workflow
 
 1. Confirm the current workspace is a Mole instance by looking for `mole.instance.yaml`.
-2. Create a new markdown file in `6-raw/inbox/quick-notes/`.
+2. Create a new markdown file directly in `6-raw/inbox/`.
 3. Use today's date in the filename plus a short slug from the insight.
 4. Write minimal frontmatter with `title`, `capture_type`, `source`, `created_at`, `summary`, and `tags`.
 5. Put the exact insight text under `## Insight`.

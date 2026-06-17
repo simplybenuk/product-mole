@@ -72,7 +72,7 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole install skills` | Installs Mole agent skills into `~/.agents/skills/` or `$AGENTS_HOME/skills/`. |
 | `mole doctor` | Checks source and instance versions plus required instance folders. |
 | `mole check-updates` | Reports whether the installed Mole source is newer than the current workspace. |
-| `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/quick-notes/`. |
+| `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/`. |
 | `mole note "<text>"` | Alias for `mole insight`. |
 | `mole signal "<text>"` | Alias for `mole insight`. |
 | `mole insight --stakeholder CEO "<text>"` | Captures an insight with stakeholder metadata for later synthesis. |
@@ -131,7 +131,7 @@ Mole tracks lightweight local processing metrics under `governance/metrics/`. Me
 When finishing inbox work, include each inbox item that was actually processed:
 
 ```bash
-mole inbox complete --processed 6-raw/inbox/new/quick-notes/a.md "Promoted one customer signal"
+mole inbox complete --processed 6-raw/inbox/a.md "Promoted one customer signal"
 ```
 
 Use repeated `--processed` flags for multiple items. Do not include items that were only inspected, skipped, or left for later. The local dashboard is available at `governance/metrics/dashboard.html`.

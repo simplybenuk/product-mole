@@ -15,7 +15,8 @@ Rules:
 - Promote substantive artefacts to `5-evidence/source-docs/` first, then create `4-context/` modules only when synthesis adds durable value.
 - Only route inbox snippets to `5-evidence/signal-clusters/` when the input is primarily a set of weak signals or messy notes.
 - If blocked by missing human input, add an item to `governance/input-queue.md`.
-- In shared inboxes, treat `6-raw/inbox/new/` and legacy direct inbox folders as unprocessed input; claim `governance/inbox-processing.lock.json` before processing, move claimed batches through processing states, and never delete raw inputs before a retrieval receipt exists.
+- Treat direct files in `6-raw/inbox/` as the current flat drop zone. In upgraded workspaces, also treat legacy subfolders such as `quick-notes/`, `messages/`, `observations/`, and `new/` as unprocessed input.
+- In shared inboxes, claim `governance/inbox-processing.lock.json` before processing when coordination is needed. Locks prevent overlap; JSON receipts are the durable processing record.
 - After promoting an inbox artefact, update relevant indexes and summaries, write a retrieval receipt, and only then remove or archive the inbox copy.
 - When completing inbox processing, run `mole inbox complete --processed <path> ... "summary"` and include only inbox items that were actually processed. Do not count skipped items, inspected-only items, or raw content in metrics files.
 - During inbox synthesis, treat user/persona-relevant signals as candidates for `4-context/personas.md`; update an existing persona or create a new one when the evidence indicates a durable user type.

@@ -23,12 +23,16 @@ This workflow is designed for reality: valuable inputs arrive as both short mess
 ```text
 6-raw/
 └── inbox/
-    ├── quick-notes/      # PM scratch notes and thoughts
-    ├── messages/         # copied snippets from CEO/customers/internal chats
-    └── observations/     # passing comments and lightweight field notes
+    ├── 20260617T090000000Z-onboarding-note-a1b2c3d4.md
+    ├── 20260617T091500000Z-ceo-export-ask-e5f6a7b8.md
+    └── 20260617T103000000Z-support-pattern-c9d0e1f2.md
 ```
 
-For shared team folders, use explicit inbox states when the team is processing material together:
+Treat `6-raw/inbox/` primarily as a flat capture/drop zone. Processing state is represented by optional locks plus JSON receipts, not by requiring contributors to move files through nested folders.
+
+Compatibility rule: existing captures in `6-raw/inbox/quick-notes/`, `messages/`, `observations/`, `new/`, `processing/`, `processed/`, or `archive/` are still valid in upgraded workspaces. Direct files and legacy `quick-notes/`, `messages/`, `observations/`, and `new/` files should be treated as unprocessed input unless a receipt shows they were already processed.
+
+Optional shared-team state folders can still be used where they solve a real coordination problem:
 
 ```text
 6-raw/
@@ -42,8 +46,6 @@ For shared team folders, use explicit inbox states when the team is processing m
     ├── processed/        # raw inputs already promoted with a receipt
     └── archive/          # retained raw inputs that should not be reprocessed
 ```
-
-Compatibility rule: existing captures in `6-raw/inbox/quick-notes/`, `messages/`, and `observations/` are still valid and should be treated as `new` until a team chooses to adopt the explicit state folders.
 
 Optional downstream outputs:
 
@@ -146,16 +148,16 @@ Promote inbox content upward only when one of these is true:
 - Do not delete an inbox item until its promoted output and retrieval receipt exist.
 - After promotion, either delete the inbox copy or move it into a stable raw/archive location.
 
-### Shared inbox state flow
+### Shared inbox coordination
 
-Use states to avoid two people or agents processing the same raw input:
+Use the processing lock to avoid two people or agents processing the same raw input:
 
-1. `new`: contributors add weak signals and substantive artefacts here, or in the legacy direct type folders.
-2. `processing`: one maintainer or agent moves a batch here before synthesis begins.
-3. `processed`: after promotion, receipt creation, and index/summary updates, move the raw inputs here.
-4. `archive`: use for retained raw inputs that should stay available but should not be picked up by routine synthesis.
+1. Direct files in `6-raw/inbox/` are unprocessed by default.
+2. One maintainer or agent claims the processing lock before a shared synthesis run.
+3. After promotion, receipt creation, and index/summary updates, the raw inputs may stay in place, be deleted, or move to a local archive convention.
+4. The JSON receipt is the durable record of what was processed.
 
-Weak signals usually move from `new` to `processing`, then into `processed` after a signal cluster and retrieval receipt exist. Substantive artefacts move through the same states, but promotion should preserve or summarise them first in `5-evidence/source-docs/` before any durable `4-context/` module is created.
+Weak signals are usually batched into signal clusters after a retrieval receipt exists. Substantive artefacts should be preserved or summarised first in `5-evidence/source-docs/` before any durable `4-context/` module is created.
 
 Never delete raw inputs from a shared inbox before the promoted output and retrieval receipt exist. If sync conflicts appear, keep both copies and resolve them during the processing pass rather than discarding either contributor's input.
 
@@ -174,15 +176,15 @@ This creates `governance/inbox-processing.lock.json` with:
 - `stale_after`
 - `inbox`
 
-If a lock already exists, another processor must stop and coordinate with the person named in the lock. Treat the lock as stale only after `stale_after`; when that happens, inspect cloud version history and current `processing/` contents before deleting or replacing the lock.
+If a lock already exists, another processor must stop and coordinate with the person named in the lock. Treat the lock as stale only after `stale_after`; when that happens, inspect cloud version history and the current inbox contents before deleting or replacing the lock.
 
 After the promoted outputs, index/summary updates, and retrieval receipt exist, complete the processing run:
 
 ```bash
-mole inbox complete "Promoted weekly research notes"
+mole inbox complete --processed 6-raw/inbox/customer-onboarding-note.md "Promoted weekly research notes"
 ```
 
-This writes a JSON receipt under `governance/run-receipts/inbox-processing/` and releases the lock. The receipt records who claimed the run, when it started, when it completed, what was processed, and a short summary.
+This writes a JSON receipt under `governance/run-receipts/inbox-processing/`, updates Molehill Metrics for the processed paths, and releases the lock if one exists. The receipt records who claimed or completed the run, when it started, when it completed, what was processed, and a short summary.
 
 ---
 

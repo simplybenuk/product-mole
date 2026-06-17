@@ -72,9 +72,8 @@ function todayDate() {
 }
 
 export function createCaptureRelPath(type, note, options = {}) {
-  const folder = ['quick-notes', 'messages', 'observations'].includes(type) ? type : 'quick-notes';
   const filename = createCaptureFileName(String(note || '').split('\n')[0], options);
-  return path.join('6-raw', 'inbox', folder, filename);
+  return path.join('6-raw', 'inbox', filename);
 }
 
 export function buildUiCaptureContent(body, options = {}) {

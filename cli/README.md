@@ -56,7 +56,7 @@ mole product-update "Sales leadership" quarter --format teams
 | `mole install skills` | Installs Mole agent skills. |
 | `mole doctor` | Checks source and instance versions plus required instance folders. |
 | `mole check-updates` | Reports whether the installed Mole source is newer than the current workspace. |
-| `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/quick-notes/`. |
+| `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/`. |
 | `mole note "<text>"` | Alias for `mole insight`. |
 | `mole signal "<text>"` | Alias for `mole insight`. |
 | `mole insight --stakeholder CEO "<text>"` | Captures an insight with stakeholder metadata for later synthesis. |
@@ -81,7 +81,7 @@ mole product-update "Sales leadership" quarter --format teams
 `mole inbox complete` can record lightweight local metrics for processed inbox items:
 
 ```bash
-mole inbox complete --processed 6-raw/inbox/new/quick-notes/a.md "Promoted one note"
+mole inbox complete --processed 6-raw/inbox/a.md "Promoted one note"
 ```
 
 Use one `--processed <path>` flag for each inbox item actually processed. Metrics are stored under `governance/metrics/` and shown in `governance/metrics/dashboard.html`. Metrics files store paths and aggregate counts only; do not put raw insight content in them.

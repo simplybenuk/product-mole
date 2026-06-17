@@ -153,9 +153,7 @@ product-mole/
 │
 ├── 6-raw/
 │   ├── inbox/
-│   │   ├── quick-notes/
-│   │   ├── messages/
-│   │   └── observations/
+│   │   └── YYYYMMDDTHHMMSSZ-signal-slug.md
 │   ├── transcripts/
 │   ├── exports/
 │   ├── ticket-dumps/

@@ -4,6 +4,15 @@ All notable changes to Mole should be documented here.
 
 The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
+## [0.2.8] - 2026-06-17
+
+### Fixed
+- `mole inbox complete` now writes a machine-readable inbox-processing receipt and updates Molehill Metrics even when a synthesis run did not create a prior processing lock.
+
+### Changed
+- New CLI and UI captures now write directly to the flat `6-raw/inbox/` drop zone.
+- Inbox guidance now treats locks and receipts as the durable processing state, while preserving compatibility with existing `quick-notes/`, `messages/`, `observations/`, and state-folder layouts.
+
 ## [0.2.7] - 2026-06-11
 
 ### Added

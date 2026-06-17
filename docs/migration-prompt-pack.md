@@ -195,10 +195,8 @@ Use this to turn existing project memory into quick-capture files.
 ```text
 Convert this project memory into discrete inbox entries for Mole.
 
-Target folders:
-- 6-raw/inbox/messages/
-- 6-raw/inbox/quick-notes/
-- 6-raw/inbox/observations/
+Target folder:
+- 6-raw/inbox/
 
 Source memory:
 <paste>
