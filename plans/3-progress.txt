@@ -234,3 +234,19 @@
 - Verified valid attachment registration and reciprocal-link validation remain unchanged; the existing attachment regression passes with zero attachment findings.
 - Validation: focused registry/migration tests passed 19/19; root `npm test` passed 66/66 across 21 suites; affected `node --check` and `git diff --check` passed. No blocking or should-fix findings for this thread; other fresh PR threads remain outside this bounded review.
 - Human testing focus: repair a malformed source record with a non-array `attachments` field, confirm `mole source resolve` and `mole source migrate` remain actionable for other sources, and confirm valid parent/attachment records still report no reciprocity findings. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
+
+2026-09-12
+
+- Addressed PR review thread 3997835043 in `lib/inbox-audit.mjs`: candidate source identity now comes only from top-level capture metadata (frontmatter or a bounded top-level YAML header) or a top-level JSON `source_id`; nested `source_refs` IDs are ignored, while the unique registry-path fallback remains available.
+- Added focused `cli/test/mole.test.mjs` regressions for nested JSON and block-style YAML `source_refs` content. When only the referenced source is processed, both new inbox files remain unprocessed.
+- Assumption: a legacy plain top-level YAML capture header remains valid metadata for compatibility; indented YAML and nested JSON values are references, not the candidate document's identity.
+- Validation: focused inbox regressions passed; `npm test` passed 68/68 across 21 suites; affected syntax checks and `git diff --check` passed. No commit or remote action was performed.
+- Next handoff: independent `$bwh-agent-review` for this bounded PR comment remediation; other fresh PR threads remain outside this task.
+
+2026-09-12
+
+- Independent `$bwh-agent-review` of PR review thread 3997835043: **READY FOR HUMAN TESTING** for this bounded inbox candidate-identity remediation.
+- Verified candidate identity comes only from top-level capture metadata (frontmatter, top-level YAML, or top-level JSON) or a unique registry-path match. Nested JSON `source_refs` IDs and block-style YAML `source_refs` IDs remain ignored, so an inbox candidate stays unprocessed when only the referenced source is recorded as processed.
+- Verified existing top-level YAML/JSON/frontmatter capture IDs, unique registry-path identity, legacy path-only receipts, and mixed receipt compatibility remain intact; focused 49-test CLI suite and manual identity matrix passed.
+- Validation: root `npm test` passed 68/68 across 21 suites; `node --check` passed for the affected module and test file; `git diff --check` passed; temporary `mole doctor` and recursive inbox-audit checks passed. No blocking or should-fix findings for this thread; other fresh PR threads remain outside this bounded review.
+- Human testing focus: run `mole inbox audit` with a nested JSON or block-style YAML `source_refs` ID whose referenced source is processed, confirm the inbox candidate remains unprocessed, then verify top-level capture IDs, unique registry-path identity, and historical path-only receipts still suppress only the intended candidate. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.

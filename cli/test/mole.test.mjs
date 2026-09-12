@@ -37,6 +37,27 @@ function withTempInstance(callback) {
   }
 }
 
+function withInboxAuditWorkspace(callback) {
+  withTempInstance((dir) => {
+    for (const relative of [
+      'mole.instance.yaml',
+      '0-bootstrap',
+      '1-routing',
+      '2-summaries',
+      '3-indexes',
+      '4-context',
+      '5-evidence',
+      '6-raw',
+      '6-raw/inbox'
+    ]) {
+      const target = path.join(dir, relative);
+      if (path.extname(target)) fs.writeFileSync(target, 'cascade_version: 0.2.8\n');
+      else fs.mkdirSync(target, { recursive: true });
+    }
+    callback(dir);
+  });
+}
+
 function runCli(args, options = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-cli-test-'));
   const stdoutPath = path.join(dir, 'stdout.txt');
@@ -696,6 +717,65 @@ describe('inbox processing lock and receipt', () => {
       const result = auditInbox(dir);
       assert.deepEqual(result.processed, []);
       assert.deepEqual(result.unprocessed, ['6-raw/inbox/reused.md']);
+    });
+  });
+
+  it('ignores nested JSON source IDs when discovering the inbox candidate identity', () => {
+    withInboxAuditWorkspace((dir) => {
+      const referencedSourceId = createSourceId();
+      const candidatePath = path.join(dir, '6-raw', 'inbox', 'new.json');
+      fs.writeFileSync(candidatePath, `${JSON.stringify({
+        title: 'New inbox document',
+        source_refs: [{
+          source_id: referencedSourceId,
+          path: '6-raw/archive/referenced.md'
+        }]
+      }, null, 2)}\n`, 'utf8');
+
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), JSON.stringify({
+        schema_version: 2,
+        processed_sources: [{
+          source_id: referencedSourceId,
+          path: '6-raw/archive/referenced.md'
+        }]
+      }));
+
+      const result = auditInbox(dir);
+      assert.deepEqual(result.processed, []);
+      assert.deepEqual(result.unprocessed, ['6-raw/inbox/new.json']);
+    });
+  });
+
+  it('ignores block-style YAML source IDs nested under source_refs in frontmatter', () => {
+    withInboxAuditWorkspace((dir) => {
+      const referencedSourceId = createSourceId();
+      const candidatePath = path.join(dir, '6-raw', 'inbox', 'new.md');
+      fs.writeFileSync(candidatePath, [
+        '---',
+        'title: New inbox document',
+        'source_refs: |',
+        `  source_id: ${referencedSourceId}`,
+        '  path: 6-raw/archive/referenced.md',
+        '---',
+        '',
+        'The referenced source is not this inbox candidate.'
+      ].join('\n'), 'utf8');
+
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), JSON.stringify({
+        schema_version: 2,
+        processed_sources: [{
+          source_id: referencedSourceId,
+          path: '6-raw/archive/referenced.md'
+        }]
+      }));
+
+      const result = auditInbox(dir);
+      assert.deepEqual(result.processed, []);
+      assert.deepEqual(result.unprocessed, ['6-raw/inbox/new.md']);
     });
   });
 
