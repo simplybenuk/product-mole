@@ -1,5 +1,11 @@
 # Contribution Guide
 
+## Project planning and workflow
+
+Public work is tracked in [GitHub Issues](https://github.com/simplybenuk/product-mole/issues) and pull requests. The repository does not require contributors to use a particular planning system, agent, editor, or development workflow. Use the tools and habits that work for you, then meet the project's documented checks and review requirements.
+
+Maintainer-only task queues, progress journals, agent skills, and local workflow configuration belong in the working copy and are ignored by Git. Do not add those files to a pull request unless the project explicitly decides that they are part of the product or contributor contract.
+
 ## Content operating rules
 
 1. Capture first in `6-raw/inbox/` when speed matters.
