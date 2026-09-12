@@ -665,6 +665,40 @@ describe('inbox processing lock and receipt', () => {
     });
   });
 
+  it('does not treat an ID-bearing path hint for another source as processed', () => {
+    withTempInstance((dir) => {
+      for (const relative of [
+        'mole.instance.yaml',
+        '0-bootstrap',
+        '1-routing',
+        '2-summaries',
+        '3-indexes',
+        '4-context',
+        '5-evidence',
+        '6-raw',
+        '6-raw/inbox'
+      ]) {
+        const target = path.join(dir, relative);
+        if (path.extname(target)) fs.writeFileSync(target, 'cascade_version: 0.2.8\n');
+        else fs.mkdirSync(target, { recursive: true });
+      }
+      const reusedPath = path.join(dir, '6-raw', 'inbox', 'reused.md');
+      const sourceAId = createSourceId();
+      const sourceBId = createSourceId();
+      fs.writeFileSync(reusedPath, `source_id: ${sourceBId}\n\nSource B`, 'utf8');
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), JSON.stringify({
+        schema_version: 2,
+        processed_sources: [{ source_id: sourceAId, path: '6-raw/inbox/reused.md' }]
+      }));
+
+      const result = auditInbox(dir);
+      assert.deepEqual(result.processed, []);
+      assert.deepEqual(result.unprocessed, ['6-raw/inbox/reused.md']);
+    });
+  });
+
   it('allows one claim and fails concurrent claims safely', () => {
     withTempInstance((dir) => {
       const first = claimInboxProcessing(dir, {

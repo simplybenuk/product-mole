@@ -188,3 +188,18 @@
 - Verified YAML structured writes use the same container boundary, and manually exercised `processed_sources` migration while preserving legacy `processed` paths and unrelated `output.path` values. No blocking or should-fix findings for thread 3997607759; the other PR threads remain outside this bounded review.
 - Validation: focused `node --test lib/test/source-migration.test.mjs` passed 9/9; root `npm test` passed 63/63 across 21 suites; manual JSON/YAML boundary checks passed; affected `node --check` and `git diff --check` passed.
 - Human testing focus for this remediation: run `mole source migrate --apply` against JSON and YAML receipts/artifacts containing `source_refs` and `processed_sources`, confirm unrelated `output.path` and legacy `processed` values are untouched, and confirm resolved structured entries receive IDs. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
+
+2026-09-12
+
+- Addressed PR review thread 3997607763 in `lib/inbox-audit.mjs`: an ID-bearing receipt path is now only an audit fallback for candidates without a source ID, or for a historical `processed` path that is not represented by an ID-bearing entry. Candidates with source IDs require a matching processed source ID or that scoped legacy path fallback, so a path hint for source A cannot mark source B processed.
+- Added focused coverage in `cli/test/mole.test.mjs` for source A's ID-bearing path hint being reused by source B; the existing moved-source and mixed/legacy receipt compatibility cases remain covered and passing.
+- Assumption: in a mixed receipt, a `processed` path not repeated in `processed_sources` is still a genuine path-only compatibility item; a path repeated by an ID-bearing entry is not. This preserves existing receipt-reader behavior while preventing cross-source path attribution.
+- Validation: focused inbox-processing tests passed 13/13; root `npm test` passed 64/64 across 21 suites; `git diff --check` passed. No commit or remote action was performed.
+- Next handoff: independent `$bwh-agent-review` for this bounded PR comment remediation. The separate migration `current_path` review thread remains out of scope.
+
+2026-09-12
+
+- Independent `$bwh-agent-review` of PR review thread 3997607763: **READY FOR HUMAN TESTING** for this bounded inbox-audit remediation.
+- Verified `auditInbox` uses a discovered candidate `source_id` as the identity when an ID-bearing receipt supplies only a path hint; a mismatched source ID at the same path remains unprocessed. A matching processed source ID still counts, including after the file moves. Historical path-only receipts remain a compatibility fallback, while a duplicate path in the same ID-bearing receipt entry is not treated as legacy evidence.
+- Validation: focused inbox-processing tests passed 13/13 (including mismatched-ID, moved-source, mixed receipt, and legacy path cases); root `npm test` passed 64/64 across 21 suites; `node --check` passed for the affected module and test file; `git diff --check` passed. No blocking or should-fix findings for this thread. The separate migration `current_path` review thread remains outside this bounded review.
+- Human testing focus for this remediation: run `mole inbox audit` with an ID-bearing receipt whose path hint is reused by a different source, then verify the different source remains listed as unprocessed; verify matching IDs still suppress moved files and historical path-only receipts still suppress their paths. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
