@@ -250,3 +250,18 @@
 - Verified existing top-level YAML/JSON/frontmatter capture IDs, unique registry-path identity, legacy path-only receipts, and mixed receipt compatibility remain intact; focused 49-test CLI suite and manual identity matrix passed.
 - Validation: root `npm test` passed 68/68 across 21 suites; `node --check` passed for the affected module and test file; `git diff --check` passed; temporary `mole doctor` and recursive inbox-audit checks passed. No blocking or should-fix findings for this thread; other fresh PR threads remain outside this bounded review.
 - Human testing focus: run `mole inbox audit` with a nested JSON or block-style YAML `source_refs` ID whose referenced source is processed, confirm the inbox candidate remains unprocessed, then verify top-level capture IDs, unique registry-path identity, and historical path-only receipts still suppress only the intended candidate. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
+
+2026-09-12
+
+- Addressed PR review thread 3997835044 in `lib/inbox-audit.mjs`: candidates without a trustworthy source ID now fall back only to genuinely path-only receipt entries. Paths repeated by ID-bearing `processed_sources` entries no longer suppress an ID-less candidate at a reused path.
+- Added a focused binary/no-identity inbox-audit regression in `cli/test/mole.test.mjs`; the existing mismatched-ID, moved-source, mixed-receipt, and legacy path-only tests remain covered.
+- Assumption: an ID-bearing receipt path is not sufficient identity evidence for a candidate whose embedded metadata and unique registry-path lookup provide no source ID; only a historical path-only receipt may suppress that candidate.
+- Validation: focused CLI tests passed 50/50; root `npm test` passed 69/69 across 21 suites; affected syntax checks and `git diff --check` passed. No commit or remote action was performed.
+- Next handoff: independent `$bwh-agent-review` for this bounded PR comment remediation. The separate final YAML adjacency thread remains outside this task.
+
+2026-09-12
+
+- Independent `$bwh-agent-review` of PR review thread 3997835044: **READY FOR HUMAN TESTING** for this bounded inbox-audit receipt-identity remediation.
+- Verified candidates without a trustworthy embedded or uniquely resolved registry `source_id` now consult only `legacyPaths`; paths represented by ID-bearing `processed_sources` entries cannot suppress a newly reused, ID-less inbox file. Matching source IDs still suppress moved files, and historical path-only `processed` entries retain compatibility behavior, including mixed receipts.
+- Validation: focused inbox-processing suite passed 50/50; root `npm test` passed 69/69 across 21 suites; affected `node --check` and `git diff --check` passed. No blocking or should-fix findings for this thread; the separate final YAML adjacency thread remains outside this bounded review.
+- Human testing focus: run `mole inbox audit` with an ID-less binary at a path previously recorded only in `processed_sources` for another source and confirm it remains unprocessed; then verify matching source IDs, moved paths, path-only receipts, and mixed receipts continue to suppress only the intended candidates. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.

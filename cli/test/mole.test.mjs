@@ -720,6 +720,24 @@ describe('inbox processing lock and receipt', () => {
     });
   });
 
+  it('does not treat an ID-bearing path hint as processed when the candidate has no source identity', () => {
+    withInboxAuditWorkspace((dir) => {
+      const reusedPath = path.join(dir, '6-raw', 'inbox', 'reused.bin');
+      const sourceAId = createSourceId();
+      fs.writeFileSync(reusedPath, Buffer.from([0xff, 0xfe, 0x00, 0x01, 0x80]));
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), JSON.stringify({
+        schema_version: 2,
+        processed_sources: [{ source_id: sourceAId, path: '6-raw/inbox/reused.bin' }]
+      }));
+
+      const result = auditInbox(dir);
+      assert.deepEqual(result.processed, []);
+      assert.deepEqual(result.unprocessed, ['6-raw/inbox/reused.bin']);
+    });
+  });
+
   it('ignores nested JSON source IDs when discovering the inbox candidate identity', () => {
     withInboxAuditWorkspace((dir) => {
       const referencedSourceId = createSourceId();
