@@ -265,3 +265,18 @@
 - Verified candidates without a trustworthy embedded or uniquely resolved registry `source_id` now consult only `legacyPaths`; paths represented by ID-bearing `processed_sources` entries cannot suppress a newly reused, ID-less inbox file. Matching source IDs still suppress moved files, and historical path-only `processed` entries retain compatibility behavior, including mixed receipts.
 - Validation: focused inbox-processing suite passed 50/50; root `npm test` passed 69/69 across 21 suites; affected `node --check` and `git diff --check` passed. No blocking or should-fix findings for this thread; the separate final YAML adjacency thread remains outside this bounded review.
 - Human testing focus: run `mole inbox audit` with an ID-less binary at a path previously recorded only in `processed_sources` for another source and confirm it remains unprocessed; then verify matching source IDs, moved paths, path-only receipts, and mixed receipts continue to suppress only the intended candidates. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
+
+2026-09-12
+
+- Addressed PR review thread 3997835050 in `lib/source-migration.mjs`: YAML apply-mode source-ID detection is now scoped to the current mapping/list item instead of immediate neighboring lines, so an adjacent `- source_id` entry cannot suppress migration of the preceding resolved path. Source IDs before or after a path within the same item remain preserved.
+- Added focused YAML regression coverage in `lib/test/source-migration.test.mjs` with adjacent list items, proving the first resolved reference receives its ID while the second and third items' existing IDs remain untouched.
+- Assumption: a YAML `source_id` is an existing identity for its containing mapping/list item only; adjacent list items are independent references and must not affect one another. This preserves the issue #23 structured-reference migration boundary.
+- Validation: focused `node --test lib/test/source-migration.test.mjs` passed 12/12; root `npm test` passed 70/70 across 21 suites; affected `node --check` and `git diff --check` passed. No commit or remote action was performed.
+- Next handoff: independent `$bwh-agent-review` for PR review thread 3997835050; parent workflow will handle the review, comment resolution, and subsequent GitHub actions.
+
+2026-09-12
+
+- Independent `$bwh-agent-review` of PR review thread 3997835050: **READY FOR HUMAN TESTING** for this bounded YAML migration remediation.
+- Verified `applyYamlReferenceChanges` scopes existing `source_id` detection to the containing YAML mapping/list item. An adjacent list item's ID no longer suppresses migration of a preceding resolved path; IDs before or after the path in the same item remain preserved. Nested source-ID fields at a deeper indentation do not suppress the containing reference.
+- Validation: focused `node --test lib/test/source-migration.test.mjs` passed 12/12; root `npm test` passed 70/70 across 21 suites; affected `node --check` and `git diff --check` passed; manual fixtures covered same-item IDs before/after path, adjacent list entries, and nested source-ID fields.
+- Human testing focus: run `mole source migrate --apply` on YAML `source_refs` and `processed_sources` entries with IDs before and after paths, adjacent entries, comments, and nested metadata; confirm only the resolved item gains an ID and existing item IDs/indentation remain unchanged. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
