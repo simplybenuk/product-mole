@@ -5,6 +5,7 @@ status: draft
 owner:
 last_updated:
 summary: A prioritisation draft generated from mole context.
+source_refs: []
 ---
 
 # Prioritisation Draft
@@ -30,6 +31,15 @@ summary: A prioritisation draft generated from mole context.
 
 ## What I still need from humans
 - 
+
+## Source references
+
+```yaml
+source_refs: []
+```
+
+Add one entry for each registered source used by the draft. `source_id` is
+required. An optional `path` is a display hint and does not replace the ID.
 
 ## Retrieval receipt
 - files read:

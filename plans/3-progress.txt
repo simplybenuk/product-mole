@@ -112,6 +112,38 @@
 - Validation: documentation checks with `rg` passed; `npm test` from `cli/` passed.
 - Category `molehill-metrics` is complete. No incomplete PRD tasks remain in the category.
 
+2026-09-12
+
+- Final independent `$bwh-agent-review` for issue #23: **NOT READY FOR HUMAN TESTING**.
+- The prior migration fixes are verified: YAML `source_refs` list entries (`- path:`) receive an indentation-preserving `source_id`, and migration reports include registry findings. Focused tests pass for both behaviors.
+- Blocking data-integrity finding remains: `findRegistryFindings` checks only whether a record's `current_path` exists and does not hash it against `record.content_hash` (`lib/source-registry.mjs`). `migrateSourceReferences` includes that scanner but does not independently block conflicted sources (`lib/source-migration.mjs`). A temporary workspace changed a registered file from `before` to `after`: `resolveSource` returned `content_conflict`, while registry and migration findings were empty and `--apply` still added `source_id` to a structured reference. The scanner must emit `content_conflict`, and apply mode must not change references whose source is in conflict; add focused regression coverage.
+- Validation: `npm test` passed 59/59 across 21 suites; affected Node syntax checks passed; package, PRD, schema, and ownership JSON parsed; `git diff --check` passed; a clean temporary scaffold passed `mole doctor`, `mole inbox audit`, and migration dry-run. The specification remains `IN DEVELOPMENT`; return to development for the conflict guard and rerun this review before human output testing or publication.
+
+2026-09-12
+
+- Follow-up `$bwh-agent-review` found one remaining blocking data-integrity issue; the verdict remains **NOT READY FOR HUMAN TESTING**.
+- Blocking finding: `findRegistryFindings` checks whether `current_path` exists but never hashes it against `record.content_hash` (`lib/source-registry.mjs:851-870`). `mole source migrate` includes that scanner's output (`lib/source-migration.mjs:338-370`), so a modified registered file produces no `content_conflict` finding. A focused temporary-workspace reproduction changed a registered file from `before` to `after`; `resolveSource` correctly returned `content_conflict`, but `findRegistryFindings` and migration returned no finding. With a structured reference present, migration `--apply` still added `source_id` despite the unacknowledged content change. The scanner/report must emit `content_conflict` and migration must not apply a reference whose source record is in conflict; add focused regression coverage.
+- Follow-up validation: `npm test` passed 59/59 across 21 suites; all affected modules passed `node --check`; package, PRD, schema, and ownership JSON parsed; `git diff --check` passed; temporary scaffold `mole doctor`, `mole inbox audit`, and migration dry-run passed. The prior YAML list and findings fixtures also pass.
+- The specification remains `IN DEVELOPMENT`; return to development for the conflict guard, then rerun this independent review before human output testing or publication.
+
+2026-09-12
+
+- Completed GitHub issue #23 implementation on `codex/issue-23-stable-source-ids-spec`.
+- Added the versioned source-record schema and file-native registry with immutable `src_` UUIDv4 IDs, exact-byte SHA-256 hashes, path and content history, attachment links, correction history, duplicate/conflict findings, and workspace/symlink safety checks.
+- Integrated source registration into CLI and UI captures, added `mole source register|resolve|reconcile|correct|migrate`, and preserved source bytes during registration.
+- Added ID-bearing `processed_sources` receipt entries while retaining legacy `processed` paths, source-ID-aware inbox audit and metrics deduplication, structured source-reference guidance across templates, and scaffold/upgrade ownership rules.
+- Added dry-run-first legacy migration with resolved, ambiguous, and unresolved classifications. Apply mode only updates resolved structured references and writes before/after hashes to an audit report.
+- Validation: `npm test` passed with 57 tests across 21 suites; Node syntax checks passed; package, PRD, and schema JSON parsed; `git diff --check` passed.
+- Implementation handoff: independent `$bwh-agent-review` review required before the spec can move from `IN DEVELOPMENT` to `READY FOR HUMAN TESTING` and before publication.
+
+2026-09-12
+
+- Independent `$bwh-agent-review` for issue #23: **NOT READY FOR HUMAN TESTING**.
+- Blocking finding: migration does not recognise the normal YAML sequence form used by `source_refs` (`- path: ...`). `lib/source-migration.mjs:20` only matches a line beginning with `path:`, and the YAML discovery loop at `lib/source-migration.mjs:230-236` therefore misses list entries. A temporary workspace with a registered source and `source_refs:\n  - path: ...` classified only the path-text occurrence and `--apply` reported `changed: 0`, leaving the structured YAML reference without `source_id`. Fix YAML sequence/map recognition, preserve valid indentation, and add an apply-mode YAML fixture before human testing.
+- Should-fix finding: `migrateSourceReferences` reports references and changed artifacts but no `findings` collection and does not include the actionable duplicate, conflict, orphan, or revision findings returned by the registry scanner (`lib/source-migration.mjs:318-356`). The registry API detects several of these cases, but the migration report and CLI do not surface them as required by the migration persistence contract and AC14. Include the findings in the report and add focused coverage.
+- Validation evidence: `npm test` passed 57/57 across 21 suites; all affected Node modules passed `node --check`; package, PRD, schema, and ownership JSON parsed; `git diff --check` passed; a clean scaffold passed `mole doctor`, `mole inbox audit`, and migration dry-run. Repository-root `mole inbox audit` was not applicable because the source repository is not itself a Mole instance (`mole.instance.yaml` is absent).
+- Review artifact and state: this entry is the review record; the specification remains `IN DEVELOPMENT`. Human output testing is blocked until the migration fixes and focused tests land. Afterward, re-run the independent review; if ready, focus human testing on CLI/UI capture parity, archive resolve/reconcile, correction conflicts, attachment reciprocity, receipt and metrics compatibility, and dry-run/apply migration safety. A successful human test hands the change to `bwh-archive-change`; a failure returns it to `bwh-development`.
+
 2026-06-11
 
 - Completed `molehill-metrics-005`: added explicit historical metrics backfill with `mole metrics backfill`.
@@ -119,3 +151,10 @@
 - Documented backfill for upgraded existing workspaces and clarified that it does not infer from raw folders or read raw insight content.
 - Validation: `npm test` from `cli/` passed; documentation checks with `rg` passed.
 - Category `molehill-metrics` is complete. No incomplete PRD tasks remain in the category.
+
+2026-09-12
+
+- Final independent `$bwh-agent-review` re-review for GitHub issue #23: **READY FOR HUMAN TESTING**.
+- Verified the conflict remediation: registry findings now hash existing `current_path` bytes and emit actionable `content_conflict`; migration demotes references to conflicted sources to `unresolved`, so apply mode leaves them unchanged. Focused registry and migration regressions pass.
+- Validation: `npm test` passed 60/60 across 21 suites; affected Node syntax checks passed; package, PRD, schema, and ownership JSON parsed; `git diff --check` passed; a clean temporary scaffold passed `mole doctor`, `mole inbox audit`, and migration dry-run. A direct changed-byte reproduction produced a registry/migration `content_conflict`, zero applied changes, and no `source_id` insertion.
+- Human testing focus: verify CLI/UI capture parity, archive resolve/reconcile, correction conflict handling, attachment reciprocity, receipt and metrics compatibility, and dry-run/apply migration safety including resolved, ambiguous, unresolved, YAML, and changed-byte references. Successful human testing hands the accepted change to `bwh-archive-change`; findings return it to `bwh-development`.

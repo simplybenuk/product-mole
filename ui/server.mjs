@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
+import { createSourceId, registerSource } from '../lib/source-registry.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -84,11 +85,13 @@ export function buildUiCaptureContent(body, options = {}) {
   const tags = Array.isArray(body.tags) ? body.tags : [];
   const capturedBy = resolveCapturedBy(body.capturedBy || body.captured_by);
   const note = (body.note || '').trim();
+  const sourceId = options.sourceId || body.sourceId || body.source_id || '';
 
   return [
     '---',
     `date: ${date}`,
     `source: ${source}`,
+    `source_id: ${sourceId}`,
     `captured_by: ${capturedBy}`,
     `channel: ${channel}`,
     `topic_tags: [${tags.join(', ')}]`,
@@ -140,6 +143,8 @@ async function routeApi(req, res, urlObj) {
     const date = todayDate();
     const relPath = createCaptureRelPath(type, note);
     const { resolved } = safeRepoPath(relPath);
+    const sourceId = createSourceId();
+    const capturedAt = new Date().toISOString();
 
     const frontmatter = buildUiCaptureContent({
       source,
@@ -148,7 +153,7 @@ async function routeApi(req, res, urlObj) {
       tags,
       note,
       capturedBy: body.capturedBy || body.captured_by
-    }, { date });
+    }, { date, sourceId });
 
     await fs.mkdir(path.dirname(resolved), { recursive: true });
     try {
@@ -160,7 +165,28 @@ async function routeApi(req, res, urlObj) {
       throw err;
     }
 
-    return send(res, 200, { ok: true, path: relPath });
+    try {
+      registerSource(REPO_ROOT, {
+        source_id: sourceId,
+        path: relPath,
+        source_type: 'note',
+        captured_at: capturedAt,
+        captured_by: resolveCapturedBy(body.capturedBy || body.captured_by),
+        channel,
+        original_date: date,
+        visibility: body.visibility || 'internal',
+        path_reason: 'captured',
+        content_change_type: 'captured'
+      });
+    } catch (err) {
+      return send(res, 500, {
+        error: `Capture written but source registration failed: ${err.message}`,
+        path: relPath,
+        source_id: sourceId
+      });
+    }
+
+    return send(res, 200, { ok: true, source_id: sourceId, path: relPath });
   }
 
   return false;

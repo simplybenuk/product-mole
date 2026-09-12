@@ -75,6 +75,11 @@ mole product-update "Sales leadership" quarter --format teams
 | `mole inbox audit` | Recursively audits the live inbox, validates the Mole root, and reports processed versus unexplained files. |
 | `mole inbox complete [--processed <path>] [summary]` | Writes a processing receipt, records processed inbox paths in local metrics, and releases the inbox lock. |
 | `mole metrics backfill` | Rebuilds local metrics from inbox processing receipts that already contain processed paths. |
+| `mole source register <path> [options]` | Registers an existing file or attachment without changing its bytes. |
+| `mole source resolve <source-id> [--json]` | Resolves a source by stable ID without changing its record. |
+| `mole source reconcile <source-id> --path <path>` | Records an explicitly confirmed source move. |
+| `mole source correct <source-id> --reason <text>` | Records an explicit content correction while preserving the source ID. |
+| `mole source migrate [--apply] [--json]` | Classifies legacy path references; apply mode updates resolved structured references and writes a report. |
 | `mole upgrade` | Updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`. |
 
 ## Inbox completion metrics
@@ -85,7 +90,7 @@ mole product-update "Sales leadership" quarter --format teams
 mole inbox complete --processed 6-raw/inbox/a.md "Promoted one note"
 ```
 
-Use one `--processed <path>` flag for each inbox item actually processed. Metrics are stored under `governance/metrics/` and shown in `governance/metrics/dashboard.html`. Metrics files store paths and aggregate counts only; do not put raw insight content in them.
+Use one `--processed <path>` flag for each inbox item actually processed. New receipts also include `processed_sources` entries with stable source IDs when a source record exists. Metrics are stored under `governance/metrics/` and shown in `governance/metrics/dashboard.html`; ID-bearing entries dedupe a moved source by ID, while historical path-only receipts use canonical paths. Metrics files store IDs, paths, and aggregate counts only; do not put raw insight content in them.
 
 For upgraded existing workspaces, run:
 
@@ -95,4 +100,4 @@ mole metrics backfill
 
 Before synthesis, run `mole inbox audit`. It excludes the instructional root `README.md` and retained `archive/` content, scans legacy nested inbox folders, and uses processing receipts to identify files that still need an explicit disposition. Run it again before completion; an inbox synthesis run should not be reported as a no-op while unexplained files remain.
 
-Backfill reads `governance/run-receipts/inbox-processing/*.json` and counts only receipt `processed` paths with valid completion dates. It does not infer from raw folders.
+Backfill reads `governance/run-receipts/inbox-processing/*.json` and prefers ID-bearing `processed_sources` entries, falling back to `processed` paths for historical receipts with valid completion dates. It does not infer from raw folders.

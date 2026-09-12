@@ -86,6 +86,8 @@ Use this markdown block for quick entries:
 ---
 date: 2026-03-15
 source: ceo            # ceo|customer|sales|support|self|other
+source_id:             # src_<lowercase-uuidv4>, when this file is registered
+source_refs: []        # stable IDs for source material used by this note
 channel: slack         # slack|email|call|meeting|chat|other
 topic_tags: [onboarding, ux]
 confidence: low        # low|medium|high
@@ -96,6 +98,11 @@ Potential implication (optional).
 ```
 
 Keep it short. 30-90 seconds per entry is the target.
+
+`source` remains a legacy actor or channel label in older captures. It is not
+the source identity. New captures use `source_id` for the note itself and add a
+`source_refs` entry for any source material the note cites. Resolve references
+by ID first. A path in a reference is only a navigation hint.
 
 ---
 
@@ -154,7 +161,7 @@ Use the processing lock to avoid two people or agents processing the same raw in
 
 1. Direct files in `6-raw/inbox/` are unprocessed by default.
 2. One maintainer or agent claims the processing lock before a shared synthesis run.
-3. After promotion, receipt creation, and index/summary updates, the raw inputs may stay in place, be deleted, or move to a local archive convention.
+3. After promotion, receipt creation, and index/summary updates, the raw inputs may stay in place, be deleted, or move to a local archive convention. If a registered source moves, reconcile its new path instead of creating a second source.
 4. The JSON receipt is the durable record of what was processed.
 
 Weak signals are usually batched into signal clusters after a retrieval receipt exists. Substantive artefacts should be preserved or summarised first in `5-evidence/source-docs/` before any durable `4-context/` module is created.
@@ -193,7 +200,7 @@ After the promoted outputs, index/summary updates, and retrieval receipt exist, 
 mole inbox complete --processed 6-raw/inbox/customer-onboarding-note.md "Promoted weekly research notes"
 ```
 
-This writes a JSON receipt under `governance/run-receipts/inbox-processing/`, updates Molehill Metrics for the processed paths, and releases the lock if one exists. The receipt records who claimed or completed the run, when it started, when it completed, what was processed, and a short summary.
+This writes a JSON receipt under `governance/run-receipts/inbox-processing/`, updates Molehill Metrics for the processed paths, and releases the lock if one exists. New receipts keep the historical `processed` path array and add ID-bearing `processed_sources` entries when records exist. The receipt records who claimed or completed the run, when it started, when it completed, what was processed, and a short summary.
 
 ---
 

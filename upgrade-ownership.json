@@ -13,7 +13,8 @@
         "ui/",
         "VERSION",
         "CHANGELOG.md",
-        "mole.instance-template.yaml"
+        "mole.instance-template.yaml",
+        "schemas/"
       ]
     },
     "merge-carefully": {
@@ -30,11 +31,12 @@
       ]
     },
     "never-overwrite": {
-      "description": "Instance-owned product context and captured evidence. Upgrade automation must not overwrite these paths.",
+      "description": "Instance-owned product context, captured evidence, and source registry data. Upgrade automation must not overwrite these paths.",
       "paths": [
         "4-context/",
         "5-evidence/",
-        "6-raw/"
+        "6-raw/",
+        "governance/sources/"
       ]
     }
   }

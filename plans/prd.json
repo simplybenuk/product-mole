@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-11",
+  "updated_at": "2026-09-12",
   "categories": [
     {
       "id": "instance-lifecycle",
@@ -101,6 +101,100 @@
           "title": "Metrics backfill",
           "status": "complete",
           "tasks": []
+        }
+      ]
+    },
+    {
+      "id": "source-provenance",
+      "title": "Stable source IDs and archive-safe provenance",
+      "status": "complete",
+      "summary": "Give captured and imported sources stable IDs, move-safe provenance, correction history, and safe migration from path-only references.",
+      "priority_notes": "Approved from issue #23. This is a prerequisite for source-aware validation, travel-log records, shared-folder processing, and ID-based metrics.",
+      "chunks": [
+        {
+          "id": "source-record-foundation",
+          "title": "Source record schema and registry",
+          "status": "complete",
+          "tasks": [
+            {
+              "id": "source-provenance-001",
+              "title": "Add the versioned source record schema and registry primitives",
+              "status": "complete",
+              "acceptance": [
+                "New records use immutable src_ UUID identities and exact-byte SHA-256 hashes.",
+                "Records validate, persist one per source, and preserve path and content history.",
+                "Resolver, reconcile, correction, attachment, duplicate, conflict, and workspace-boundary behavior have focused tests."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "source-lifecycle",
+          "title": "Source lifecycle and capture integration",
+          "status": "complete",
+          "tasks": [
+            {
+              "id": "source-provenance-002",
+              "title": "Integrate registration with CLI and UI capture and add source lifecycle commands",
+              "status": "complete",
+              "acceptance": [
+                "CLI and UI captures return and embed source IDs.",
+                "Existing files and attachments can be registered without changing their bytes.",
+                "Move resolution, reconciliation, and explicit correction are observable through CLI output."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "source-reference-compatibility",
+          "title": "References, receipts, audit, and metrics",
+          "status": "complete",
+          "tasks": [
+            {
+              "id": "source-provenance-003",
+              "title": "Add ID-bearing references with backward-compatible receipt and metrics readers",
+              "status": "complete",
+              "acceptance": [
+                "New evidence, context, receipts, audit, and metrics use source IDs with optional paths.",
+                "Legacy path-only receipts remain readable and moved sources are not double-counted by path alone.",
+                "Focused tests cover old and new receipt shapes and reference serialization."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "source-migration",
+          "title": "Legacy migration and conflict reporting",
+          "status": "complete",
+          "tasks": [
+            {
+              "id": "source-provenance-004",
+              "title": "Classify legacy path references and report duplicates and conflicts",
+              "status": "complete",
+              "acceptance": [
+                "Dry-run migration classifies references as resolved, ambiguous, or unresolved.",
+                "Apply mode changes only resolved structured references and writes an audit report.",
+                "Duplicate, conflict, orphan, traversal, and symlink findings are actionable and never silently merged."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "source-provenance-docs",
+          "title": "Scaffold, documentation, and end-to-end validation",
+          "status": "complete",
+          "tasks": [
+            {
+              "id": "source-provenance-005",
+              "title": "Ship workspace guidance, templates, fixtures, and full validation",
+              "status": "complete",
+              "acceptance": [
+                "New workspaces include the schema, registry guidance, and ownership rules.",
+                "Docs explain source references, migration, security, and commands.",
+                "Root npm test and command checks cover the approved acceptance criteria."
+              ]
+            }
+          ]
         }
       ]
     }

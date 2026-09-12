@@ -22,6 +22,7 @@ import {
   parseInboxCompleteValues
 } from '../mole.mjs';
 import { buildUiCaptureContent, createCaptureRelPath } from '../../ui/server.mjs';
+import { createSourceId, readSourceRecord, registerSource } from '../../lib/source-registry.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, '..', '..');
@@ -208,6 +209,8 @@ describe('workspace scaffold', () => {
         path.join('governance', 'metrics', 'monthly.json'),
         path.join('governance', 'metrics', 'seen-today.json'),
         path.join('governance', 'metrics', 'dashboard.html'),
+        path.join('governance', 'sources', 'README.md'),
+        path.join('schemas', 'source-record-v1.schema.json'),
         'mole.instance.yaml'
       ]) {
         assert.ok(fs.existsSync(path.join(dir, relPath)), `${relPath} should exist`);
@@ -303,6 +306,64 @@ describe('upgrade command', () => {
       '-g',
       'github:simplybenuk/product-mole#main'
     ]);
+  });
+});
+
+describe('source lifecycle commands', () => {
+  it('registers an existing file and exposes resolve/reconcile output', () => {
+    withTempInstance((dir) => {
+      const original = path.join(dir, 'export.csv');
+      fs.writeFileSync(original, 'a,b\n1,2\n', 'utf8');
+      const register = runCli(['source', 'register', 'export.csv', '--source-type', 'export', '--json'], { cwd: dir });
+      assert.equal(register.status, 0);
+      const registered = JSON.parse(register.stdout);
+      assert.match(registered.source_id, /^src_[0-9a-f-]{36}$/);
+      assert.deepEqual(fs.readFileSync(original), Buffer.from('a,b\n1,2\n'));
+
+      const resolve = runCli(['source', 'resolve', registered.source_id, '--json'], { cwd: dir });
+      assert.equal(resolve.status, 0);
+      assert.equal(JSON.parse(resolve.stdout).status, 'resolved');
+
+      fs.mkdirSync(path.join(dir, 'archive'), { recursive: true });
+      fs.renameSync(original, path.join(dir, 'archive', 'export.csv'));
+      const reconcile = runCli([
+        'source',
+        'reconcile',
+        registered.source_id,
+        '--path',
+        'archive/export.csv',
+        '--json'
+      ], { cwd: dir });
+      assert.equal(reconcile.status, 0);
+      assert.equal(JSON.parse(reconcile.stdout).record.current_path, 'archive/export.csv');
+    });
+  });
+
+  it('classifies legacy references and applies only resolved structured references', () => {
+    withTempInstance((dir) => {
+      fs.mkdirSync(path.join(dir, '4-context'), { recursive: true });
+      const sourcePath = path.join(dir, 'source.md');
+      fs.writeFileSync(sourcePath, 'source', 'utf8');
+      const register = runCli(['source', 'register', 'source.md', '--json'], { cwd: dir });
+      const source = JSON.parse(register.stdout);
+      const artifactPath = path.join(dir, '4-context', 'references.json');
+      fs.writeFileSync(artifactPath, `${JSON.stringify({ source_refs: [{ path: 'source.md' }] }, null, 2)}\n`, 'utf8');
+
+      const dryRun = runCli(['source', 'migrate', '--json'], { cwd: dir });
+      assert.equal(dryRun.status, 0);
+      const dryReport = JSON.parse(dryRun.stdout);
+      assert.equal(dryReport.mode, 'dry-run');
+      assert.equal(dryReport.counts.resolved, 1);
+      assert.equal(JSON.parse(fs.readFileSync(artifactPath, 'utf8')).source_refs[0].source_id, undefined);
+
+      const applied = runCli(['source', 'migrate', '--apply', '--json'], { cwd: dir });
+      assert.equal(applied.status, 0);
+      const appliedReport = JSON.parse(applied.stdout);
+      assert.equal(appliedReport.mode, 'apply');
+      assert.equal(appliedReport.counts.changed, 1);
+      assert.equal(JSON.parse(fs.readFileSync(artifactPath, 'utf8')).source_refs[0].source_id, source.source_id);
+      assert.ok(appliedReport.report_path);
+    });
   });
 });
 
@@ -443,6 +504,42 @@ describe('capture attribution metadata', () => {
     assert.match(content, /captured_by: Ada/);
     assert.match(content, /source: customer/);
   });
+
+  it('embeds the CLI capture source ID and writes its sidecar record', () => {
+    withTempInstance((dir) => {
+      fs.mkdirSync(path.join(dir, '6-raw', 'inbox'), { recursive: true });
+      const result = runCli(['insight', 'A stable CLI source'], {
+        cwd: dir,
+        env: { ...process.env, MOLE_CAPTURED_BY: 'Ada' }
+      });
+
+      assert.equal(result.status, 0);
+      const capture = fs.readdirSync(path.join(dir, '6-raw', 'inbox'))[0];
+      const content = fs.readFileSync(path.join(dir, '6-raw', 'inbox', capture), 'utf8');
+      const sourceId = content.match(/^source_id:\s+(src_[^\s]+)$/m)?.[1];
+      assert.match(sourceId, /^src_[0-9a-f-]{36}$/);
+      assert.match(result.stdout, new RegExp(`Source ID: ${sourceId}`));
+
+      const record = readSourceRecord(dir, sourceId);
+      assert.equal(record.current_path, `6-raw/inbox/${capture}`);
+      assert.equal(record.source_type, 'note');
+      assert.equal(record.channel, 'cli');
+      assert.equal(record.captured_by, 'Ada');
+    });
+  });
+
+  it('serializes source IDs in UI capture frontmatter', () => {
+    const content = buildUiCaptureContent({
+      source: 'customer',
+      channel: 'call',
+      note: 'A UI note'
+    }, {
+      date: '2026-05-13',
+      sourceId: 'src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0'
+    });
+
+    assert.match(content, /source_id: src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0/);
+  });
 });
 
 describe('inbox processing lock and receipt', () => {
@@ -494,6 +591,80 @@ describe('inbox processing lock and receipt', () => {
     });
   });
 
+  it('uses processed source IDs when a live inbox file changes path', () => {
+    withTempInstance((dir) => {
+      for (const relative of [
+        'mole.instance.yaml',
+        '0-bootstrap',
+        '1-routing',
+        '2-summaries',
+        '3-indexes',
+        '4-context',
+        '5-evidence',
+        '6-raw',
+        '6-raw/inbox'
+      ]) {
+        const target = path.join(dir, relative);
+        if (path.extname(target)) fs.writeFileSync(target, 'cascade_version: 0.2.8\n');
+        else fs.mkdirSync(target, { recursive: true });
+      }
+      const original = path.join(dir, '6-raw', 'inbox', 'moved.md');
+      const sourceId = createSourceId();
+      fs.writeFileSync(original, `source_id: ${sourceId}\n\nmoved source`, 'utf8');
+      const source = registerSource(dir, { path: original, sourceType: 'note', sourceId });
+      fs.mkdirSync(path.join(dir, '6-raw', 'inbox', 'nested'), { recursive: true });
+      fs.renameSync(original, path.join(dir, '6-raw', 'inbox', 'nested', 'moved.md'));
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), JSON.stringify({
+        schema_version: 2,
+        processed: ['6-raw/inbox/moved.md'],
+        processed_sources: [{ source_id: source.source_id, path: '6-raw/inbox/moved.md' }]
+      }));
+
+      const result = auditInbox(dir);
+      assert.deepEqual(result.processed, ['6-raw/inbox/nested/moved.md']);
+      assert.deepEqual(result.unprocessed, []);
+    });
+  });
+
+  it('keeps the legacy processed path fallback when a receipt also has ID-bearing entries', () => {
+    withTempInstance((dir) => {
+      for (const relative of [
+        'mole.instance.yaml',
+        '0-bootstrap',
+        '1-routing',
+        '2-summaries',
+        '3-indexes',
+        '4-context',
+        '5-evidence',
+        '6-raw',
+        '6-raw/inbox'
+      ]) {
+        const target = path.join(dir, relative);
+        if (path.extname(target)) fs.writeFileSync(target, 'cascade_version: 0.2.8\n');
+        else fs.mkdirSync(target, { recursive: true });
+      }
+      const firstPath = path.join(dir, '6-raw', 'inbox', 'first.md');
+      const secondPath = path.join(dir, '6-raw', 'inbox', 'second.md');
+      fs.writeFileSync(firstPath, 'first', 'utf8');
+      fs.writeFileSync(secondPath, 'second', 'utf8');
+      const first = registerSource(dir, { path: firstPath, sourceType: 'note' });
+      registerSource(dir, { path: secondPath, sourceType: 'note' });
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), JSON.stringify({
+        schema_version: 2,
+        processed: ['6-raw/inbox/first.md', '6-raw/inbox/second.md'],
+        processed_sources: [{ source_id: first.source_id, path: '6-raw/inbox/first.md' }]
+      }));
+
+      const result = auditInbox(dir);
+      assert.deepEqual(result.processed, ['6-raw/inbox/first.md', '6-raw/inbox/second.md']);
+      assert.deepEqual(result.unprocessed, []);
+    });
+  });
+
   it('allows one claim and fails concurrent claims safely', () => {
     withTempInstance((dir) => {
       const first = claimInboxProcessing(dir, {
@@ -540,6 +711,27 @@ describe('inbox processing lock and receipt', () => {
         lockId: 'lock-2'
       });
       assert.equal(next.ok, true);
+    });
+  });
+
+  it('adds ID-bearing processed source entries while preserving processed paths', () => {
+    withTempInstance((dir) => {
+      fs.mkdirSync(path.join(dir, '6-raw', 'inbox'), { recursive: true });
+      const sourcePath = path.join(dir, '6-raw', 'inbox', 'source.md');
+      fs.writeFileSync(sourcePath, 'source', 'utf8');
+      const source = registerSource(dir, { path: sourcePath, sourceType: 'note' });
+      const result = completeInboxProcessing(dir, {
+        allowMissingLock: true,
+        processed: ['6-raw/inbox/source.md'],
+        completedAt: new Date('2026-05-13T10:21:12.345Z')
+      });
+
+      assert.equal(result.receipt.schema_version, 2);
+      assert.deepEqual(result.receipt.processed, ['6-raw/inbox/source.md']);
+      assert.deepEqual(result.receipt.processed_sources, [{
+        source_id: source.source_id,
+        path: '6-raw/inbox/source.md'
+      }]);
     });
   });
 
@@ -742,6 +934,29 @@ describe('processed inbox metrics', () => {
         { date: '2026-06-11', count: 1 },
         { date: '2026-06-12', count: 1 }
       ]);
+    });
+  });
+
+  it('dedupes moved sources by source ID when ID-bearing entries change path', () => {
+    withTempInstance((dir) => {
+      const sourceId = 'src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0';
+      const first = recordProcessedInboxItems(dir, [{
+        source_id: sourceId,
+        path: '6-raw/inbox/moved.md'
+      }], {
+        now: new Date('2026-06-11T10:00:00.000Z')
+      });
+      const second = recordProcessedInboxItems(dir, [{
+        source_id: sourceId,
+        path: '6-raw/inbox/archive/moved.md'
+      }], {
+        now: new Date('2026-06-11T11:00:00.000Z')
+      });
+
+      assert.equal(first.counted, 1);
+      assert.equal(second.counted, 0);
+      const daily = JSON.parse(fs.readFileSync(getMetricsPaths(dir).dailyPath, 'utf8'));
+      assert.deepEqual(daily.records, [{ date: '2026-06-11', count: 1 }]);
     });
   });
 

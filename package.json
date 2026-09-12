@@ -22,6 +22,7 @@
     "governance",
     "lib",
     "plans",
+    "schemas",
     "spec",
     "templates",
     "ui",
@@ -35,7 +36,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test cli/test/mole.test.mjs"
+    "test": "node --test cli/test/mole.test.mjs lib/test/source-registry.test.mjs lib/test/source-migration.test.mjs"
   },
   "license": "UNLICENSED"
 }

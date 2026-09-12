@@ -42,6 +42,7 @@ Typical examples:
 - `1-routing/`
 - `templates/`
 - `docs/`
+- `schemas/`
 - some governance docs
 
 ### 2) Merge carefully
@@ -63,6 +64,7 @@ Typical examples:
 - `4-context/`
 - `5-evidence/`
 - `6-raw/`
+- `governance/sources/`
 
 ---
 
@@ -122,6 +124,7 @@ For each upstream release:
 Think in terms of:
 - adding a new template
 - copying a new docs file
+- copying a new source-record schema
 - manually merging guidance into shared files
 - optionally adopting a new folder/module
 
@@ -148,6 +151,7 @@ Examples:
 ### Optional adoption
 Examples:
 - new domain folders
+- local source records under `governance/sources/records/`
 - alternative workflow patterns
 - local UI ideas
 - feature-flagged concepts

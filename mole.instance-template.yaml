@@ -20,6 +20,7 @@ local_ownership:
   upstream_owned:
     - 0-bootstrap/
     - 1-routing/
+    - schemas/
     - governance/quality-checklist.md
   merge_carefully:
     - governance/change-log.md
@@ -30,6 +31,7 @@ local_ownership:
     - 4-context/
     - 5-evidence/
     - 6-raw/
+    - governance/sources/
 
 notes: |
   Keep this file current when making local structural changes.
