@@ -218,3 +218,19 @@
 - Verified valid `source_refs` and `processed_sources` JSON entries, YAML sequence entries, and legacy `processed` path values retain their intended behavior: structured entries receive the source ID when resolved, while current-path metadata and legacy paths remain unchanged. No blocking or should-fix findings for this thread.
 - Validation: focused `node --test lib/test/source-migration.test.mjs` passed 10/10; root `npm test` passed 65/65 across 21 suites; affected `node --check` and `git diff --check` passed; a temporary JSON/YAML boundary fixture passed.
 - Human testing focus for this remediation: run `mole source migrate --apply` with a source-record-like JSON object containing only `current_path`, confirm the report labels it report-only and leaves bytes unchanged, then verify resolved `source_refs`/`processed_sources` entries receive IDs without changing `current_path` or legacy `processed` paths. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
+
+2026-09-12
+
+- Addressed PR review thread 3997835042 in `lib/source-registry.mjs`: registry attachment reciprocity checks now run only for array-valued `attachments`, so malformed records retain their actionable `invalid_record` finding without throwing during scans.
+- Added migration regression coverage with a non-array `attachments` value proving `findRegistryFindings` returns the invalid-record finding and the registry-dependent migration report remains recoverable.
+- Assumption: malformed attachment values are reported through record validation; reciprocity cannot be inferred until a human repairs the record, so the scan skips only those reciprocity checks.
+- Validation: focused registry/migration tests passed 19/19; root `npm test` passed 66/66 across 21 suites; affected `node --check` and `git diff --check` passed. No commit or remote action was performed.
+- Next handoff: independent `$bwh-agent-review` for this bounded PR comment remediation.
+
+2026-09-12
+
+- Independent `$bwh-agent-review` of PR review thread 3997835042: **READY FOR HUMAN TESTING** for this bounded remediation.
+- Verified that a non-array `attachments` value is reported as `invalid_record` and skipped by reciprocity scanning without throwing. An unrelated malformed record does not block `resolveSource` for a valid source, and migration still returns registry findings and applies eligible healthy structured references.
+- Verified valid attachment registration and reciprocal-link validation remain unchanged; the existing attachment regression passes with zero attachment findings.
+- Validation: focused registry/migration tests passed 19/19; root `npm test` passed 66/66 across 21 suites; affected `node --check` and `git diff --check` passed. No blocking or should-fix findings for this thread; other fresh PR threads remain outside this bounded review.
+- Human testing focus: repair a malformed source record with a non-array `attachments` field, confirm `mole source resolve` and `mole source migrate` remain actionable for other sources, and confirm valid parent/attachment records still report no reciprocity findings. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
