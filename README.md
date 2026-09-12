@@ -274,6 +274,12 @@ What is still lightweight:
 - command set is intentionally small
 - naming/brand may still evolve
 
+## Contributing
+
+Use [GitHub Issues](https://github.com/simplybenuk/product-mole/issues) for public work proposals and the repository's pull request process for changes. See the [contribution guide](governance/contribution-guide.md) for the required checks and content rules.
+
+Contributors may use their own planning, agent, editor, and development workflows. Mole does not require a particular agent toolkit. Local task plans, progress journals, and agent configuration should stay out of pull requests unless they become an agreed part of the project or product.
+
 ## Local UI (v0 scaffold)
 
 A minimal local HTML UI is included for immediate testing:

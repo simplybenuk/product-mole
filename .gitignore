@@ -1,0 +1,26 @@
+# Dependencies and generated package output
+node_modules/
+npm-debug.log*
+*.tgz
+coverage/
+
+# Local agent and editor state
+/.agents/
+/.codex/
+/governance/bwh/
+
+# Private maintainer planning and execution history
+/.issue-drafts/
+/plans/prd.json
+/plans/prd-backlog.json
+/plans/3-progress.txt
+/plans/archive/
+
+# Local Mole instance metadata and inbox coordination state
+/mole.instance.yaml
+/governance/inbox-processing.lock.json
+/governance/run-receipts/inbox-processing/
+
+# Operating-system noise
+.DS_Store
+Thumbs.db

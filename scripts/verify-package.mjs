@@ -23,6 +23,12 @@ export const REQUIRED_PACKAGED_FILES = Object.freeze([
   'upgrade-ownership.json'
 ]);
 
+export const FORBIDDEN_PACKAGED_PREFIXES = Object.freeze([
+  '.agents/',
+  'plans/',
+  'governance/bwh/'
+]);
+
 function parsePackMetadata(stdout) {
   const text = String(stdout || '').trim();
 
@@ -48,6 +54,16 @@ export function assertRequiredPackagedFiles(entries, required = REQUIRED_PACKAGE
   }
 
   return packagedFiles;
+}
+
+export function assertNoPrivatePackagedFiles(entries, forbiddenPrefixes = FORBIDDEN_PACKAGED_PREFIXES) {
+  const privateFiles = entries
+    .map(normaliseArchivePath)
+    .filter((file) => forbiddenPrefixes.some((prefix) => file.startsWith(prefix)));
+
+  if (privateFiles.length) {
+    throw new Error('Packed artefact contains private workflow files: ' + privateFiles.join(', '));
+  }
 }
 
 function run(command, args, cwd, options = {}) {
@@ -109,6 +125,7 @@ export function verifyPackage(root = repoRoot, options = {}) {
 
     const archiveEntries = listing.stdout.split(/\r?\n/).filter(Boolean);
     const packagedFiles = assertRequiredPackagedFiles(archiveEntries);
+    assertNoPrivatePackagedFiles(archiveEntries);
 
     const installRoot = path.join(tempRoot, 'clean-install');
     fs.mkdirSync(installRoot);
