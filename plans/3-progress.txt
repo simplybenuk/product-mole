@@ -295,3 +295,19 @@
 - Verified `readSourceRecord` rejects a valid record whose embedded `source_id` differs from the requested filename with `RECORD_FILENAME_CONFLICT` before attachment registration can create or update any record. The canonical record for the embedded ID remains byte-identical, and valid direct reads and reciprocal attachment registration remain intact.
 - Validation: focused `node --test lib/test/source-registry.test.mjs` passed 9/9; root `npm test` passed 71/71 across 21 suites; affected `node --check` and `git diff --check` passed. No blocking or should-fix findings for this thread; other fresh PR threads remain outside this bounded review.
 - Human testing focus: place a valid source record under a different source-ID filename, run the relevant source/attachment operation, confirm it fails without changing the canonical record, then verify normal source reads and parent/attachment links still work. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
+
+2026-09-13
+
+- Addressed PR review thread 3997935318 in `lib/source-migration.mjs`: JSON apply mode now uses a lexical/token-preserving update for documented `source_refs` and `processed_sources` entries. It inserts only the selected `source_id` property and no longer reserializes unrelated values or formatting, preserving unsafe numeric tokens such as `9007199254740993`.
+- Added focused migration coverage proving an unsafe integer, surrounding JSON formatting, and unrelated values remain byte-identical while a resolved structured reference receives its source ID.
+- Assumption: valid JSON source-reference objects without an existing `source_id` are the only JSON nodes eligible for insertion; existing values and all non-reference properties remain untouched. This preserves issue #23's explicit structured-reference migration boundary.
+- Validation: focused `node --test lib/test/source-migration.test.mjs` passed 13/13; root `npm test` passed 72/72 across 21 suites; affected `node --check` and `git diff --check` passed. No commit or remote action was performed.
+- Next handoff: independent `$bwh-agent-review` for this bounded JSON migration remediation. Other fresh PR threads remain outside this task.
+
+2026-09-13
+
+- Independent `$bwh-agent-review` of PR review thread 3997935318: **READY FOR HUMAN TESTING** for this bounded JSON migration remediation.
+- Verified lexical JSON apply preserves unsafe numeric tokens, string escapes, key order, whitespace, line endings, and unrelated nested values while inserting only the selected `source_id` into documented `source_refs` and `processed_sources` entries. Valid compact, multiline, CRLF, nested, escaped-key/path, numeric-token, and multi-target fixtures remained parseable and retained their original bytes outside the insertion.
+- Verified generic path-bearing JSON objects remain report-only, existing source IDs are not overwritten, and valid structured JSON/YAML migration behavior remains intact. No blocking or should-fix findings for this thread; other fresh PR threads remain outside this bounded review.
+- Validation: focused `node --test lib/test/source-migration.test.mjs` passed 13/13; root `npm test` passed 72/72 across 21 suites; manual JSON edge matrix passed; affected `node --check` and `git diff --check` passed. No commit or remote action was performed.
+- Human testing focus: run `mole source migrate --apply` against compact and multiline JSON `source_refs`/`processed_sources` entries containing unsafe integers, escaped strings, nested values, and CRLF formatting; confirm only the resolved reference receives an ID and all unrelated bytes remain unchanged. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
