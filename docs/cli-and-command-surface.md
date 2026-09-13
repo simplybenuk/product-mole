@@ -69,6 +69,8 @@ mole critique spec
 mole critique decision-brief
 ```
 
+The thin CLI implementation accepts `mole critique <target> [claim-or-path]` for `idea`, `strategy`, `roadmap`, `spec`, and `decision-brief`. It prints an agent instruction that names the retrieval path and expected critique sections. It does not claim that the CLI itself has read the workspace or produced the judgement.
+
 ### Insight / note / signal capture
 Used to capture chat-native or CLI-native raw context without making users think about folders.
 
@@ -109,14 +111,19 @@ mole review conflicts
 ```
 
 ### Init / upgrade
-Used to scaffold or evolve an instance.
+Used to scaffold an instance, compare it with the installed source, or refresh
+the global CLI from a stable release tag.
 
 Examples:
 ```bash
 mole init
 mole check-updates
-mole upgrade
+mole upgrade 0.2.8
 ```
+
+Pass a target release to `mole upgrade`; without one, it uses the tag matching
+the installed CLI version. The command updates the global tool and bundled
+scaffold, not a customised workspace.
 
 ### Source provenance
 
