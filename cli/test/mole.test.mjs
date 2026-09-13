@@ -1092,6 +1092,48 @@ describe('processed inbox metrics', () => {
     });
   });
 
+  it('dedupes a legacy seen path when a same-day receipt adds its source ID', () => {
+    withTempInstance((dir) => {
+      const sourceId = 'src_2a53f6cc-9e6c-4f8f-a4e0-6c88f1b08c7f';
+      const first = recordProcessedInboxItems(dir, ['6-raw/inbox/a.md'], {
+        now: new Date('2026-06-11T10:00:00.000Z')
+      });
+      const second = recordProcessedInboxItems(dir, [], {
+        processedSources: [{
+          source_id: sourceId,
+          path: '6-raw/inbox/a.md'
+        }],
+        now: new Date('2026-06-11T11:00:00.000Z')
+      });
+
+      const paths = getMetricsPaths(dir);
+      const daily = JSON.parse(fs.readFileSync(paths.dailyPath, 'utf8'));
+      const weekly = JSON.parse(fs.readFileSync(paths.weeklyPath, 'utf8'));
+      const monthly = JSON.parse(fs.readFileSync(paths.monthlyPath, 'utf8'));
+      const seenToday = JSON.parse(fs.readFileSync(paths.seenTodayPath, 'utf8'));
+
+      assert.equal(first.counted, 1);
+      assert.equal(second.counted, 0);
+      assert.equal(second.skipped, 1);
+      assert.deepEqual(daily.records, [{ date: '2026-06-11', count: 1 }]);
+      assert.deepEqual(weekly.records, [{
+        week_start: '2026-06-08',
+        week_end: '2026-06-14',
+        count: 1
+      }]);
+      assert.deepEqual(monthly.records, [{
+        month: '2026-06',
+        month_start: '2026-06-01',
+        month_end: '2026-06-30',
+        count: 1
+      }]);
+      assert.equal(seenToday.seen.length, 1);
+      assert.equal(seenToday.seen[0].key, sourceId);
+      assert.equal(seenToday.seen[0].source_id, sourceId);
+      assert.equal(seenToday.seen[0].path, '6-raw/inbox/a.md');
+    });
+  });
+
   it('trims daily records while preserving older weekly and monthly rollups', () => {
     withTempInstance((dir) => {
       const paths = getMetricsPaths(dir);
@@ -1257,6 +1299,55 @@ describe('processed inbox metrics', () => {
         count: 3
       }]);
       assert.deepEqual(seenToday.seen.map((entry) => entry.key), ['6-raw/inbox/a.md']);
+    });
+  });
+
+  it('dedupes path-only and ID-bearing receipts for the same source during backfill', () => {
+    withTempInstance((dir) => {
+      const sourceId = 'src_2a53f6cc-9e6c-4f8f-a4e0-6c88f1b08c7f';
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, '20260611T100000000Z-legacy.json'), `${JSON.stringify({
+        completed_at: '2026-06-11T10:00:00.000Z',
+        processed: ['6-raw/inbox/a.md']
+      }, null, 2)}\n`);
+      fs.writeFileSync(path.join(receiptsDir, '20260611T110000000Z-id.json'), `${JSON.stringify({
+        completed_at: '2026-06-11T11:00:00.000Z',
+        processed_sources: [{
+          source_id: sourceId,
+          path: '6-raw/inbox/a.md'
+        }]
+      }, null, 2)}\n`);
+
+      const result = backfillProcessedInboxMetrics(dir, {
+        now: new Date('2026-06-11T12:00:00.000Z')
+      });
+      const paths = getMetricsPaths(dir);
+      const daily = JSON.parse(fs.readFileSync(paths.dailyPath, 'utf8'));
+      const weekly = JSON.parse(fs.readFileSync(paths.weeklyPath, 'utf8'));
+      const monthly = JSON.parse(fs.readFileSync(paths.monthlyPath, 'utf8'));
+      const seenToday = JSON.parse(fs.readFileSync(paths.seenTodayPath, 'utf8'));
+
+      assert.equal(result.receipts_scanned, 2);
+      assert.equal(result.receipts_counted, 1);
+      assert.equal(result.receipts_skipped, 1);
+      assert.equal(result.processed_paths_counted, 1);
+      assert.deepEqual(daily.records, [{ date: '2026-06-11', count: 1 }]);
+      assert.deepEqual(weekly.records, [{
+        week_start: '2026-06-08',
+        week_end: '2026-06-14',
+        count: 1
+      }]);
+      assert.deepEqual(monthly.records, [{
+        month: '2026-06',
+        month_start: '2026-06-01',
+        month_end: '2026-06-30',
+        count: 1
+      }]);
+      assert.equal(seenToday.seen.length, 1);
+      assert.equal(seenToday.seen[0].key, sourceId);
+      assert.equal(seenToday.seen[0].source_id, sourceId);
+      assert.equal(seenToday.seen[0].path, '6-raw/inbox/a.md');
     });
   });
 

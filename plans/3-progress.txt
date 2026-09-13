@@ -327,3 +327,20 @@
 - Validation: focused `node --test lib/test/source-migration.test.mjs` passed 15/15; root `npm test` passed 74/74 across 21 suites; affected `node --check` and `git diff --check` passed. `node cli/mole.mjs doctor` reports the expected missing instance metadata in the source repository and no migration-specific failure.
 - Human testing focus: run `mole source migrate --apply --report <path>` with multiple eligible JSON/YAML artifacts and a deliberately invalid or unavailable report destination; confirm no artifact changes are left behind. Then run a successful migration and verify the report lists every changed artifact and before/after hash. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
 - Next handoff: parent workflow may publish the bounded remediation, reply to and resolve thread 3997935322, then continue with the remaining fresh PR comments.
+
+2026-09-13
+
+- Addressed PR review thread 3997935326 in `lib/metrics.mjs`: same-day metrics state and historical backfill now maintain aliases for both `source_id` and canonical path. A source-ID receipt upgrades and deduplicates a matching legacy path entry, while conflicting source IDs sharing a path remain distinct.
+- Added focused CLI metrics regressions for a legacy `seen-today` path followed by an ID-bearing receipt, and for path-only plus ID-bearing receipts during backfill. Both assert daily, weekly, and monthly counts remain one and preserve the upgraded source/path identity.
+- Assumption: a source ID is authoritative when present; a canonical path bridges only the compatibility gap between a legacy path-only entry and its first ID-bearing receipt. This preserves source identity without silently merging two distinct source IDs.
+- Validation: focused metrics regressions passed 2/2; root `npm test` passed 76/76 across 21 suites; affected `node --check` and `git diff --check` passed. No commit or remote action was performed.
+- Next handoff: independent `$bwh-agent-review` for this bounded metrics deduplication remediation; other fresh PR threads remain outside this task.
+
+2026-09-13
+
+- Independent `$bwh-agent-review` of PR review thread 3997935326: **READY FOR HUMAN TESTING** for this bounded metrics deduplication remediation.
+- Verified live same-day state upgrades a matching legacy canonical-path entry with the source ID without incrementing daily, weekly, or monthly counts. Distinct source IDs that share a path remain separate, and source-ID dedupe still handles moved paths.
+- Verified historical backfill uses the same source-ID/path alias index per day, preserving upgraded identity data and avoiding duplicate counts across path-only and ID-bearing receipts.
+- Validation: focused metrics coverage passed 10/10 in the `processed inbox metrics` suite; root `npm test` passed 76/76 across 21 suites; affected `node --check` and `git diff --check` passed. No blocking or should-fix findings for this thread; other fresh PR threads remain outside this bounded review.
+- Human testing focus: run same-day metrics updates with a legacy path-only entry followed by its ID-bearing receipt, then a distinct ID-bearing source at the same path; verify `seen-today.json` preserves one entry per source and all rollups count each source once. Repeat with historical receipts via `mole metrics backfill`. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
+- Next handoff: parent workflow may publish the bounded remediation, reply to and resolve thread 3997935326, then continue with the remaining fresh PR comments.
