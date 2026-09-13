@@ -280,3 +280,18 @@
 - Verified `applyYamlReferenceChanges` scopes existing `source_id` detection to the containing YAML mapping/list item. An adjacent list item's ID no longer suppresses migration of a preceding resolved path; IDs before or after the path in the same item remain preserved. Nested source-ID fields at a deeper indentation do not suppress the containing reference.
 - Validation: focused `node --test lib/test/source-migration.test.mjs` passed 12/12; root `npm test` passed 70/70 across 21 suites; affected `node --check` and `git diff --check` passed; manual fixtures covered same-item IDs before/after path, adjacent list entries, and nested source-ID fields.
 - Human testing focus: run `mole source migrate --apply` on YAML `source_refs` and `processed_sources` entries with IDs before and after paths, adjacent entries, comments, and nested metadata; confirm only the resolved item gains an ID and existing item IDs/indentation remain unchanged. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
+
+2026-09-13
+
+- Addressed PR review thread 3997935313 in `lib/source-registry.mjs`: `readSourceRecord` now rejects a valid JSON record whose embedded `source_id` differs from the requested source-ID filename with the existing filename-conflict error semantics. Attachment registration therefore cannot load source B through source A's filename and overwrite B's canonical record.
+- Added a focused registry regression proving mismatched reads fail with `RECORD_FILENAME_CONFLICT`, attachment registration fails before writing, and source B's canonical record remains byte-for-byte unchanged.
+- Assumption: a source record's canonical filename and embedded `source_id` are an inseparable identity pair; a valid record under the wrong filename is a conflict, not an alias. This preserves the immutable-ID and attachment-integrity requirements for issue #23.
+- Validation: focused `node --test lib/test/source-registry.test.mjs` passed 9/9; root `npm test` passed 71/71 across 21 suites; affected `node --check` and `git diff --check` passed. No commit or remote action was performed.
+- Next handoff: independent `$bwh-agent-review` for this bounded PR comment remediation. Other fresh PR threads remain outside this task.
+
+2026-09-13
+
+- Independent `$bwh-agent-review` of PR review thread 3997935313: **READY FOR HUMAN TESTING** for this bounded source-record identity remediation.
+- Verified `readSourceRecord` rejects a valid record whose embedded `source_id` differs from the requested filename with `RECORD_FILENAME_CONFLICT` before attachment registration can create or update any record. The canonical record for the embedded ID remains byte-identical, and valid direct reads and reciprocal attachment registration remain intact.
+- Validation: focused `node --test lib/test/source-registry.test.mjs` passed 9/9; root `npm test` passed 71/71 across 21 suites; affected `node --check` and `git diff --check` passed. No blocking or should-fix findings for this thread; other fresh PR threads remain outside this bounded review.
+- Human testing focus: place a valid source record under a different source-ID filename, run the relevant source/attachment operation, confirm it fails without changing the canonical record, then verify normal source reads and parent/attachment links still work. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
