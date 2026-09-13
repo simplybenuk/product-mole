@@ -311,3 +311,19 @@
 - Verified generic path-bearing JSON objects remain report-only, existing source IDs are not overwritten, and valid structured JSON/YAML migration behavior remains intact. No blocking or should-fix findings for this thread; other fresh PR threads remain outside this bounded review.
 - Validation: focused `node --test lib/test/source-migration.test.mjs` passed 13/13; root `npm test` passed 72/72 across 21 suites; manual JSON edge matrix passed; affected `node --check` and `git diff --check` passed. No commit or remote action was performed.
 - Human testing focus: run `mole source migrate --apply` against compact and multiline JSON `source_refs`/`processed_sources` entries containing unsafe integers, escaped strings, nested values, and CRLF formatting; confirm only the resolved reference receives an ID and all unrelated bytes remain unchanged. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
+
+2026-09-13
+
+- Addressed PR review thread 3997935322 in `lib/source-migration.mjs`: migration now prepares every artifact replacement and validates the report destination before mutating workspace files. Staged replacements commit in order with same-directory backups and roll back earlier artifacts if a later artifact or report replacement fails; report output is staged as part of the same controlled commit.
+- Added focused regressions for an invalid report destination and a simulated later replacement failure, proving artifacts remain byte-identical, no report is left behind, and temporary migration files are cleaned up after rollback.
+- Assumption: a migration run must either install all staged artifact/report outputs or leave every pre-run target unchanged; recoverable backup files are retained only if rollback itself fails.
+- Validation: focused `node --test lib/test/source-migration.test.mjs` passed 15/15; affected `node --check` and `git diff --check` passed. No commit or remote action was performed.
+- Next handoff: independent `$bwh-agent-review` for this bounded migration atomicity remediation; other fresh PR threads remain outside this task.
+
+2026-09-13
+
+- Independent `$bwh-agent-review` of PR review thread 3997935322: **READY FOR HUMAN TESTING** for this bounded migration atomicity remediation.
+- Verified every eligible artifact replacement and the optional report are prepared before commit; report destination validation runs before artifact mutation. Same-directory backups restore earlier replacements when a later artifact or report replacement fails, while rollback failures retain recoverable backups.
+- Validation: focused `node --test lib/test/source-migration.test.mjs` passed 15/15; root `npm test` passed 74/74 across 21 suites; affected `node --check` and `git diff --check` passed. `node cli/mole.mjs doctor` reports the expected missing instance metadata in the source repository and no migration-specific failure.
+- Human testing focus: run `mole source migrate --apply --report <path>` with multiple eligible JSON/YAML artifacts and a deliberately invalid or unavailable report destination; confirm no artifact changes are left behind. Then run a successful migration and verify the report lists every changed artifact and before/after hash. Successful human output testing hands the accepted change to `$bwh-archive-change`; any finding returns it to `$bwh-development`.
+- Next handoff: parent workflow may publish the bounded remediation, reply to and resolve thread 3997935322, then continue with the remaining fresh PR comments.
