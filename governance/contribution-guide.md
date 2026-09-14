@@ -17,6 +17,17 @@ Maintainer-only task queues, progress journals, agent skills, and local workflow
 7. Keep docs focused (avoid giant omnibus files).
 8. Keep `governance/input-queue.md` current for human asks.
 
+## Source provenance
+
+When a capture or registered file has a source record, use its immutable
+`source_id` in evidence, context, and receipt references. Add an optional path
+only as a navigation hint. Do not make a path the only locator for new work.
+
+Keep source records under `governance/sources/records/` with the workspace
+that created them. They are instance-owned data and must not be overwritten by
+an upgrade. Read [`docs/source-provenance.md`](../docs/source-provenance.md)
+before registering, moving, correcting, or migrating a source.
+
 ## Development checks
 
 Mole supports Node.js 18.x, 20.x, 22.x, and 24.x. CI runs the root checks on

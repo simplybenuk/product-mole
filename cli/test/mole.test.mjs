@@ -29,6 +29,7 @@ import {
 } from '../../scripts/check-release-consistency.mjs';
 import { createGitSnapshot } from '../../scripts/verify-package.mjs';
 import { buildUiCaptureContent, createCaptureRelPath } from '../../ui/server.mjs';
+import { createSourceId, readSourceRecord, registerSource } from '../../lib/source-registry.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, '..', '..');
@@ -41,6 +42,27 @@ function withTempInstance(callback) {
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+}
+
+function withInboxAuditWorkspace(callback) {
+  withTempInstance((dir) => {
+    for (const relative of [
+      'mole.instance.yaml',
+      '0-bootstrap',
+      '1-routing',
+      '2-summaries',
+      '3-indexes',
+      '4-context',
+      '5-evidence',
+      '6-raw',
+      '6-raw/inbox'
+    ]) {
+      const target = path.join(dir, relative);
+      if (path.extname(target)) fs.writeFileSync(target, 'cascade_version: 0.2.8\n');
+      else fs.mkdirSync(target, { recursive: true });
+    }
+    callback(dir);
+  });
 }
 
 function runCli(args, options = {}) {
@@ -254,6 +276,8 @@ describe('workspace scaffold', () => {
         path.join('governance', 'metrics', 'monthly.json'),
         path.join('governance', 'metrics', 'seen-today.json'),
         path.join('governance', 'metrics', 'dashboard.html'),
+        path.join('governance', 'sources', 'README.md'),
+        path.join('schemas', 'source-record-v1.schema.json'),
         'mole.instance.yaml'
       ]) {
         assert.ok(fs.existsSync(path.join(dir, relPath)), `${relPath} should exist`);
@@ -520,6 +544,64 @@ describe('release metadata', () => {
   });
 });
 
+describe('source lifecycle commands', () => {
+  it('registers an existing file and exposes resolve/reconcile output', () => {
+    withTempInstance((dir) => {
+      const original = path.join(dir, 'export.csv');
+      fs.writeFileSync(original, 'a,b\n1,2\n', 'utf8');
+      const register = runCli(['source', 'register', 'export.csv', '--source-type', 'export', '--json'], { cwd: dir });
+      assert.equal(register.status, 0);
+      const registered = JSON.parse(register.stdout);
+      assert.match(registered.source_id, /^src_[0-9a-f-]{36}$/);
+      assert.deepEqual(fs.readFileSync(original), Buffer.from('a,b\n1,2\n'));
+
+      const resolve = runCli(['source', 'resolve', registered.source_id, '--json'], { cwd: dir });
+      assert.equal(resolve.status, 0);
+      assert.equal(JSON.parse(resolve.stdout).status, 'resolved');
+
+      fs.mkdirSync(path.join(dir, 'archive'), { recursive: true });
+      fs.renameSync(original, path.join(dir, 'archive', 'export.csv'));
+      const reconcile = runCli([
+        'source',
+        'reconcile',
+        registered.source_id,
+        '--path',
+        'archive/export.csv',
+        '--json'
+      ], { cwd: dir });
+      assert.equal(reconcile.status, 0);
+      assert.equal(JSON.parse(reconcile.stdout).record.current_path, 'archive/export.csv');
+    });
+  });
+
+  it('classifies legacy references and applies only resolved structured references', () => {
+    withTempInstance((dir) => {
+      fs.mkdirSync(path.join(dir, '4-context'), { recursive: true });
+      const sourcePath = path.join(dir, 'source.md');
+      fs.writeFileSync(sourcePath, 'source', 'utf8');
+      const register = runCli(['source', 'register', 'source.md', '--json'], { cwd: dir });
+      const source = JSON.parse(register.stdout);
+      const artifactPath = path.join(dir, '4-context', 'references.json');
+      fs.writeFileSync(artifactPath, `${JSON.stringify({ source_refs: [{ path: 'source.md' }] }, null, 2)}\n`, 'utf8');
+
+      const dryRun = runCli(['source', 'migrate', '--json'], { cwd: dir });
+      assert.equal(dryRun.status, 0);
+      const dryReport = JSON.parse(dryRun.stdout);
+      assert.equal(dryReport.mode, 'dry-run');
+      assert.equal(dryReport.counts.resolved, 1);
+      assert.equal(JSON.parse(fs.readFileSync(artifactPath, 'utf8')).source_refs[0].source_id, undefined);
+
+      const applied = runCli(['source', 'migrate', '--apply', '--json'], { cwd: dir });
+      assert.equal(applied.status, 0);
+      const appliedReport = JSON.parse(applied.stdout);
+      assert.equal(appliedReport.mode, 'apply');
+      assert.equal(appliedReport.counts.changed, 1);
+      assert.equal(JSON.parse(fs.readFileSync(artifactPath, 'utf8')).source_refs[0].source_id, source.source_id);
+      assert.ok(appliedReport.report_path);
+    });
+  });
+});
+
 describe('upgrade ownership manifest', () => {
   it('defines parseable ownership classes for upgrade planning', () => {
     const manifest = JSON.parse(
@@ -657,6 +739,42 @@ describe('capture attribution metadata', () => {
     assert.match(content, /captured_by: Ada/);
     assert.match(content, /source: customer/);
   });
+
+  it('embeds the CLI capture source ID and writes its sidecar record', () => {
+    withTempInstance((dir) => {
+      fs.mkdirSync(path.join(dir, '6-raw', 'inbox'), { recursive: true });
+      const result = runCli(['insight', 'A stable CLI source'], {
+        cwd: dir,
+        env: { ...process.env, MOLE_CAPTURED_BY: 'Ada' }
+      });
+
+      assert.equal(result.status, 0);
+      const capture = fs.readdirSync(path.join(dir, '6-raw', 'inbox'))[0];
+      const content = fs.readFileSync(path.join(dir, '6-raw', 'inbox', capture), 'utf8');
+      const sourceId = content.match(/^source_id:\s+(src_[^\s]+)$/m)?.[1];
+      assert.match(sourceId, /^src_[0-9a-f-]{36}$/);
+      assert.match(result.stdout, new RegExp(`Source ID: ${sourceId}`));
+
+      const record = readSourceRecord(dir, sourceId);
+      assert.equal(record.current_path, `6-raw/inbox/${capture}`);
+      assert.equal(record.source_type, 'note');
+      assert.equal(record.channel, 'cli');
+      assert.equal(record.captured_by, 'Ada');
+    });
+  });
+
+  it('serializes source IDs in UI capture frontmatter', () => {
+    const content = buildUiCaptureContent({
+      source: 'customer',
+      channel: 'call',
+      note: 'A UI note'
+    }, {
+      date: '2026-05-13',
+      sourceId: 'src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0'
+    });
+
+    assert.match(content, /source_id: src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0/);
+  });
 });
 
 describe('inbox processing lock and receipt', () => {
@@ -708,6 +826,191 @@ describe('inbox processing lock and receipt', () => {
     });
   });
 
+  it('uses processed source IDs when a live inbox file changes path', () => {
+    withTempInstance((dir) => {
+      for (const relative of [
+        'mole.instance.yaml',
+        '0-bootstrap',
+        '1-routing',
+        '2-summaries',
+        '3-indexes',
+        '4-context',
+        '5-evidence',
+        '6-raw',
+        '6-raw/inbox'
+      ]) {
+        const target = path.join(dir, relative);
+        if (path.extname(target)) fs.writeFileSync(target, 'cascade_version: 0.2.8\n');
+        else fs.mkdirSync(target, { recursive: true });
+      }
+      const original = path.join(dir, '6-raw', 'inbox', 'moved.md');
+      const sourceId = createSourceId();
+      fs.writeFileSync(original, `source_id: ${sourceId}\n\nmoved source`, 'utf8');
+      const source = registerSource(dir, { path: original, sourceType: 'note', sourceId });
+      fs.mkdirSync(path.join(dir, '6-raw', 'inbox', 'nested'), { recursive: true });
+      fs.renameSync(original, path.join(dir, '6-raw', 'inbox', 'nested', 'moved.md'));
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), JSON.stringify({
+        schema_version: 2,
+        processed: ['6-raw/inbox/moved.md'],
+        processed_sources: [{ source_id: source.source_id, path: '6-raw/inbox/moved.md' }]
+      }));
+
+      const result = auditInbox(dir);
+      assert.deepEqual(result.processed, ['6-raw/inbox/nested/moved.md']);
+      assert.deepEqual(result.unprocessed, []);
+    });
+  });
+
+  it('keeps the legacy processed path fallback when a receipt also has ID-bearing entries', () => {
+    withTempInstance((dir) => {
+      for (const relative of [
+        'mole.instance.yaml',
+        '0-bootstrap',
+        '1-routing',
+        '2-summaries',
+        '3-indexes',
+        '4-context',
+        '5-evidence',
+        '6-raw',
+        '6-raw/inbox'
+      ]) {
+        const target = path.join(dir, relative);
+        if (path.extname(target)) fs.writeFileSync(target, 'cascade_version: 0.2.8\n');
+        else fs.mkdirSync(target, { recursive: true });
+      }
+      const firstPath = path.join(dir, '6-raw', 'inbox', 'first.md');
+      const secondPath = path.join(dir, '6-raw', 'inbox', 'second.md');
+      fs.writeFileSync(firstPath, 'first', 'utf8');
+      fs.writeFileSync(secondPath, 'second', 'utf8');
+      const first = registerSource(dir, { path: firstPath, sourceType: 'note' });
+      registerSource(dir, { path: secondPath, sourceType: 'note' });
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), JSON.stringify({
+        schema_version: 2,
+        processed: ['6-raw/inbox/first.md', '6-raw/inbox/second.md'],
+        processed_sources: [{ source_id: first.source_id, path: '6-raw/inbox/first.md' }]
+      }));
+
+      const result = auditInbox(dir);
+      assert.deepEqual(result.processed, ['6-raw/inbox/first.md', '6-raw/inbox/second.md']);
+      assert.deepEqual(result.unprocessed, []);
+    });
+  });
+
+  it('does not treat an ID-bearing path hint for another source as processed', () => {
+    withTempInstance((dir) => {
+      for (const relative of [
+        'mole.instance.yaml',
+        '0-bootstrap',
+        '1-routing',
+        '2-summaries',
+        '3-indexes',
+        '4-context',
+        '5-evidence',
+        '6-raw',
+        '6-raw/inbox'
+      ]) {
+        const target = path.join(dir, relative);
+        if (path.extname(target)) fs.writeFileSync(target, 'cascade_version: 0.2.8\n');
+        else fs.mkdirSync(target, { recursive: true });
+      }
+      const reusedPath = path.join(dir, '6-raw', 'inbox', 'reused.md');
+      const sourceAId = createSourceId();
+      const sourceBId = createSourceId();
+      fs.writeFileSync(reusedPath, `source_id: ${sourceBId}\n\nSource B`, 'utf8');
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), JSON.stringify({
+        schema_version: 2,
+        processed_sources: [{ source_id: sourceAId, path: '6-raw/inbox/reused.md' }]
+      }));
+
+      const result = auditInbox(dir);
+      assert.deepEqual(result.processed, []);
+      assert.deepEqual(result.unprocessed, ['6-raw/inbox/reused.md']);
+    });
+  });
+
+  it('does not treat an ID-bearing path hint as processed when the candidate has no source identity', () => {
+    withInboxAuditWorkspace((dir) => {
+      const reusedPath = path.join(dir, '6-raw', 'inbox', 'reused.bin');
+      const sourceAId = createSourceId();
+      fs.writeFileSync(reusedPath, Buffer.from([0xff, 0xfe, 0x00, 0x01, 0x80]));
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), JSON.stringify({
+        schema_version: 2,
+        processed_sources: [{ source_id: sourceAId, path: '6-raw/inbox/reused.bin' }]
+      }));
+
+      const result = auditInbox(dir);
+      assert.deepEqual(result.processed, []);
+      assert.deepEqual(result.unprocessed, ['6-raw/inbox/reused.bin']);
+    });
+  });
+
+  it('ignores nested JSON source IDs when discovering the inbox candidate identity', () => {
+    withInboxAuditWorkspace((dir) => {
+      const referencedSourceId = createSourceId();
+      const candidatePath = path.join(dir, '6-raw', 'inbox', 'new.json');
+      fs.writeFileSync(candidatePath, `${JSON.stringify({
+        title: 'New inbox document',
+        source_refs: [{
+          source_id: referencedSourceId,
+          path: '6-raw/archive/referenced.md'
+        }]
+      }, null, 2)}\n`, 'utf8');
+
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), JSON.stringify({
+        schema_version: 2,
+        processed_sources: [{
+          source_id: referencedSourceId,
+          path: '6-raw/archive/referenced.md'
+        }]
+      }));
+
+      const result = auditInbox(dir);
+      assert.deepEqual(result.processed, []);
+      assert.deepEqual(result.unprocessed, ['6-raw/inbox/new.json']);
+    });
+  });
+
+  it('ignores block-style YAML source IDs nested under source_refs in frontmatter', () => {
+    withInboxAuditWorkspace((dir) => {
+      const referencedSourceId = createSourceId();
+      const candidatePath = path.join(dir, '6-raw', 'inbox', 'new.md');
+      fs.writeFileSync(candidatePath, [
+        '---',
+        'title: New inbox document',
+        'source_refs: |',
+        `  source_id: ${referencedSourceId}`,
+        '  path: 6-raw/archive/referenced.md',
+        '---',
+        '',
+        'The referenced source is not this inbox candidate.'
+      ].join('\n'), 'utf8');
+
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), JSON.stringify({
+        schema_version: 2,
+        processed_sources: [{
+          source_id: referencedSourceId,
+          path: '6-raw/archive/referenced.md'
+        }]
+      }));
+
+      const result = auditInbox(dir);
+      assert.deepEqual(result.processed, []);
+      assert.deepEqual(result.unprocessed, ['6-raw/inbox/new.md']);
+    });
+  });
+
   it('allows one claim and fails concurrent claims safely', () => {
     withTempInstance((dir) => {
       const first = claimInboxProcessing(dir, {
@@ -754,6 +1057,27 @@ describe('inbox processing lock and receipt', () => {
         lockId: 'lock-2'
       });
       assert.equal(next.ok, true);
+    });
+  });
+
+  it('adds ID-bearing processed source entries while preserving processed paths', () => {
+    withTempInstance((dir) => {
+      fs.mkdirSync(path.join(dir, '6-raw', 'inbox'), { recursive: true });
+      const sourcePath = path.join(dir, '6-raw', 'inbox', 'source.md');
+      fs.writeFileSync(sourcePath, 'source', 'utf8');
+      const source = registerSource(dir, { path: sourcePath, sourceType: 'note' });
+      const result = completeInboxProcessing(dir, {
+        allowMissingLock: true,
+        processed: ['6-raw/inbox/source.md'],
+        completedAt: new Date('2026-05-13T10:21:12.345Z')
+      });
+
+      assert.equal(result.receipt.schema_version, 2);
+      assert.deepEqual(result.receipt.processed, ['6-raw/inbox/source.md']);
+      assert.deepEqual(result.receipt.processed_sources, [{
+        source_id: source.source_id,
+        path: '6-raw/inbox/source.md'
+      }]);
     });
   });
 
@@ -959,6 +1283,71 @@ describe('processed inbox metrics', () => {
     });
   });
 
+  it('dedupes moved sources by source ID when ID-bearing entries change path', () => {
+    withTempInstance((dir) => {
+      const sourceId = 'src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0';
+      const first = recordProcessedInboxItems(dir, [{
+        source_id: sourceId,
+        path: '6-raw/inbox/moved.md'
+      }], {
+        now: new Date('2026-06-11T10:00:00.000Z')
+      });
+      const second = recordProcessedInboxItems(dir, [{
+        source_id: sourceId,
+        path: '6-raw/inbox/archive/moved.md'
+      }], {
+        now: new Date('2026-06-11T11:00:00.000Z')
+      });
+
+      assert.equal(first.counted, 1);
+      assert.equal(second.counted, 0);
+      const daily = JSON.parse(fs.readFileSync(getMetricsPaths(dir).dailyPath, 'utf8'));
+      assert.deepEqual(daily.records, [{ date: '2026-06-11', count: 1 }]);
+    });
+  });
+
+  it('dedupes a legacy seen path when a same-day receipt adds its source ID', () => {
+    withTempInstance((dir) => {
+      const sourceId = 'src_2a53f6cc-9e6c-4f8f-a4e0-6c88f1b08c7f';
+      const first = recordProcessedInboxItems(dir, ['6-raw/inbox/a.md'], {
+        now: new Date('2026-06-11T10:00:00.000Z')
+      });
+      const second = recordProcessedInboxItems(dir, [], {
+        processedSources: [{
+          source_id: sourceId,
+          path: '6-raw/inbox/a.md'
+        }],
+        now: new Date('2026-06-11T11:00:00.000Z')
+      });
+
+      const paths = getMetricsPaths(dir);
+      const daily = JSON.parse(fs.readFileSync(paths.dailyPath, 'utf8'));
+      const weekly = JSON.parse(fs.readFileSync(paths.weeklyPath, 'utf8'));
+      const monthly = JSON.parse(fs.readFileSync(paths.monthlyPath, 'utf8'));
+      const seenToday = JSON.parse(fs.readFileSync(paths.seenTodayPath, 'utf8'));
+
+      assert.equal(first.counted, 1);
+      assert.equal(second.counted, 0);
+      assert.equal(second.skipped, 1);
+      assert.deepEqual(daily.records, [{ date: '2026-06-11', count: 1 }]);
+      assert.deepEqual(weekly.records, [{
+        week_start: '2026-06-08',
+        week_end: '2026-06-14',
+        count: 1
+      }]);
+      assert.deepEqual(monthly.records, [{
+        month: '2026-06',
+        month_start: '2026-06-01',
+        month_end: '2026-06-30',
+        count: 1
+      }]);
+      assert.equal(seenToday.seen.length, 1);
+      assert.equal(seenToday.seen[0].key, sourceId);
+      assert.equal(seenToday.seen[0].source_id, sourceId);
+      assert.equal(seenToday.seen[0].path, '6-raw/inbox/a.md');
+    });
+  });
+
   it('trims daily records while preserving older weekly and monthly rollups', () => {
     withTempInstance((dir) => {
       const paths = getMetricsPaths(dir);
@@ -1124,6 +1513,55 @@ describe('processed inbox metrics', () => {
         count: 3
       }]);
       assert.deepEqual(seenToday.seen.map((entry) => entry.key), ['6-raw/inbox/a.md']);
+    });
+  });
+
+  it('dedupes path-only and ID-bearing receipts for the same source during backfill', () => {
+    withTempInstance((dir) => {
+      const sourceId = 'src_2a53f6cc-9e6c-4f8f-a4e0-6c88f1b08c7f';
+      const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+      fs.mkdirSync(receiptsDir, { recursive: true });
+      fs.writeFileSync(path.join(receiptsDir, '20260611T100000000Z-legacy.json'), `${JSON.stringify({
+        completed_at: '2026-06-11T10:00:00.000Z',
+        processed: ['6-raw/inbox/a.md']
+      }, null, 2)}\n`);
+      fs.writeFileSync(path.join(receiptsDir, '20260611T110000000Z-id.json'), `${JSON.stringify({
+        completed_at: '2026-06-11T11:00:00.000Z',
+        processed_sources: [{
+          source_id: sourceId,
+          path: '6-raw/inbox/a.md'
+        }]
+      }, null, 2)}\n`);
+
+      const result = backfillProcessedInboxMetrics(dir, {
+        now: new Date('2026-06-11T12:00:00.000Z')
+      });
+      const paths = getMetricsPaths(dir);
+      const daily = JSON.parse(fs.readFileSync(paths.dailyPath, 'utf8'));
+      const weekly = JSON.parse(fs.readFileSync(paths.weeklyPath, 'utf8'));
+      const monthly = JSON.parse(fs.readFileSync(paths.monthlyPath, 'utf8'));
+      const seenToday = JSON.parse(fs.readFileSync(paths.seenTodayPath, 'utf8'));
+
+      assert.equal(result.receipts_scanned, 2);
+      assert.equal(result.receipts_counted, 1);
+      assert.equal(result.receipts_skipped, 1);
+      assert.equal(result.processed_paths_counted, 1);
+      assert.deepEqual(daily.records, [{ date: '2026-06-11', count: 1 }]);
+      assert.deepEqual(weekly.records, [{
+        week_start: '2026-06-08',
+        week_end: '2026-06-14',
+        count: 1
+      }]);
+      assert.deepEqual(monthly.records, [{
+        month: '2026-06',
+        month_start: '2026-06-01',
+        month_end: '2026-06-30',
+        count: 1
+      }]);
+      assert.equal(seenToday.seen.length, 1);
+      assert.equal(seenToday.seen[0].key, sourceId);
+      assert.equal(seenToday.seen[0].source_id, sourceId);
+      assert.equal(seenToday.seen[0].path, '6-raw/inbox/a.md');
     });
   });
 

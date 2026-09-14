@@ -5,6 +5,7 @@ status: draft
 owner:
 last_updated:
 summary: A decision brief generated from mole context.
+source_refs: []
 ---
 
 # Decision Brief
@@ -31,6 +32,15 @@ summary: A decision brief generated from mole context.
 
 ## What I still need from humans
 - 
+
+## Source references
+
+```yaml
+source_refs: []
+```
+
+Add one entry for each registered source used by the brief. `source_id` is
+required. An optional `path` is a display hint and does not replace the ID.
 
 ## Retrieval receipt
 - files read:

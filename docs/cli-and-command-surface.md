@@ -125,6 +125,28 @@ Pass a target release to `mole upgrade`; without one, it uses the tag matching
 the installed CLI version. The command updates the global tool and bundled
 scaffold, not a customised workspace.
 
+### Source provenance
+
+Used to register source files and keep their identities stable when paths
+change. These commands operate on the local registry under
+`governance/sources/`:
+
+```bash
+mole source register 6-raw/inbox/customer-note.md
+mole source resolve src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --json
+mole source reconcile src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --path 6-raw/archive/2026-09/customer-note.md
+mole source correct src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --reason "Owner corrected the note"
+mole source migrate --json
+```
+
+`resolve` and the default `migrate` mode are read-only. `reconcile` verifies
+the stored hash before recording a move. `correct` records a new content hash
+for the same logical source. Migration `--apply` is an explicit write and may
+update only evidence-backed structured references classified as `resolved`.
+It must leave raw bytes and ambiguous references untouched. See
+[`source-provenance.md`](./source-provenance.md) for the record, reference,
+security, and recovery rules.
+
 ---
 
 ## Output philosophy
