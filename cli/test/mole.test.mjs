@@ -1864,6 +1864,37 @@ describe('inbox processing lock and receipt', () => {
     });
   });
 
+  it('blocks conflict-named inbox directories and their descendants', () => {
+    withTempInstance((dir) => {
+      createWorkspaceScaffold(dir);
+      const conflictDir = path.join(dir, '6-raw', 'inbox', 'batch (conflicted copy)');
+      const sourcePath = path.join(conflictDir, 'source.md');
+      fs.mkdirSync(conflictDir, { recursive: true });
+      fs.writeFileSync(sourcePath, 'preserve');
+
+      const expectedConflicts = [
+        '6-raw/inbox/batch (conflicted copy)',
+        '6-raw/inbox/batch (conflicted copy)/source.md'
+      ];
+      assert.deepEqual(discoverInboxConflictFiles(dir), expectedConflicts);
+      const audit = auditInbox(dir);
+      assert.deepEqual(audit.syncConflictFiles, expectedConflicts);
+      assert.equal(audit.issues.some((issue) => issue.code === 'SYNC_CONFLICT'), true);
+      assert.deepEqual(inspectInboxProcessing(dir).inboxConflictPaths, expectedConflicts);
+
+      const claim = claimInboxProcessing(dir, {
+        runId: 'conflict-directory-run',
+        processor: 'Ada',
+        host: 'laptop-a',
+        claimedPaths: ['6-raw/inbox/batch (conflicted copy)/source.md']
+      });
+
+      assert.equal(claim.ok, false);
+      assert.equal(claim.code, 'SYNC_CONFLICT');
+      assert.equal(fs.readFileSync(sourcePath, 'utf8'), 'preserve');
+    });
+  });
+
   it('detects provider-style conflicted lock copies before mutations', () => {
     withTempInstance((dir) => {
       createWorkspaceScaffold(dir);

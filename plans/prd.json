@@ -135,16 +135,16 @@
               ],
               "passes": false,
               "validation": [
-                "npm test (114 tests)",
+                "npm test (115 tests)",
                 "node --check on changed JavaScript modules",
                 "git diff --check",
                 "receipt-gated direct metrics regression for incomplete recovery state",
                 "mole doctor in a disposable workspace",
                 "local CLI inbox audit, claim, heartbeat, checkpoint, complete, and metrics backfill in a disposable workspace"
               ],
-              "review": "PENDING THIRD CODEX PR REVIEW after preserving configured lease duration and blocked metric history.",
-              "commit_status": "follow-up fix commit e81de91 pushed to PR #34",
-              "next_handoff": "Request a third Codex review on PR #34; resolve the existing main-branch merge conflict only with explicit authorization, then human output testing and bwh-archive-change."
+              "review": "No further Codex PR review requested; directory-conflict finding addressed and merge pending.",
+              "commit_status": "final review fix pending commit",
+              "next_handoff": "Commit and push the final review fix, resolve the existing main-branch merge conflict, then merge PR #34; run human output testing and bwh-archive-change after acceptance."
             }
           ]
         }

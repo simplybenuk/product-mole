@@ -201,3 +201,9 @@
 - Heartbeat and checkpoint now retain the validated lease duration stored in the active owned lock. Metrics backfill returns a blocked result before any metric write when receipt or recovery state is ambiguous; the CLI reports the block and exits non-zero. Documentation now explains that existing metric history is preserved until reconciliation.
 - Added regressions for omitted renewal options, byte-for-byte preservation of daily/weekly/monthly/seen-today files, and blocked CLI backfill. Validation: `npm test` passed with 114 tests; changed JavaScript syntax, `git diff --check`, all planning JSON, and the disposable doctor/CLI workflow passed.
 - Created and pushed follow-up commit `e81de91` (`fix: preserve inbox lease and metric history`) to PR #34. Planning: `plans/prd.json` remains `in_development` pending a third Codex review; `plans/prd-backlog.json` and `plans/archive/prd-complete.json` remain unchanged. The existing PR merge conflict remains separate; no rebase or merge is planned.
+
+2026-09-19
+
+- Addressed the final requested Codex PR finding: conflict-named inbox directories now block audit and mutation, and their descendant paths remain visible as conflicted evidence. Added a regression preserving the source file and rejecting the claim.
+- Validation: `npm test` passed with 115 tests; changed JavaScript syntax and the focused conflict-directory regression passed. No further Codex review will be requested.
+- Planning: `plans/prd.json` remains `in_development` pending the authorized merge; `plans/prd-backlog.json` and `plans/archive/prd-complete.json` remain unchanged. Next step is to commit/push this fix, resolve the `main` merge conflict, and merge PR #34.
