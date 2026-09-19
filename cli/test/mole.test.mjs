@@ -1436,7 +1436,7 @@ describe('inbox processing lock and receipt', () => {
         runId: 'partial-run',
         processor: 'Ada',
         host: 'laptop-a',
-        processed: ['6-raw/inbox/a.md', '6-raw/inbox/b.md'],
+        processed: ['6-raw/inbox/b.md'],
         completedAt: new Date('2026-09-09T10:20:00.000Z')
       });
       assert.equal(retry.ok, true);
@@ -1721,6 +1721,31 @@ describe('inbox processing lock and receipt', () => {
       assert.equal(recovered.ok, false);
       assert.equal(recovered.code, 'RUN_ALREADY_COMPLETED');
       assert.equal(inspectInboxProcessing(dir).lock.run_id, 'stale-run');
+      assert.equal(inspectInboxProcessing(dir).overrides.length, 0);
+    });
+  });
+
+  it('rejects stale recovery that reuses the expired run ID', () => {
+    withTempInstance((dir) => {
+      claimInboxProcessing(dir, {
+        runId: 'expired-run',
+        processor: 'Ada',
+        host: 'laptop-a',
+        leaseMs: 1000,
+        now: new Date('2026-09-08T10:00:00.000Z')
+      });
+
+      const recovered = overrideStaleInboxProcessing(dir, {
+        runId: 'expired-run',
+        processor: 'Grace',
+        host: 'laptop-b',
+        reason: 'The expired worker stopped and its run identity must not be reused.',
+        now: new Date('2026-09-08T10:00:02.000Z')
+      });
+
+      assert.equal(recovered.ok, false);
+      assert.equal(recovered.code, 'RUN_ID_REUSE');
+      assert.equal(inspectInboxProcessing(dir).lock.run_id, 'expired-run');
       assert.equal(inspectInboxProcessing(dir).overrides.length, 0);
     });
   });
