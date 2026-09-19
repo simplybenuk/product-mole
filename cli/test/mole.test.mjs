@@ -1151,6 +1151,41 @@ describe('inbox processing lock and receipt', () => {
     });
   });
 
+  it('preserves the claimed lease duration when renewal options are omitted', () => {
+    withTempInstance((dir) => {
+      const owner = {
+        runId: 'preserved-lease-run',
+        processor: 'Ada',
+        host: 'laptop-a',
+        leaseMs: 1000,
+        claimedPaths: ['6-raw/inbox/a.md'],
+        now: new Date('2026-09-08T10:00:00.000Z')
+      };
+      assert.equal(claimInboxProcessing(dir, owner).ok, true);
+
+      const heartbeat = heartbeatInboxProcessing(dir, {
+        runId: owner.runId,
+        processor: owner.processor,
+        host: owner.host,
+        now: new Date('2026-09-08T10:00:00.500Z')
+      });
+      assert.equal(heartbeat.ok, true);
+      assert.equal(heartbeat.lock.lease_duration_ms, 1000);
+      assert.equal(heartbeat.lock.expires_at, '2026-09-08T10:00:01.500Z');
+
+      const checkpoint = checkpointInboxProcessing(dir, {
+        runId: owner.runId,
+        processor: owner.processor,
+        host: owner.host,
+        processed: owner.claimedPaths,
+        now: new Date('2026-09-08T10:00:00.750Z')
+      });
+      assert.equal(checkpoint.ok, true);
+      assert.equal(checkpoint.lock.lease_duration_ms, 1000);
+      assert.equal(checkpoint.lock.expires_at, '2026-09-08T10:00:01.750Z');
+    });
+  });
+
   it('requires an explicit matching run ID for every post-claim mutation', () => {
     withTempInstance((dir) => {
       claimInboxProcessing(dir, {
@@ -3151,6 +3186,57 @@ describe('processed inbox metrics', () => {
     });
   });
 
+  it('preserves existing metric history while receipt counting is blocked', () => {
+    withTempInstance((dir) => {
+      createWorkspaceScaffold(dir);
+      const paths = getMetricsPaths(dir);
+      const daily = JSON.parse(fs.readFileSync(paths.dailyPath, 'utf8'));
+      const weekly = JSON.parse(fs.readFileSync(paths.weeklyPath, 'utf8'));
+      const monthly = JSON.parse(fs.readFileSync(paths.monthlyPath, 'utf8'));
+      const seenToday = JSON.parse(fs.readFileSync(paths.seenTodayPath, 'utf8'));
+      daily.records = [{ date: '2026-09-01', count: 7 }];
+      weekly.records = [{ week_start: '2026-08-31', week_end: '2026-09-06', count: 7 }];
+      monthly.records = [{
+        month: '2026-09',
+        month_start: '2026-09-01',
+        month_end: '2026-09-30',
+        count: 7
+      }];
+      seenToday.date = '2026-09-01';
+      seenToday.seen = [{ key: '6-raw/inbox/already-counted.md', first_seen_at: '2026-09-01T12:00:00.000Z' }];
+      fs.writeFileSync(paths.dailyPath, `${JSON.stringify(daily, null, 2)}\n`);
+      fs.writeFileSync(paths.weeklyPath, `${JSON.stringify(weekly, null, 2)}\n`);
+      fs.writeFileSync(paths.monthlyPath, `${JSON.stringify(monthly, null, 2)}\n`);
+      fs.writeFileSync(paths.seenTodayPath, `${JSON.stringify(seenToday, null, 2)}\n`);
+
+      const metricPaths = [
+        paths.dailyPath,
+        paths.weeklyPath,
+        paths.monthlyPath,
+        paths.seenTodayPath
+      ];
+      const before = metricPaths.map((file) => fs.readFileSync(file, 'utf8'));
+      const overrides = path.join(
+        dir,
+        'governance',
+        'run-receipts',
+        'inbox-processing',
+        'overrides'
+      );
+      fs.mkdirSync(overrides, { recursive: true });
+      fs.writeFileSync(path.join(overrides, 'blocked.json'), '{');
+
+      const result = backfillProcessedInboxMetrics(dir, {
+        now: new Date('2026-09-08T12:00:00.000Z')
+      });
+
+      assert.equal(result.ok, false);
+      assert.equal(result.blocked, true);
+      assert.equal(result.processed_paths_counted, 0);
+      assert.deepEqual(metricPaths.map((file) => fs.readFileSync(file, 'utf8')), before);
+    });
+  });
+
   it('does not partially count a valid receipt beside malformed receipt JSON', () => {
     withTempInstance((dir) => {
       createWorkspaceScaffold(dir);
@@ -3195,6 +3281,32 @@ describe('processed inbox metrics', () => {
       assert.match(result.stdout, /Mole metrics backfill complete/);
       assert.match(result.stdout, /Receipts scanned: 1/);
       assert.match(result.stdout, /Processed paths counted: 1/);
+    });
+  });
+
+  it('fails closed from the CLI without rewriting blocked metric history', () => {
+    withTempInstance((dir) => {
+      createWorkspaceScaffold(dir);
+      const paths = getMetricsPaths(dir);
+      const daily = JSON.parse(fs.readFileSync(paths.dailyPath, 'utf8'));
+      daily.records = [{ date: '2026-09-01', count: 7 }];
+      fs.writeFileSync(paths.dailyPath, `${JSON.stringify(daily, null, 2)}\n`);
+      const before = fs.readFileSync(paths.dailyPath, 'utf8');
+      const overrides = path.join(
+        dir,
+        'governance',
+        'run-receipts',
+        'inbox-processing',
+        'overrides'
+      );
+      fs.mkdirSync(overrides, { recursive: true });
+      fs.writeFileSync(path.join(overrides, 'blocked.json'), '{');
+
+      const result = runCli(['metrics', 'backfill'], { cwd: dir });
+
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /backfill blocked/);
+      assert.equal(fs.readFileSync(paths.dailyPath, 'utf8'), before);
     });
   });
 });

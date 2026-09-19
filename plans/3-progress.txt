@@ -194,3 +194,10 @@
 - Returned through `bwh-development`. Lock/receipt mutations now perform post-write full-state validation and preserve ambiguous records while returning reconciliation failures. Override validation now requires type-specific valid snapshots, validates nested receipt overrides, and cross-checks finalized recovery records against replacement locks or terminal receipt snapshots. Added regression fixtures for both findings.
 - Validation: `npm test` passed with 103 tests; changed JavaScript, diff, and planning checks remain to be rerun with the disposable doctor/CLI smoke flow before the next fresh independent review. No implementation commit or remote action was made.
 - Planning: `plans/prd.json` remains `in_development`; `plans/prd-backlog.json` and `plans/archive/prd-complete.json` remain unchanged. Next handoff: fresh independent Terra Max `bwh-agent-review`.
+
+2026-09-19
+
+- Returned `issue-21-001` through `bwh-development` after the latest Codex PR review identified two bounded fail-closed gaps: heartbeat/checkpoint renewal could restore the default lease duration when `--lease-ms` was omitted, and blocked metrics backfill could overwrite existing history with empty aggregates.
+- Heartbeat and checkpoint now retain the validated lease duration stored in the active owned lock. Metrics backfill returns a blocked result before any metric write when receipt or recovery state is ambiguous; the CLI reports the block and exits non-zero. Documentation now explains that existing metric history is preserved until reconciliation.
+- Added regressions for omitted renewal options, byte-for-byte preservation of daily/weekly/monthly/seen-today files, and blocked CLI backfill. Validation: `npm test` passed with 114 tests; changed JavaScript syntax checks passed. Full repository checks and PR update remain pending.
+- Planning: `plans/prd.json` remains `in_development` pending a third Codex review; `plans/prd-backlog.json` and `plans/archive/prd-complete.json` remain unchanged. The existing PR merge conflict remains separate; no rebase or merge is planned.

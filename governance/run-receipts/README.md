@@ -7,7 +7,7 @@ Inbox processing receipts live under `inbox-processing/` as JSON. Each current r
 
 Stale-lock and missing-lock decisions live under `inbox-processing/overrides/`. An override records the actor, host, time, reason, replacement run, and replaced lock. Keep these records available for audit. They are not permission to discard source files or silently resolve sync conflicts.
 
-Receipts from different run IDs must not claim the same canonical inbox path. `mole inbox audit` reports that split-brain state and excludes the path from the normal processed set; metrics backfill skips it until the receipts are reconciled. Duplicate receipts for one run exclude the full union of their processed paths, including paths present in only one copy.
+Receipts from different run IDs must not claim the same canonical inbox path. `mole inbox audit` reports that split-brain state and excludes the path from the normal processed set; metrics backfill skips it until the receipts are reconciled and preserves existing metric history while blocked. Duplicate receipts for one run exclude the full union of their processed paths, including paths present in only one copy.
 
 Every accepted receipt requires a nonempty string identity (`run_id`, legacy `lock_id`, or legacy `receipt_id`) and a valid string `completed_at` timestamp. A supplied `status` must be `completed`. Audit and metrics backfill use the same validated receipt snapshot and exclude invalid records and conflict-named receipt files.
 

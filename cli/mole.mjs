@@ -825,13 +825,17 @@ function runInboxCommand(action, values = []) {
 function runMetricsCommand(action) {
   if (action === 'backfill') {
     const result = backfillProcessedInboxMetrics(cwd);
-    console.log('Mole metrics backfill complete.');
+    const output = result.blocked ? console.error : console.log;
+    output(result.blocked
+      ? 'Mole metrics backfill blocked; existing metric files were preserved.'
+      : 'Mole metrics backfill complete.');
     console.log(`Receipts scanned: ${result.receipts_scanned}`);
     console.log(`Receipts counted: ${result.receipts_counted}`);
     console.log(`Receipts skipped: ${result.receipts_skipped}`);
     console.log(`Processed paths counted: ${result.processed_paths_counted}`);
     console.log(`Conflict receipts skipped: ${result.conflict_receipts_skipped}`);
     console.log(`Processed paths conflicted: ${result.processed_paths_conflicted}`);
+    if (result.blocked) process.exitCode = 1;
     return;
   }
 

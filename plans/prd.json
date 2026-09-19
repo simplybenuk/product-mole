@@ -135,16 +135,16 @@
               ],
               "passes": false,
               "validation": [
-                "npm test (111 tests)",
+                "npm test (114 tests)",
                 "node --check on changed JavaScript modules",
                 "git diff --check",
                 "receipt-gated direct metrics regression for incomplete recovery state",
                 "mole doctor in a disposable workspace",
                 "local CLI inbox audit, claim, heartbeat, checkpoint, complete, and metrics backfill in a disposable workspace"
               ],
-              "review": "PENDING SECOND CODEX PR REVIEW after fixing checkpoint-aware completion retries and stale recovery run-ID reuse.",
-              "commit_status": "follow-up fix commit 76767d9 pushed to draft PR #34",
-              "next_handoff": "Second Codex review on PR #34; resolve the existing main-branch merge conflict only with explicit authorization, then human output testing and bwh-archive-change."
+              "review": "PENDING THIRD CODEX PR REVIEW after preserving configured lease duration and blocked metric history.",
+              "commit_status": "follow-up review fixes pending commit",
+              "next_handoff": "Push the follow-up review fixes and request a third Codex review on PR #34; resolve the existing main-branch merge conflict only with explicit authorization, then human output testing and bwh-archive-change."
             }
           ]
         }
