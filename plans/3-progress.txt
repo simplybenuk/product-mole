@@ -168,6 +168,13 @@
 
 2026-09-19
 
+- Completed the focused local diff review after the receipt-gated metrics fix. `npm test` passed with 110 tests; changed JavaScript syntax, `git diff --check`, planning JSON, and the disposable CLI workflow all passed.
+- Created implementation commit `a81747e` (`feat: add restart-safe inbox coordination`) and pushed the existing `codex/issue-25-sensitive-data-spec` branch after explicit authorization.
+- Opened draft PR #34 for Codex review: https://github.com/simplybenuk/product-mole/pull/34. No branch was created or switched, and the pre-existing untracked `.agents/` and `governance/bwh/` toolkit files remain untouched.
+- Planning: `plans/prd.json` remains `in_development` pending formal review; `plans/prd-backlog.json` and `plans/archive/prd-complete.json` remain unchanged. Next handoff is independent review on the draft PR, then human output testing if the review is ready.
+
+2026-09-19
+
 - Restarted Terra Max `bwh-agent-review` returned `NOT READY FOR HUMAN TESTING` with five bounded findings: post-write lock checks were not bound to the expected snapshot, completion/recovery evidence allowed timestamp and snapshot contradictions, metrics could partially count beside ambiguous records, inbox symlinks/special entries were invisible to audit, and unknown CLI flags were parsed as processor or summary text.
 - Returned through `bwh-development`. Lock, receipt, and recovery mutations now compare fresh persisted snapshots with expected lock/receipt/override records; completion timestamps and recovery snapshot linkage are validated; metrics block all countability on malformed, duplicate, split-brain, conflicted, unsafe, or invalid operational state; audit reports symlinked/special inbox entries without dereferencing; and unknown `--` options fail before mutation.
 - Added six focused regression fixtures covering canonical lock replacement races, source-conflict stale recovery before writes, timestamp ordering, recovery evidence linkage, symlink audit blockers, unknown options, and valid receipts beside malformed JSON. Updated split-brain expectations to enforce no partial metric counts.

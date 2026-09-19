@@ -142,9 +142,9 @@
                 "mole doctor in a disposable workspace",
                 "local CLI inbox audit, claim, heartbeat, checkpoint, complete, and metrics backfill in a disposable workspace"
               ],
-              "review": "PENDING FORMAL INDEPENDENT REVIEW after receipt-gating the direct metrics recorder and routing all CLI completion metrics through validated receipt backfill.",
-              "commit_status": "not committed; explicit user request required",
-              "next_handoff": "Fresh independent Terra Max bwh-agent-review."
+              "review": "PENDING DRAFT PR CODEX REVIEW after receipt-gating the direct metrics recorder and routing all CLI completion metrics through validated receipt backfill.",
+              "commit_status": "implementation commit a81747e pushed; draft PR #34 open for review",
+              "next_handoff": "Independent Codex review on draft PR #34; after acceptance, human output testing then bwh-archive-change."
             }
           ]
         }
