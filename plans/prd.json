@@ -135,16 +135,16 @@
               ],
               "passes": false,
               "validation": [
-                "npm test (110 tests)",
+                "npm test (111 tests)",
                 "node --check on changed JavaScript modules",
                 "git diff --check",
                 "receipt-gated direct metrics regression for incomplete recovery state",
                 "mole doctor in a disposable workspace",
                 "local CLI inbox audit, claim, heartbeat, checkpoint, complete, and metrics backfill in a disposable workspace"
               ],
-              "review": "PENDING DRAFT PR CODEX REVIEW after receipt-gating the direct metrics recorder and routing all CLI completion metrics through validated receipt backfill.",
-              "commit_status": "implementation commit a81747e pushed; draft PR #34 open for review",
-              "next_handoff": "Independent Codex review on draft PR #34; after acceptance, human output testing then bwh-archive-change."
+              "review": "PENDING SECOND CODEX PR REVIEW after fixing checkpoint-aware completion retries and stale recovery run-ID reuse.",
+              "commit_status": "follow-up fix commit 76767d9 pushed to draft PR #34",
+              "next_handoff": "Second Codex review on PR #34; resolve the existing main-branch merge conflict only with explicit authorization, then human output testing and bwh-archive-change."
             }
           ]
         }

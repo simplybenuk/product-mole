@@ -175,6 +175,13 @@
 
 2026-09-19
 
+- Addressed both P2 comments from the first Codex PR review. Completion retry validation now unions newly supplied paths with the terminal lock snapshot's checkpointed paths, and stale recovery rejects reuse of the expired run ID before writing any override or replacement lock.
+- Added focused regression coverage for checkpoint-aware retry recovery and self-referential stale recovery. `npm test` passed with 111 tests; changed JavaScript syntax and `git diff --check` passed.
+- Created and pushed follow-up commit `76767d9` (`fix: harden inbox recovery retry semantics`) to draft PR #34. The branch was not rebased or merged.
+- Planning: `plans/prd.json` remains `in_development`; `plans/prd-backlog.json` and `plans/archive/prd-complete.json` remain unchanged. Next handoff is a second Codex PR review. The existing main-branch merge conflict remains separate and requires explicit authorization before resolution.
+
+2026-09-19
+
 - Restarted Terra Max `bwh-agent-review` returned `NOT READY FOR HUMAN TESTING` with five bounded findings: post-write lock checks were not bound to the expected snapshot, completion/recovery evidence allowed timestamp and snapshot contradictions, metrics could partially count beside ambiguous records, inbox symlinks/special entries were invisible to audit, and unknown CLI flags were parsed as processor or summary text.
 - Returned through `bwh-development`. Lock, receipt, and recovery mutations now compare fresh persisted snapshots with expected lock/receipt/override records; completion timestamps and recovery snapshot linkage are validated; metrics block all countability on malformed, duplicate, split-brain, conflicted, unsafe, or invalid operational state; audit reports symlinked/special inbox entries without dereferencing; and unknown `--` options fail before mutation.
 - Added six focused regression fixtures covering canonical lock replacement races, source-conflict stale recovery before writes, timestamp ordering, recovery evidence linkage, symlink audit blockers, unknown options, and valid receipts beside malformed JSON. Updated split-brain expectations to enforce no partial metric counts.
