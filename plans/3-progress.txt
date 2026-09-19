@@ -119,3 +119,64 @@
 - Documented backfill for upgraded existing workspaces and clarified that it does not infer from raw folders or read raw insight content.
 - Validation: `npm test` from `cli/` passed; documentation checks with `rg` passed.
 - Category `molehill-metrics` is complete. No incomplete PRD tasks remain in the category.
+
+2026-09-18
+
+- Implemented `issue-21-001` from the approved shared-folder inbox coordination specification.
+- Added the v2 file-native leased run protocol with stable run IDs, processor/host ownership, finite leases, heartbeats, path checkpoints, deterministic receipts, unresolved-path recovery, explicit stale and missing-lock overrides, prepared/finalized audit records, conflict-aware audit, receipt-based metric reconciliation, legacy-lock migration, and canonical symlink-safe inbox paths.
+- Updated CLI behavior, scaffold guidance, shared-folder documentation, receipt guidance, audit output, and focused fixtures. Normal mutation paths fail closed on ownership, conflict, invalid metadata, unsafe paths, duplicate receipts, split-brain paths, and incomplete overrides; source files are preserved.
+- Independent BWH review: `READY FOR HUMAN TESTING`. Initial review findings around unsafe path normalization, generic conflict bypasses, incompatible same-run claims, terminal retry payloads, and incomplete v2 metadata validation were fixed and covered by tests.
+- Validation: `npm test` passed with 91 tests; changed JavaScript passed `node --check`; `git diff --check` passed; disposable-workspace `mole doctor` passed; local CLI claim/heartbeat/checkpoint/complete/audit and receipt-driven metrics backfill passed.
+- Planning: `plans/prd.json` is `ready_for_human_testing`; `plans/prd-backlog.json` has no duplicate or deferred Issue #21 item; `plans/archive/prd-complete.json` remains unchanged until human acceptance. No implementation commit was created.
+- Next handoff: human output testing, then `bwh-archive-change` after acceptance; return to `bwh-development` if testing finds more work.
+
+2026-09-18
+
+- Independent Terra Max BWH review returned `NOT READY FOR HUMAN TESTING`.
+- Blocking findings: empty claimed-path sets currently allow arbitrary processed paths during checkpoint and completion; malformed conflict-named receipts are excluded from conflict tracking, allowing a valid sibling receipt to remain countable.
+- Additional findings: audit/backfill CLI output needs clearer conflict paths and totals; missing stale-override reasons should return structured remediation instead of throwing; add black-box CLI coverage for audit, heartbeat, checkpoint, and later-UTC retry metrics.
+- Planning moved `shared-inbox-coordination` / `restart-safe-run-protocol` / `issue-21-001` back to `in_development`. No implementation commit or remote action was made.
+- Next handoff: address these bounded findings, validate, and spawn a fresh independent Terra Max `bwh-agent-review`.
+
+2026-09-18
+
+- Returned `issue-21-001` through `bwh-development` and addressed the independent review findings without broadening scope.
+- Empty claimed-path sets now reject processed checkpoint and completion paths; malformed or conflict-named receipts block audit and metric countability; stale recovery without a reason returns structured remediation; audit/backfill output reports actionable conflict paths and totals; scoped CLI and later-UTC retry fixtures were added.
+- Validation: `npm test` passed with 96 tests; changed JavaScript passed `node --check`; `git diff --check` passed. No implementation commit or remote action was made.
+- Planning: `plans/prd.json` remains `in_development` pending fresh independent review; `plans/prd-backlog.json` and `plans/archive/prd-complete.json` remain unchanged. Next handoff: fresh independent Terra Max `bwh-agent-review`.
+
+2026-09-19
+
+- Continued `issue-21-001` development from the partial Terra review. The reviewer exhausted its usage limit before a formal verdict, but independently reproduced two integrity defects: provider-style conflicted lock names were missed, and a terminal v2 receipt could omit paths already checkpointed in its lock snapshot while remaining countable.
+- Fixed both fail-closed gaps and made `mole inbox audit` show active run ownership and expiry. Added regression coverage for snapshot-consistent receipts, conflicted lock copies, and active-lease CLI output.
+- Validation: `npm test` passed with 98 tests; changed JavaScript passed `node --check`; `git diff --check` passed; planning JSON parsed; disposable-workspace doctor plus claim/active-audit/heartbeat/checkpoint/complete/final-audit/metrics-backfill smoke checks passed. No implementation commit or remote action was made.
+- Planning: `plans/prd.json` remains `in_development`; `plans/prd-backlog.json` and `plans/archive/prd-complete.json` remain unchanged. Next handoff: a fresh independent BWH review when reviewer capacity is available.
+
+2026-09-19
+
+- Returned `issue-21-001` through `bwh-development` after the next independent review identified three fail-closed gaps: missing-lock recovery accepted ambient processor/host defaults, lease timestamps could contradict heartbeat or lease duration, and metrics backfill still counted receipts while override metadata was malformed or incomplete.
+- Required explicit `--processor` and `--host` for missing-lock recovery, validated `started_at <= heartbeat_at < expires_at` plus the exact lease duration, and blocked metric countability for invalid, incomplete, conflict-named, or duplicate override state. Added focused unit and CLI regression coverage.
+- Validation: `npm test` passed with 101 tests. Repository-level `node --check`, `git diff --check`, planning JSON validation, disposable `mole doctor`, and the claim/audit/heartbeat/checkpoint/complete/final-audit/metrics-backfill smoke flow are pending before the fresh independent Terra Max review. No implementation commit or remote action was made.
+- Planning: `plans/prd.json` remains `in_development`; `plans/prd-backlog.json` and `plans/archive/prd-complete.json` remain unchanged. Next handoff: fresh independent Terra Max `bwh-agent-review`.
+
+2026-09-19
+
+- Returned `issue-21-001` through `bwh-development` after the latest Terra probe reproduced a direct metrics bypass: `recordProcessedInboxItems` could count paths while a recovery override remained prepared.
+- Inbox completion now reconciles metrics only through validated receipt backfill for both first completion and retries. The lower-level path recorder requires a run ID backed by one unambiguous completed receipt and rejects paths outside that receipt. Added a regression proving incomplete recovery evidence cannot produce metrics.
+- Validation: `npm test` passed with 110 tests; changed JavaScript passed `node --check`; `git diff --check` passed; all planning JSON parsed; disposable `mole doctor` plus claim/active-audit/heartbeat/checkpoint/complete/final-audit/metrics-backfill smoke checks passed. No implementation commit or remote action was made.
+- Planning: `plans/prd.json` remains `in_development`; `plans/prd-backlog.json` and `plans/archive/prd-complete.json` remain unchanged. Next step is focused local diff review, followed by the authorized review/publication decision.
+
+2026-09-19
+
+- Restarted Terra Max `bwh-agent-review` returned `NOT READY FOR HUMAN TESTING` with five bounded findings: post-write lock checks were not bound to the expected snapshot, completion/recovery evidence allowed timestamp and snapshot contradictions, metrics could partially count beside ambiguous records, inbox symlinks/special entries were invisible to audit, and unknown CLI flags were parsed as processor or summary text.
+- Returned through `bwh-development`. Lock, receipt, and recovery mutations now compare fresh persisted snapshots with expected lock/receipt/override records; completion timestamps and recovery snapshot linkage are validated; metrics block all countability on malformed, duplicate, split-brain, conflicted, unsafe, or invalid operational state; audit reports symlinked/special inbox entries without dereferencing; and unknown `--` options fail before mutation.
+- Added six focused regression fixtures covering canonical lock replacement races, source-conflict stale recovery before writes, timestamp ordering, recovery evidence linkage, symlink audit blockers, unknown options, and valid receipts beside malformed JSON. Updated split-brain expectations to enforce no partial metric counts.
+- Validation: `npm test` passed with 109 tests. Full repository syntax, diff, planning, disposable doctor, CLI smoke, and the next independent Terra Max review remain to be run after this remediation. No implementation commit or remote action was made.
+- Planning: `plans/prd.json` remains `in_development`; `plans/prd-backlog.json` and `plans/archive/prd-complete.json` remain unchanged. Next handoff: run BWH verification and spawn a fresh independent Terra Max `bwh-agent-review`.
+
+2026-09-19
+
+- Fresh Terra Max `bwh-agent-review` returned `NOT READY FOR HUMAN TESTING` with two P1 findings: a provider conflict copy injected during claim could appear after pre-write validation and still return success, and a finalized stale override with an empty `replaced_lock` snapshot remained countable.
+- Returned through `bwh-development`. Lock/receipt mutations now perform post-write full-state validation and preserve ambiguous records while returning reconciliation failures. Override validation now requires type-specific valid snapshots, validates nested receipt overrides, and cross-checks finalized recovery records against replacement locks or terminal receipt snapshots. Added regression fixtures for both findings.
+- Validation: `npm test` passed with 103 tests; changed JavaScript, diff, and planning checks remain to be rerun with the disposable doctor/CLI smoke flow before the next fresh independent review. No implementation commit or remote action was made.
+- Planning: `plans/prd.json` remains `in_development`; `plans/prd-backlog.json` and `plans/archive/prd-complete.json` remain unchanged. Next handoff: fresh independent Terra Max `bwh-agent-review`.

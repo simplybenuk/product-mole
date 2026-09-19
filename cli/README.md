@@ -71,9 +71,12 @@ mole product-update "Sales leadership" quarter --format teams
 | `mole create product-update [output-path]` | Creates a product update draft from the product update template. |
 | `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
-| `mole inbox claim [processor]` | Claims inbox processing with a lightweight file lock. |
-| `mole inbox audit` | Recursively audits the live inbox, validates the Mole root, and reports processed versus unexplained files. |
-| `mole inbox complete [--processed <path>] [summary]` | Writes a processing receipt, records processed inbox paths in local metrics, and releases the inbox lock. |
+| `mole inbox claim [options]` | Claims a run with a leased, owned lock and returns its `run_id`; provide each `--claimed-path`. |
+| `mole inbox heartbeat --run-id <id>` | Renews the matching active run lease. |
+| `mole inbox checkpoint --run-id <id> [--processed <path>]` | Saves restart-safe partial progress for the matching run. |
+| `mole inbox audit` | Recursively audits the root, live files, leases, sync conflicts, overrides, and receipts. |
+| `mole inbox complete [options] [summary]` | Writes one idempotent receipt for the owned run, records metrics, and releases its lock. |
+| `mole inbox override-stale [options]` | Replaces an expired lock only through an audited override. |
 | `mole metrics backfill` | Rebuilds local metrics from inbox processing receipts that already contain processed paths. |
 | `mole upgrade` | Updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`. |
 
@@ -82,10 +85,12 @@ mole product-update "Sales leadership" quarter --format teams
 `mole inbox complete` can record lightweight local metrics for processed inbox items:
 
 ```bash
-mole inbox complete --processed 6-raw/inbox/a.md "Promoted one note"
+mole inbox claim --processor "Your Name" --claimed-path 6-raw/inbox/a.md
+mole inbox checkpoint --run-id <run-id> --processor "Your Name" --processed 6-raw/inbox/a.md
+mole inbox complete --run-id <run-id> --processor "Your Name" --processed 6-raw/inbox/a.md "Promoted one note"
 ```
 
-Use one `--processed <path>` flag for each inbox item actually processed. Metrics are stored under `governance/metrics/` and shown in `governance/metrics/dashboard.html`. Metrics files store paths and aggregate counts only; do not put raw insight content in them.
+Use one `--processed <path>` flag for each inbox item actually processed. A repeated completion for the same `run_id` returns the existing receipt and does not record another metrics event. Metrics are stored under `governance/metrics/` and shown in `governance/metrics/dashboard.html`. Metrics files store paths and aggregate counts only; do not put raw insight content in them.
 
 For upgraded existing workspaces, run:
 
@@ -96,3 +101,5 @@ mole metrics backfill
 Before synthesis, run `mole inbox audit`. It excludes the instructional root `README.md` and retained `archive/` content, scans legacy nested inbox folders, and uses processing receipts to identify files that still need an explicit disposition. Run it again before completion; an inbox synthesis run should not be reported as a no-op while unexplained files remain.
 
 Backfill reads `governance/run-receipts/inbox-processing/*.json` and counts only receipt `processed` paths with valid completion dates. It does not infer from raw folders.
+
+In a synced folder, file coordination can lag. Mole refuses to choose between competing claims, duplicate receipt copies, or conflict-named source files. It also flags receipts from different run IDs that claim the same canonical path and excludes that path from normal processed counts. Preserve every copy and resolve it explicitly. A missing or expired lock also fails normal completion. Use `mole inbox override-stale --run-id <new-run-id> --processor "Your Name" --reason "..."` or `mole inbox complete --override-missing-lock --run-id <run-id> --processor "Your Name" --host <host> --reason "..."` only after checking the sync history; malformed override records fail the audit and processing commands until repaired. Override records are retained under `governance/run-receipts/inbox-processing/overrides/`.
