@@ -69,6 +69,8 @@ mole critique spec
 mole critique decision-brief
 ```
 
+The thin CLI implementation accepts `mole critique <target> [claim-or-path]` for `idea`, `strategy`, `roadmap`, `spec`, and `decision-brief`. It prints an agent instruction that names the retrieval path and expected critique sections. It does not claim that the CLI itself has read the workspace or produced the judgement.
+
 ### Insight / note / signal capture
 Used to capture chat-native or CLI-native raw context without making users think about folders.
 
@@ -109,14 +111,41 @@ mole review conflicts
 ```
 
 ### Init / upgrade
-Used to scaffold or evolve an instance.
+Used to scaffold an instance, compare it with the installed source, or refresh
+the global CLI from a stable release tag.
 
 Examples:
 ```bash
 mole init
 mole check-updates
-mole upgrade
+mole upgrade 0.2.8
 ```
+
+Pass a target release to `mole upgrade`; without one, it uses the tag matching
+the installed CLI version. The command updates the global tool and bundled
+scaffold, not a customised workspace.
+
+### Source provenance
+
+Used to register source files and keep their identities stable when paths
+change. These commands operate on the local registry under
+`governance/sources/`:
+
+```bash
+mole source register 6-raw/inbox/customer-note.md
+mole source resolve src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --json
+mole source reconcile src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --path 6-raw/archive/2026-09/customer-note.md
+mole source correct src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --reason "Owner corrected the note"
+mole source migrate --json
+```
+
+`resolve` and the default `migrate` mode are read-only. `reconcile` verifies
+the stored hash before recording a move. `correct` records a new content hash
+for the same logical source. Migration `--apply` is an explicit write and may
+update only evidence-backed structured references classified as `resolved`.
+It must leave raw bytes and ambiguous references untouched. See
+[`source-provenance.md`](./source-provenance.md) for the record, reference,
+security, and recovery rules.
 
 ---
 

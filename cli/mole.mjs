@@ -15,6 +15,16 @@ import {
 } from '../lib/inbox-processing.mjs';
 import { auditInbox } from '../lib/inbox-audit.mjs';
 import { backfillProcessedInboxMetrics } from '../lib/metrics.mjs';
+import { formatUtcTimestamp } from '../lib/capture.mjs';
+import {
+  correctSource,
+  reconcileSource,
+  registerAttachment,
+  registerSource,
+  resolveSource,
+  createSourceId
+} from '../lib/source-registry.mjs';
+import { migrateSourceReferences } from '../lib/source-migration.mjs';
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
@@ -22,8 +32,16 @@ const cwd = process.cwd();
 const thisFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(thisFile), '..');
 const isDirectRun = process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(thisFile);
-const PACKAGE_SOURCE = 'github:simplybenuk/product-mole#main';
+const PACKAGE_REPOSITORY = 'github:simplybenuk/product-mole';
+const RELEASE_VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 const HELP_URL = 'https://github.com/simplybenuk/product-mole#readme';
+const CRITIQUE_TARGETS = Object.freeze([
+  'idea',
+  'strategy',
+  'roadmap',
+  'spec',
+  'decision-brief'
+]);
 
 const WORKSPACE_SCAFFOLD_DIRS = Object.freeze([
   '0-bootstrap',
@@ -46,6 +64,8 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
   ['governance/metrics/dashboard.html', 'governance/metrics/dashboard.html'],
   ['governance/quality-checklist.md', 'governance/quality-checklist.md'],
   ['governance/run-receipts/README.md', 'governance/run-receipts/README.md'],
+  ['governance/sources/README.md', 'governance/sources/README.md'],
+  ['schemas/source-record-v1.schema.json', 'schemas/source-record-v1.schema.json'],
   ['mole.instance-template.yaml', 'mole.instance.yaml']
 ]);
 
@@ -61,6 +81,8 @@ Usage:
   mole signal [options] <text>         Alias for "mole insight".
   mole product-update <audience> <timescale> [--format email|teams|blog|brief]
                                       Print an agent instruction for a stakeholder update.
+  mole critique <target> [claim-or-path]
+                                      Print a context-grounded critique instruction.
   mole bootstrap-context              Print an agent instruction for first-time top-layer setup.
   mole refresh top-layers             Print an agent instruction for summary/index refresh.
   mole synthesise <target>             Print an agent instruction for synthesis work.
@@ -74,9 +96,19 @@ Usage:
                                       Write an idempotent receipt and release the lock.
   mole inbox override-stale [options] Replace an expired lock with an audited override.
   mole metrics backfill               Rebuild metrics from inbox processing receipts.
+  mole source register <path> [options]
+                                      Register an existing file without changing its bytes.
+  mole source resolve <source_id> [--json]
+                                      Resolve a source by immutable ID (read-only).
+  mole source reconcile <source_id> --path <path>
+                                      Record an explicitly confirmed source move.
+  mole source correct <source_id> --reason <text>
+                                      Record an explicit content correction.
+  mole source migrate [--apply] [--json]
+                                      Classify legacy path references; apply is opt-in.
   mole install skills                  Install Mole agent skills into ~/.agents/skills.
   mole check-updates                   Compare this CLI version with the workspace.
-  mole upgrade                         Update the globally installed Mole CLI.
+  mole upgrade [version]               Update the globally installed Mole CLI from a stable tag.
   mole doctor                          Check workspace metadata and required folders.
 
 Artifacts:
@@ -92,6 +124,9 @@ Examples:
   mole signal "Trial users miss the export button"
   mole insight --stakeholder CEO "Asked whether enterprise onboarding is improving"
   mole product-update CEO 2-weeks --format email
+  mole critique idea "Improve regulated-customer onboarding"
+  mole critique spec drafts/spec.md
+  mole upgrade 0.2.8
   mole bootstrap-context
   mole refresh top-layers
   mole install skills
@@ -102,6 +137,9 @@ Examples:
   mole inbox complete --run-id <run-id> --processor "Your Name" --processed 6-raw/inbox/a.md "Promoted one note"
   mole inbox override-stale --run-id <new-run-id> --processor "Your Name" --reason "Confirmed prior run stopped"
   mole metrics backfill
+  mole source register 6-raw/inbox/export.csv --source-type export
+  mole source resolve src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --json
+  mole source migrate
 
 More help:
   ${HELP_URL}
@@ -332,6 +370,9 @@ function parseInsightArgs(values) {
     } else if (value === '--visibility' && next) {
       metadata.visibility = next;
       index += 1;
+    } else if (value === '--captured-by' && next) {
+      metadata.capturedBy = next;
+      index += 1;
     } else if (value === '--follow-up-by' && next) {
       metadata.followUpBy = next;
       index += 1;
@@ -354,8 +395,14 @@ function captureInsight(values) {
   ensureDir(dir);
   const fileName = createCaptureFileName(text);
   const target = path.join(dir, fileName);
+  const createdAt = nowUtc();
+  const sourceId = createSourceId();
 
-  const content = buildInsightCaptureContent(text, metadata);
+  const content = buildInsightCaptureContent(text, {
+    ...metadata,
+    sourceId,
+    createdAt
+  });
 
   try {
     fs.writeFileSync(target, content, { encoding: 'utf8', flag: 'wx' });
@@ -366,7 +413,27 @@ function captureInsight(values) {
     }
     throw err;
   }
+
+  try {
+    registerSource(cwd, {
+      source_id: sourceId,
+      path: target,
+      source_type: 'note',
+      captured_at: createdAt,
+      captured_by: resolveCapturedBy(metadata.capturedBy),
+      channel: 'cli',
+      original_date: createdAt.slice(0, 10),
+      visibility: metadata.visibility || 'internal',
+      path_reason: 'captured',
+      content_change_type: 'captured'
+    });
+  } catch (err) {
+    console.error(`Capture written but source registration failed: ${err.message}`);
+    process.exit(1);
+  }
+
   console.log(`Captured insight: ${target}`);
+  console.log(`Source ID: ${sourceId}`);
   console.log('\nSuggested next command:');
   console.log('mole synthesise inbox');
 }
@@ -389,6 +456,7 @@ export function buildInsightCaptureContent(text, options = {}) {
 title: Raw Insight
 capture_type: insight
 source: mole CLI
+source_id: ${options.sourceId || ''}
 captured_by: ${capturedBy}
 created_at: ${createdAt}
 summary: ${text}
@@ -488,6 +556,48 @@ export function buildProductUpdateInstruction(audience, timescale, format = 'bri
 Generate a product update for ${targetAudience} covering ${updateTimescale} in ${outputFormat} format. Use the Mole operating model: retrieve top-down, descend only as needed, and keep claims evidence-backed. Start with stakeholder memory in \`4-context/stakeholders.md\`, then read relevant \`2-summaries/\`, \`3-indexes/\`, product context in \`4-context/\`, evidence in \`5-evidence/\`, and recent raw or synthesised items matching ${updateTimescale}. Tailor the update to the audience's product interests, decision authority, communication preferences, known concerns, and likely asks. Separate headline summary, progress, what changed, risks or blockers, decisions needed, asks, and suggested follow-up. Include a concise retrieval receipt.`;
 }
 
+export function buildCritiqueInstruction(target, subject = '') {
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+
+  if (!CRITIQUE_TARGETS.includes(normalizedTarget)) {
+    throw new Error(
+      `Unsupported critique target. Supported critique targets: ${CRITIQUE_TARGETS.join(', ')}.`
+    );
+  }
+
+  const detail = String(subject || '').trim();
+  const targetDescription = detail
+    ? `the ${normalizedTarget}: ${detail}`
+    : `the requested ${normalizedTarget}`;
+
+  return `Suggested agent instruction:
+
+Critique ${targetDescription} against the current Mole context. If the target names a file, read it before judging it. If it is a claim or proposal, treat the supplied text as the object to test. Start with \`0-bootstrap/\`, \`1-routing/\`, relevant \`2-summaries/\`, and \`3-indexes/\`; descend into \`4-context/\` and \`5-evidence/\` only as needed. Read \`governance/input-queue.md\` when missing human input affects the judgement. Separate facts and source-backed evidence from interpretation. Do not invent support, results, or certainty.
+
+Return:
+- Critique target
+- What supports it
+- What weakens it
+- Assumptions
+- What is missing, including missing evidence or human inputs
+- Judgement and confidence
+- Best next step
+- Retrieval receipt with files read, deepest layer reached, why descent stopped, and uncertainties
+
+Use \`templates/artifacts/critique-template.md\` when creating or updating a critique file. Keep pending or rejected context out of normal evidence unless the task explicitly asks to inspect it.`;
+}
+
+function critique(values) {
+  const [target, ...subjectParts] = values;
+
+  try {
+    console.log(buildCritiqueInstruction(target, subjectParts.join(' ')));
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+}
+
 export function buildBootstrapContextInstruction() {
   return `Suggested agent instruction:
 
@@ -509,6 +619,207 @@ function productUpdate(values) {
   }
 
   console.log(buildProductUpdateInstruction(audience, timescale, format));
+}
+
+function readOptionValue(values, index, option) {
+  const value = values[index + 1];
+  if (!value || value.startsWith('--')) throw new Error(`Missing value for ${option}.`);
+  return value;
+}
+
+export function parseSourceRegisterValues(values = []) {
+  const options = {
+    sourceType: 'file'
+  };
+  let sourcePath = '';
+  let sourceReferenceKind = null;
+  let sourceReferenceValue = null;
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    if (!value.startsWith('--') && !sourcePath) {
+      sourcePath = value;
+      continue;
+    }
+
+    if (value === '--source-type') {
+      options.sourceType = readOptionValue(values, index, value);
+      index += 1;
+    } else if (value === '--original-date') {
+      options.originalDate = readOptionValue(values, index, value);
+      index += 1;
+    } else if (value === '--channel') {
+      options.channel = readOptionValue(values, index, value);
+      index += 1;
+    } else if (value === '--media-type') {
+      options.mediaType = readOptionValue(values, index, value);
+      index += 1;
+    } else if (value === '--captured-by') {
+      options.capturedBy = readOptionValue(values, index, value);
+      index += 1;
+    } else if (value === '--visibility') {
+      options.visibility = readOptionValue(values, index, value);
+      index += 1;
+    } else if (value === '--parent-source-id') {
+      options.parentSourceId = readOptionValue(values, index, value);
+      index += 1;
+    } else if (value === '--label') {
+      options.label = readOptionValue(values, index, value);
+      index += 1;
+    } else if (value === '--relationship') {
+      options.relationship = readOptionValue(values, index, value);
+      index += 1;
+    } else if (value === '--retention-mode') {
+      options.retention = { ...(options.retention || {}), mode: readOptionValue(values, index, value) };
+      index += 1;
+    } else if (value === '--review-after') {
+      options.retention = { ...(options.retention || {}), reviewAfter: readOptionValue(values, index, value) };
+      index += 1;
+    } else if (value === '--expires-at') {
+      options.retention = { ...(options.retention || {}), expiresAt: readOptionValue(values, index, value) };
+      index += 1;
+    } else if (value === '--source-reference-kind') {
+      sourceReferenceKind = readOptionValue(values, index, value);
+      index += 1;
+    } else if (value === '--source-reference' || value === '--source-reference-value') {
+      sourceReferenceValue = readOptionValue(values, index, value);
+      index += 1;
+    } else if (value === '--json') {
+      options.json = true;
+    } else {
+      throw new Error(`Unknown source register option: ${value}`);
+    }
+  }
+
+  if (!sourcePath) throw new Error('A source path is required.');
+  if (sourceReferenceKind || sourceReferenceValue) {
+    if (!sourceReferenceKind || !sourceReferenceValue) throw new Error('Both --source-reference-kind and --source-reference are required.');
+    options.sourceReference = { kind: sourceReferenceKind, value: sourceReferenceValue };
+  }
+  return { sourcePath, options };
+}
+
+function parseSourceIdAndOptions(values, commandName) {
+  const sourceId = values.find((value) => !value.startsWith('--'));
+  if (!sourceId) throw new Error(`A source ID is required for source ${commandName}.`);
+  const options = {};
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    if (value === sourceId) continue;
+    if (value === '--json') {
+      options.json = true;
+    } else if (value === '--path') {
+      options.path = readOptionValue(values, index, value);
+      index += 1;
+    } else if (value === '--reason') {
+      options.reason = readOptionValue(values, index, value);
+      index += 1;
+    } else {
+      throw new Error(`Unknown source ${commandName} option: ${value}`);
+    }
+  }
+  return { sourceId, options };
+}
+
+function parseSourceMigrateValues(values = []) {
+  const options = {};
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    if (value === '--apply') {
+      options.apply = true;
+    } else if (value === '--json') {
+      options.json = true;
+    } else if (value === '--report') {
+      options.reportPath = readOptionValue(values, index, value);
+      index += 1;
+    } else {
+      throw new Error(`Unknown source migrate option: ${value}`);
+    }
+  }
+  return options;
+}
+
+function printSourceResult(result, options = {}) {
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  if (result.source_id) console.log(`Source ID: ${result.source_id}`);
+  if (result.path || result.current_path) console.log(`Path: ${result.path || result.current_path}`);
+  if (result.status) console.log(`Status: ${result.status}`);
+  if (result.record_path) console.log(`Record: ${result.record_path}`);
+  if (result.candidates?.length) {
+    console.log('Candidates:');
+    for (const candidate of result.candidates) console.log(`- ${candidate.path}`);
+  }
+  if (result.findings?.length) {
+    console.log('Findings:');
+    for (const item of result.findings) console.log(`- ${item.type || item.finding_type}`);
+  }
+}
+
+function runSourceCommand(action, values = []) {
+  try {
+    if (action === 'migrate') {
+      const options = parseSourceMigrateValues(values);
+      const reportPath = options.reportPath || (options.apply
+        ? path.join('governance', 'run-receipts', 'source-migration', `${formatUtcTimestamp()}.json`)
+        : undefined);
+      const result = migrateSourceReferences(cwd, { ...options, reportPath });
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        console.log(`Mole source migration ${result.mode}.`);
+        console.log(`References scanned: ${result.counts.total}`);
+        console.log(`Resolved: ${result.counts.resolved}`);
+        console.log(`Ambiguous: ${result.counts.ambiguous}`);
+        console.log(`Unresolved: ${result.counts.unresolved}`);
+        console.log(`Registry findings: ${result.findings.length}`);
+        console.log(`Artifacts changed: ${result.counts.changed}`);
+        if (result.report_path) console.log(`Report: ${result.report_path}`);
+      }
+      return;
+    }
+
+    if (action === 'register') {
+      const { sourcePath, options } = parseSourceRegisterValues(values);
+      const result = options.parentSourceId
+        ? registerAttachment(cwd, options.parentSourceId, sourcePath, options)
+        : registerSource(cwd, { ...options, path: sourcePath });
+      if (!options.json) console.log('Registered source.');
+      printSourceResult(result, options);
+      return;
+    }
+
+    if (action === 'resolve') {
+      const { sourceId, options } = parseSourceIdAndOptions(values, action);
+      printSourceResult(resolveSource(cwd, sourceId), options);
+      return;
+    }
+
+    if (action === 'reconcile') {
+      const { sourceId, options } = parseSourceIdAndOptions(values, action);
+      if (!options.path) throw new Error('Missing value for --path.');
+      const result = reconcileSource(cwd, sourceId, options.path, options);
+      if (!options.json) console.log(result.changed ? 'Reconciled source.' : 'Source already reconciled.');
+      printSourceResult(result, options);
+      return;
+    }
+
+    if (action === 'correct') {
+      const { sourceId, options } = parseSourceIdAndOptions(values, action);
+      if (!options.reason) throw new Error('Missing value for --reason.');
+      const result = correctSource(cwd, sourceId, options.reason, options);
+      if (!options.json) console.log('Recorded source correction.');
+      printSourceResult(result, options);
+      return;
+    }
+
+    throw new Error('Supported source commands: register, resolve, reconcile, correct');
+  } catch (error) {
+    console.error(`Source command failed: ${error.message}`);
+    process.exitCode = 1;
+  }
 }
 
 export function getDoctorOutput(instanceRoot = cwd) {
@@ -589,13 +900,28 @@ function checkUpdates() {
   process.stdout.write(getCheckUpdatesOutput());
 }
 
-export function getUpgradeCommand() {
-  return ['npm', 'install', '-g', PACKAGE_SOURCE];
+export function normalizeReleaseVersion(version = getSourceVersion()) {
+  const normalized = String(version).trim().replace(/^v/i, '');
+  if (!RELEASE_VERSION_PATTERN.test(normalized)) {
+    throw new Error('Upgrade version must be a stable SemVer release such as 0.2.8.');
+  }
+  return normalized;
 }
 
-function upgradeTool() {
-  const command = getUpgradeCommand();
-  console.log(`Updating Mole from ${PACKAGE_SOURCE}...`);
+export function getUpgradeCommand(version = getSourceVersion()) {
+  const releaseVersion = normalizeReleaseVersion(version);
+  return ['npm', 'install', '-g', `${PACKAGE_REPOSITORY}#v${releaseVersion}`];
+}
+
+function upgradeTool(version) {
+  let command;
+  try {
+    command = getUpgradeCommand(version);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+  console.log(`Updating Mole from ${command[command.length - 1]}...`);
 
   const result = spawnSync(command[0], command.slice(1), {
     stdio: 'inherit'
@@ -986,6 +1312,9 @@ if (isDirectRun) {
     case 'product-update':
       productUpdate([subcommand, ...rest].filter(Boolean));
       break;
+    case 'critique':
+      critique([subcommand, ...rest].filter(Boolean));
+      break;
     case 'bootstrap-context':
       console.log(buildBootstrapContextInstruction());
       break;
@@ -1012,6 +1341,9 @@ if (isDirectRun) {
     case 'metrics':
       runMetricsCommand(subcommand);
       break;
+    case 'source':
+      runSourceCommand(subcommand, rest);
+      break;
     case 'install':
       if (subcommand === 'skills') {
         installMoleSkills();
@@ -1027,7 +1359,14 @@ if (isDirectRun) {
       checkUpdates();
       break;
     case 'upgrade':
-      upgradeTool();
+      {
+        const upgradeArgs = [subcommand, ...rest].filter(Boolean);
+        if (upgradeArgs.length > 1) {
+          console.error('Usage: mole upgrade [version]');
+          process.exit(1);
+        }
+        upgradeTool(upgradeArgs[0]);
+      }
       break;
     case 'doctor':
       doctor();

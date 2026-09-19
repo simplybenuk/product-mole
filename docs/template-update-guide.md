@@ -28,6 +28,20 @@ Then update it with your real local customisations over time.
 
 ## Practical update flow
 
+### Refresh the installed CLI first
+
+Keep the tool that performs workspace operations on a known release tag:
+
+```bash
+mole upgrade 0.2.8
+mole install skills
+```
+
+Pass the target release explicitly when moving between versions. A no-argument
+`mole upgrade` reuses the tag matching the installed CLI version. Older CLIs
+that do not support this command can be bootstrapped with the tagged command
+`npm install -g` in the upstream upgrade guide.
+
 ### 1. Check what release you are on
 Read:
 - `mole.instance.yaml`
@@ -47,10 +61,11 @@ Prefer reading the changelog and upgrade docs first, rather than blindly merging
 
 ```bash
 git checkout main
-git merge v0.2   # replace with the release you want
+git merge v0.2.8   # replace with the release you want
 ```
 
-Or merge upstream main if you are deliberately tracking unreleased work:
+Or merge upstream main if you are deliberately tracking unreleased work and
+accept the reproducibility and migration risk:
 
 ```bash
 git checkout main
@@ -94,5 +109,5 @@ After a successful upgrade, update `mole.instance.yaml` with:
 - No direct pushes to `main`.
 - Create a branch per change.
 - Open PR and merge after review.
-- Tag stable releases (`v0.1`, `v0.2`, ...).
+- Tag stable releases with full SemVer tags (`v0.2.8`, `v0.3.0`, ...).
 - Include upgrade notes whenever adopter behaviour should change.

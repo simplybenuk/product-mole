@@ -330,6 +330,22 @@ Every substantive agent output should end with a retrieval receipt:
 
 This provides auditability and token discipline.
 
+### Source references
+
+When a substantive file uses registered source material, its frontmatter or
+receipt should also carry an ID-bearing `source_refs` list:
+
+```yaml
+source_refs:
+  - source_id: src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0
+    path: 5-evidence/source-docs/customer-notes.md
+    relationship: supports
+```
+
+The ID is stable across archive moves. The path is optional and may go stale.
+Keep older path-only fields readable while migration is in progress. See
+[`source-provenance.md`](./source-provenance.md) for the registry contract.
+
 ---
 
 ## Implementation plan (phased)

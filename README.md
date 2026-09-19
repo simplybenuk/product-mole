@@ -6,6 +6,12 @@ Current version: `0.2.8`
 
 It gives teams a file-based place to capture messy product inputs, distil them into structured evidence, and generate better roadmaps, specs, decisions, and prioritisation work from shared context. Mole is designed to work locally, in synced folders such as SharePoint/OneDrive or Google Drive, or alongside a codebase in Git.
 
+## License
+
+Mole is intended to be released under the MIT License. The full text is in [LICENSE](LICENSE).
+The copyright-holder line in that file must be confirmed by a maintainer before
+a release is published.
+
 ---
 
 ## Installation
@@ -13,11 +19,13 @@ It gives teams a file-based place to capture messy product inputs, distil them i
 ### 1. Install from GitHub
 
 ```bash
-npm install -g github:simplybenuk/product-mole#main
+npm install -g github:simplybenuk/product-mole#v0.2.8
 mole --help
 ```
 
-This installs the `mole` command globally from the `main` branch.
+This installs the `mole` command globally from the tagged `v0.2.8` release.
+Replace the tag with the release you want. Installing from `main` is for
+contributors or users who explicitly want unreleased changes.
 
 ### 2. Create a Mole workspace
 
@@ -46,6 +54,7 @@ mole insight "Users trust CSV export more than dashboard totals"
 mole insight --stakeholder CEO "Asked whether enterprise onboarding is improving"
 mole bootstrap-context
 mole product-update CEO 2-weeks --format email
+mole critique idea "Improve regulated-customer onboarding"
 mole create roadmap
 ```
 
@@ -79,6 +88,7 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole signal "<text>"` | Alias for `mole insight`. |
 | `mole insight --stakeholder CEO "<text>"` | Captures an insight with stakeholder metadata for later synthesis. |
 | `mole product-update <audience> <timescale> --format <format>` | Prints an agent instruction for a stakeholder-specific product update. |
+| `mole critique <target> [claim-or-path]` | Prints an agent instruction for a context-grounded critique. |
 | `mole bootstrap-context` | Prints an agent instruction for first-time summary/index population. |
 | `mole refresh top-layers` | Prints an agent instruction for refreshing stale, blank, or incomplete summaries and indexes. |
 | `mole create roadmap [output-path]` | Creates a roadmap draft from the roadmap template. |
@@ -96,7 +106,23 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole inbox complete [options] [summary]` | Writes one idempotent receipt for the owned run, records metrics, and releases its lock. |
 | `mole inbox override-stale [options]` | Replaces an expired lock only after an explicit, auditable recovery decision. |
 | `mole metrics backfill` | Rebuilds local metrics from inbox processing receipts that already contain processed paths. |
-| `mole upgrade` | Updates the globally installed Mole CLI from `github:simplybenuk/product-mole#main`. |
+| `mole upgrade [version]` | Updates the globally installed Mole CLI from a stable release tag. With no version, it reuses the installed CLI's version tag. |
+
+## Development
+
+Mole supports Node.js 18.x, 20.x, 22.x, and 24.x. CI runs the repository
+checks on each version.
+
+From the repository root, run:
+
+```bash
+npm test
+npm run check:versions
+npm run check:package
+```
+
+`npm run check:release` adds the strict release guard. It must pass before
+publishing a tag.
 
 ## Stakeholder memory and product updates
 
@@ -190,11 +216,17 @@ Mole separates the installed tool from generated working instances.
 When the source/tool changes, update the global install:
 
 ```bash
-npm install -g github:simplybenuk/product-mole#main
+mole upgrade 0.2.8
 mole install skills
 ```
 
-If your installed `mole upgrade` only prints upgrade documentation, you are on an older placeholder build. Run the `npm install -g ...` command once; after `0.2.1`, `mole upgrade` performs that update for you.
+`mole upgrade <version>` refreshes the globally installed CLI from a stable
+release tag. Pass `0.2.8` or `v0.2.8` to select a release explicitly.
+With no argument, it uses the tag matching the installed CLI version. It does
+not use the moving `main` branch.
+
+If an older CLI does not support version selection, install a tagged release
+with the command in the Installation section, then run `mole upgrade` normally.
 
 Why both?
 - `npm install -g ...` refreshes the CLI, bundled scaffold, docs, and skill files
@@ -219,7 +251,10 @@ mole check-updates
 - safe additions from `upgrade-ownership.json`
 - manual review paths that may contain local customisation
 
-`mole upgrade` updates the installed Mole CLI and bundled scaffold. It does not rewrite an existing workspace's local product context.
+`mole upgrade [version]` updates the globally installed Mole CLI and bundled
+scaffold from the GitHub tag `vX.Y.Z`. It never rewrites an existing workspace's
+local product context. Upgrade a workspace separately by reviewing the release
+notes and applying only the ownership classes you choose.
 
 ## What currently works
 
@@ -263,6 +298,12 @@ What is still lightweight:
 - synthesis logic is instruction-driven rather than deeply automated
 - command set is intentionally small
 - naming/brand may still evolve
+
+## Contributing
+
+Use [GitHub Issues](https://github.com/simplybenuk/product-mole/issues) for public work proposals and the repository's pull request process for changes. See the [contribution guide](governance/contribution-guide.md) for the required checks and content rules.
+
+Contributors may use their own planning, agent, editor, and development workflows. Mole does not require a particular agent toolkit. Local task plans, progress journals, and agent configuration should stay out of pull requests unless they become an agreed part of the project or product.
 
 ## Local UI (v0 scaffold)
 

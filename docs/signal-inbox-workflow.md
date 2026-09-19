@@ -86,6 +86,8 @@ Use this markdown block for quick entries:
 ---
 date: 2026-03-15
 source: ceo            # ceo|customer|sales|support|self|other
+source_id:             # src_<lowercase-uuidv4>, when this file is registered
+source_refs: []        # stable IDs for source material used by this note
 channel: slack         # slack|email|call|meeting|chat|other
 topic_tags: [onboarding, ux]
 confidence: low        # low|medium|high
@@ -96,6 +98,11 @@ Potential implication (optional).
 ```
 
 Keep it short. 30-90 seconds per entry is the target.
+
+`source` remains a legacy actor or channel label in older captures. It is not
+the source identity. New captures use `source_id` for the note itself and add a
+`source_refs` entry for any source material the note cites. Resolve references
+by ID first. A path in a reference is only a navigation hint.
 
 ---
 
@@ -164,7 +171,6 @@ Never delete raw inputs from a shared inbox before the promoted output and retri
 ### Processing lock and receipt
 
 Before synthesising, validate the workspace and audit the complete inbox tree:
-
 ```bash
 mole doctor
 mole inbox audit
@@ -195,6 +201,7 @@ If a run stops after a partial pass, the checkpoint remains in the lock. Resume 
 File coordination is not a perfect distributed lock. Each mutating operation serializes local lock updates and verifies the complete lock state plus its monotonic version before and after writing, but sync clients may still delay or duplicate writes. Conflict copies can appear for source files, locks, or receipts; `mole inbox audit` reports those copies and stale leases. Preserve every source copy and never delete or move a user file to make the state look consistent.
 
 Expired locks from older Mole versions require the explicit stale override path to be migrated into the current lease schema. Receipts with processed paths must include a valid completion timestamp before they can explain live inbox files.
+This writes a JSON receipt under `governance/run-receipts/inbox-processing/`, updates Molehill Metrics for the processed paths, and releases the lock. New receipts keep the historical `processed` path array and add ID-bearing `processed_sources` entries when records exist.
 
 ---
 

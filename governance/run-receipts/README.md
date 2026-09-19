@@ -35,3 +35,20 @@ mole inbox audit
 The retry returns the existing receipt without changing it and finalizes only the matching prepared override. It does not bypass unrelated prepared records or conflicting copies. Check that audit no longer reports `INCOMPLETE_OVERRIDE` for that record.
 
 If no receipt exists, or a stale-lock override remains prepared, there is no automatic finalization path. Pause processing and reconcile the lock, receipts, override records, and sync history manually. Retain the original records as evidence; a prepared record alone does not prove that recovery succeeded.
+
+When a receipt names registered source material, include an ID-bearing
+`source_refs` list alongside the human-readable files read:
+
+```yaml
+source_refs:
+  - source_id: src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0
+    path: 5-evidence/source-docs/customer-notes.md
+    relationship: supports
+```
+
+JSON receipts use the same object keys. Keep existing path-only fields while
+older readers are supported, but let `source_id` be the identity used for
+resolution and deduplication. A path is a display and navigation hint, not a
+stable locator. Inbox processing receipts may also include `processed_sources`
+entries with stable source IDs; retain the historical `processed` paths for
+compatibility.

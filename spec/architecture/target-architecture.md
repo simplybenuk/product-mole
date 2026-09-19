@@ -18,7 +18,7 @@ The repository remains the source of truth. Commands and agents should help user
 - `templates/`: reusable document and artefact templates.
 - `governance/`: quality checks, input queue, change logs, and receipts.
 - `cli/`: lightweight command surface for setup, capture, creation, review, and lifecycle checks.
-- `plans/`: Ralph-compatible delivery planning artifacts.
+- `plans/`: product vision, goals, and durable planning notes. Public implementation work is tracked in GitHub Issues and pull requests.
 
 ## Architectural Principles
 
@@ -31,4 +31,3 @@ The repository remains the source of truth. Commands and agents should help user
 ## Current Architectural Gap
 
 The source/tool repo can create working instances, but those instances do not yet have a robust upgrade path. The near-term architecture should add metadata, ownership classification, and read-only reports before applying upgrades.
-

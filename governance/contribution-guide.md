@@ -1,5 +1,11 @@
 # Contribution Guide
 
+## Project planning and workflow
+
+Public work is tracked in [GitHub Issues](https://github.com/simplybenuk/product-mole/issues) and pull requests. The repository does not require contributors to use a particular planning system, agent, editor, or development workflow. Use the tools and habits that work for you, then meet the project's documented checks and review requirements.
+
+Maintainer-only task queues, progress journals, agent skills, and local workflow configuration belong in the working copy and are ignored by Git. Do not add those files to a pull request unless the project explicitly decides that they are part of the product or contributor contract.
+
 ## Content operating rules
 
 1. Capture first in `6-raw/inbox/` when speed matters.
@@ -11,12 +17,45 @@
 7. Keep docs focused (avoid giant omnibus files).
 8. Keep `governance/input-queue.md` current for human asks.
 
+## Source provenance
+
+When a capture or registered file has a source record, use its immutable
+`source_id` in evidence, context, and receipt references. Add an optional path
+only as a navigation hint. Do not make a path the only locator for new work.
+
+Keep source records under `governance/sources/records/` with the workspace
+that created them. They are instance-owned data and must not be overwritten by
+an upgrade. Read [`docs/source-provenance.md`](../docs/source-provenance.md)
+before registering, moving, correcting, or migrating a source.
+
+## Development checks
+
+Mole supports Node.js 18.x, 20.x, 22.x, and 24.x. CI runs the root checks on
+each version.
+
+From the repository root, run:
+
+```bash
+npm test
+npm run check:versions
+npm run check:package
+```
+
+Before publishing a release, run `npm run check:release`. This strict check also
+requires a maintainer-confirmed copyright holder in `LICENSE`.
+
+## License
+
+The package metadata declares the MIT License and the full terms are in
+[LICENSE](../LICENSE). Do not publish a release until its copyright-holder line
+has been confirmed by a maintainer.
+
 ## Template change control rules
 
 1. Do not push directly to `main`.
 2. Create a branch per change (e.g. `feat/...`, `docs/...`, `fix/...`).
 3. Open PR and merge after review.
-4. Tag stable template releases (`v0.1`, `v0.2`, ...).
+4. Tag stable template releases with full SemVer tags (`v0.2.8`, `v0.3.0`, ...).
 5. Document notable structural changes in PR description and changelog.
 
 See also: [docs/template-update-guide.md](../docs/template-update-guide.md)

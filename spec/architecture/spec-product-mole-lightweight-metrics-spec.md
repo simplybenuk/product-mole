@@ -390,11 +390,11 @@ Add tests covering:
 
 ## Implementation Task Outline
 
-The build should be split into PRD tasks:
+The build should be split into small implementation tasks:
 
 1. Add metrics module and starter JSON files.
 2. Extend inbox completion CLI and receipt integration.
 3. Add static dashboard.
 4. Update docs and agent guidance.
 
-These tasks are now represented in `plans/prd.json` under the `molehill-metrics` category.
+These tasks were tracked through the project's GitHub Issues and are reflected in the completed implementation.

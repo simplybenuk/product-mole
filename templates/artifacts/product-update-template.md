@@ -7,6 +7,7 @@ format: brief
 created_at:
 summary:
 tags: [product-update, stakeholders]
+source_refs: []
 ---
 
 # Product Update
@@ -58,6 +59,15 @@ Explain why the update matters to this stakeholder or group based on their known
 ## Suggested follow-up
 
 - 
+
+## Source references
+
+```yaml
+source_refs: []
+```
+
+Add one entry for each registered source used by the update. `source_id` is
+required. An optional `path` is a display hint and does not replace the ID.
 
 ## Retrieval receipt
 
