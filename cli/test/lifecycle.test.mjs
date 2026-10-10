@@ -327,6 +327,33 @@ describe('renamed, removed, and untrackable files', () => {
     });
   });
 
+  it('approves a draft that cites a capture deleted and withdrawn after promotion', () => {
+    withWorkspace((workspace, mole) => {
+      const captured = mole('insight', 'Customers ask for CSV export every week');
+      const captureId = printedId(captured.stdout, 'Source ID');
+      const rawRecordId = printedId(captured.stdout, 'Lifecycle record');
+      const { recordId } = createDraft(mole, 'roadmap');
+      assert.equal(mole('lifecycle', 'submit', recordId, ...agentFlags, '--reason', 'Ready', '--source', captureId).status, 0);
+
+      fs.rmSync(captured.stdout.match(/Captured insight: (.+)/)[1]);
+      assert.equal(mole('lifecycle', 'withdraw', rawRecordId, ...agentFlags, '--reason', 'Inbox copy removed after promotion').status, 0);
+
+      const approved = mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Agreed', '--expect-revision', '2');
+      assert.equal(approved.status, 0, approved.stderr);
+      assert.match(mole('retrieve').stdout, /Retrievable records \(accepted\): 1/);
+      assert.equal(mole('lifecycle', 'audit').status, 0);
+
+      const abandoned = createDraft(mole, 'decision-brief');
+      assert.equal(mole('lifecycle', 'withdraw', abandoned.recordId, ...agentFlags, '--reason', 'Abandoned').status, 0);
+      const next = createDraft(mole, 'spec');
+      mole('lifecycle', 'submit', next.recordId, ...agentFlags, '--reason', 'Ready', '--source', abandoned.sourceId);
+      const refused = mole('lifecycle', 'approve', next.recordId, ...humanFlags, '--reason', 'Agreed', '--expect-revision', '2');
+      assert.equal(refused.status, 1);
+      assert.ok(refused.stderr.includes(`${abandoned.sourceId} (withdrawn record ${abandoned.recordId})`), refused.stderr);
+      assert.ok(refused.stderr.includes(`mole lifecycle revise ${next.recordId} --remove-source ${abandoned.sourceId}`), refused.stderr);
+    });
+  });
+
   it('keeps a capture when the ledger cannot be written and backfills it later', () => {
     withWorkspace((workspace, mole) => {
       mole('insight', 'First note');

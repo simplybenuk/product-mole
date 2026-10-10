@@ -24,6 +24,9 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   through review under the same record.
 - `mole lifecycle approve` requires `--expect-revision <n>`, the revision the
   reviewer read.
+- A capture that was deleted and withdrawn while `raw` or `evidence` still
+  supports an approval. A refused approval lists every source that cannot
+  support it and the `revise --remove-source` command that clears them.
 - `mole lifecycle list --path <path>` finds the record for a file. One file
   backs one open record; a second registration of a tracked file is pointed
   at the existing record.

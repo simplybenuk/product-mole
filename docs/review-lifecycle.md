@@ -116,8 +116,23 @@ Approval also needs:
 
 - at least one supporting source ID that the source registry knows, other than
   the record's own source. Pass it with `--source` at registration, submission,
-  or approval. The source of a rejected or withdrawn record does not count.
+  or approval. The source of a rejected record does not count, and neither
+  does the source of a record withdrawn as a `draft`, `pending_review`,
+  `unreviewed`, or accepted record. A capture withdrawn while it was `raw` or
+  `evidence` still counts: its content was real evidence and only the file
+  was cleaned up.
 - the file to hold the same bytes that were submitted.
+
+When a cited source does not count, the approval fails with
+`INVALID_SUPPORTING_SOURCE`. The message lists every such source with its
+record, and the command that removes them:
+
+```bash
+mole lifecycle revise rec_... --remove-source src_... --actor "Agent" --actor-type agent --reason "Drop stale citation"
+mole lifecycle submit rec_... --actor "Agent" --actor-type agent --reason "Ready for review"
+```
+
+Then approve with a source that still counts.
 
 The decision stores the reviewer, the time, and the reason, and the same facts
 go into the history entry.
@@ -233,6 +248,8 @@ withdrawing its record, and running `mole create` again works.
 
 Agent guidance tells agents to remove or archive an inbox copy after promoting
 it. An archived copy keeps working. Withdraw the record of a copy you delete.
+A draft that cites the deleted capture can still be approved, because a
+capture withdrawn as `raw` or `evidence` keeps counting as support.
 
 ## Supersession
 
