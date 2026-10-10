@@ -29,7 +29,6 @@ import { migrateSourceReferences } from '../lib/source-migration.mjs';
 import {
   LIFECYCLE_ACTIONS,
   LIFECYCLE_USAGE_ERROR_CODES,
-  RELOCATABLE_STATES,
   LifecycleError,
   auditLifecycle,
   listLifecycleRecords,
@@ -138,12 +137,12 @@ Usage:
   mole lifecycle supersede <record_id> --replacement <record_id> [human options]
                                       Replace an accepted record with another accepted record.
   mole lifecycle withdraw <record_id> [options]
-                                      Close a record, such as one whose file is gone. Accepted records need a human.
+                                      Close a record, such as one whose file is gone. Once-accepted records need a human.
   mole lifecycle relocate <record_id> --path <path> [options]
-                                      Point a draft at its renamed file.
+                                      Point a record at the file it now lives in.
   mole lifecycle show <record_id>      Show a record and its transition history.
-  mole lifecycle list [--state <state>]
-                                      List review records.
+  mole lifecycle list [--state <state>] [--path <path>]
+                                      List review records, or find the record for a file.
   mole lifecycle audit                Check the review ledger and reviewed files (read-only).
   mole lifecycle migrate [--apply]    Report untracked files; apply registers them as raw or unreviewed.
   mole lifecycle unlock               Remove a mutation lock left by a stopped process.
@@ -399,16 +398,8 @@ function createArtifact(kind, outputPath) {
     assertLifecycleWritable(cwd);
     const claims = findPathClaims(cwd, relativeTarget);
     if (claims.length) {
-      const claim = claims.find((item) => item.record_id) || claims[0];
-      const owner = claim.record_id ? `source ${claim.source_id} (${claim.state} lifecycle record ${claim.record_id})` : `source ${claim.source_id}`;
-      const steps = [];
-      if (claim.record_id && RELOCATABLE_STATES.includes(claim.state)) {
-        steps.push(`If that file was renamed, run "mole lifecycle relocate ${claim.record_id} --path <new path>".`);
-      } else {
-        steps.push(`If that file moved unchanged, run "mole source reconcile ${claim.source_id} --path <new path>".`);
-      }
-      if (claim.record_id) steps.push(`If it was deleted, run "mole lifecycle withdraw ${claim.record_id}".`);
-      console.error(`Refusing to create a draft at ${relativeTarget}: ${owner} is still registered at that path. ${steps.join(' ')} Otherwise choose another output path. Nothing was written.`);
+      const claim = claims[0];
+      console.error(`Refusing to create a draft at ${relativeTarget}: that path belongs to ${claim.state} lifecycle record ${claim.record_id}. If its file now lives somewhere else, run "mole lifecycle relocate ${claim.record_id} --path <new path>". If it was deleted, run "mole lifecycle withdraw ${claim.record_id}". Otherwise choose another output path. Nothing was written.`);
       process.exit(1);
     }
   } catch (error) {
@@ -1125,6 +1116,7 @@ function runLifecycleCommand(action, values = []) {
         if (result.source_correction) {
           console.log(`Recorded a source content correction for ${result.record.source_id}: the file changed after it was registered.`);
         }
+        for (const notice of result.notices || []) console.log(`Note: ${notice}`);
         if (action === 'submit') {
           console.log(`A person can read it with: mole retrieve ${result.record_id} --include-state pending_review`);
           console.log(`and approve what they read with: --expect-revision ${result.record.revision}`);
@@ -1172,9 +1164,9 @@ function runLifecycleCommand(action, values = []) {
     }
 
     if (action === 'list') {
-      const parsed = parseLifecycleValues(values, { lists: ['--state'] });
+      const parsed = parseLifecycleValues(values, { lists: ['--state'], scalars: ['--path'] });
       format = parsed.format;
-      const records = listLifecycleRecords(cwd, { states: parsed.options['--state'] });
+      const records = listLifecycleRecords(cwd, { states: parsed.options['--state'], path: parsed.options['--path'] });
       emit({ ok: true, records }, () => {
         if (!records.length) console.log('No lifecycle records.');
         for (const record of records) {

@@ -65,9 +65,10 @@ abandoned, and lets a person retire accepted context that has no successor.
 | `approve` | `pending_review` | `accepted` | human, confirmed |
 | `reject` | `pending_review` | `rejected` | human, confirmed |
 | `supersede` | `accepted` | `superseded` | human, confirmed |
-| `withdraw` | `raw`, `evidence`, `draft`, `pending_review`, `rejected`, `unreviewed` | `withdrawn` | anyone |
-| `withdraw` | `accepted` | `withdrawn` | human, confirmed |
-| `relocate` | `draft`, `unreviewed`, `rejected` | same state | anyone |
+| `withdraw` | `raw`, `evidence`, `draft`, `pending_review`, `rejected`, `unreviewed`, never accepted | `withdrawn` | anyone |
+| `withdraw` | `accepted`, or any record that was accepted before | `withdrawn` | human, confirmed |
+| `relocate` to a file that was also edited | `draft`, `unreviewed`, `rejected` | same state | anyone |
+| `relocate` to a file with unchanged bytes | any state except `superseded` and `withdrawn` | same state | anyone |
 
 Any other move fails and leaves the record unchanged. Registration cannot
 create a `pending_review`, `accepted`, `rejected`, `superseded`, or `withdrawn`
@@ -75,7 +76,8 @@ record, so the commands offer no way to skip the review. Every action that
 enters `accepted` needs a confirmed human. So does every action that takes
 valid accepted context away. The one exception is `revise` on an accepted
 record whose file was already edited. That file has already dropped out of
-retrieval, so sending it back to review takes nothing away.
+retrieval, so sending it back to review takes nothing away. A record that was
+accepted once still needs a person to withdraw it, even after such a revise.
 
 Every transition needs an actor name, an actor type, and a reason.
 
@@ -89,8 +91,8 @@ change accepted context, described under
 
 ## Human decisions
 
-`approve`, `reject`, `supersede`, `withdraw` on an accepted record, and
-`revise` on an accepted record whose file is unchanged require
+`approve`, `reject`, `supersede`, `withdraw` on a record that is or was
+accepted, and `revise` on an accepted record whose file is unchanged require
 `--actor-type human` and `--confirm-human`. If either is missing, the command
 fails with exit code 1 and the record keeps its state. An agent that tries to
 approve its own draft gets a refusal, and the draft stays pending.
@@ -190,27 +192,40 @@ valid context away from readers.
 
 ## Files that move, change, or disappear
 
-The source registry owns paths. A record's file is the one at its source's
-registered path. Mole handles the common cases this way.
+The source registry stores paths. A record's file is the one at its source's
+registered path. A path belongs to the one open record whose source is
+registered there. A source with no lifecycle record owns nothing, and neither
+does the source of a superseded or withdrawn record. Mole handles the common
+cases this way.
 
 | What happened | What Mole does | What you do |
 | --- | --- | --- |
-| The file moved and its bytes are unchanged, such as an archived capture | Finds it by its registered hash, if exactly one unclaimed file has those bytes | Nothing. Run `mole source reconcile` to update the stored path when convenient. |
+| The file moved and its bytes are unchanged, such as an archived capture | Finds it by its registered hash, if exactly one unclaimed file has those bytes | Nothing. Run `mole lifecycle relocate <record_id> --path <new path>` to store the new path when convenient. |
 | A draft was renamed and edited | Cannot match it by hash. `submit` fails and audit reports `source_unresolved`. | `mole lifecycle relocate <record_id> --path <new path>` |
 | The file was deleted or abandoned | Audit reports `source_unresolved`. | `mole lifecycle withdraw <record_id>` |
-| Two unclaimed copies hold a moved file's bytes | Refuses to guess. Audit lists both under `candidate_paths`. | `mole source reconcile <source_id> --path <path>` |
-| A second source is registered at a path a live record still claims | Refuses to register or submit either one. Audit reports `path_claim_conflict`. | Relocate or reconcile the source whose file moved, or withdraw the record whose file is gone. |
+| Two unclaimed copies hold a moved file's bytes | Refuses to guess. Audit lists both under `candidate_paths`. | `mole lifecycle relocate <record_id> --path <path>` |
+| A file that already has an open record is registered as a source again | Refuses a second lifecycle record and names the existing one. The existing record keeps working, and audit stays clean. | Use the existing record. Find it with `mole lifecycle list --path <path>`. |
+| A new file is written at a path an open record still owns | Refuses a lifecycle record for the new file, and `mole create` refuses to write there. | Relocate the existing record to where its file went, or withdraw it if that file is gone. |
 | A new file appears at the old path of a superseded or withdrawn record | Treats the new file as untracked. When it is registered, Mole clears the closed record's stored path. | Register the new file, or run `mole lifecycle migrate --apply`. |
 
-`relocate` works on `draft`, `unreviewed`, and `rejected` records. It records
-the new path in the source registry, and the new bytes when they changed. It
-does not move or edit the file. A `pending_review` record must be revised
-first. Raw, evidence, and accepted material is not meant to change, so those
-records use `mole source reconcile` for an unchanged move and `withdraw`
-otherwise.
+`relocate` records the new path in the source registry. It does not move or
+edit the file. A `draft`, `unreviewed`, or `rejected` record may point at a
+file that was also edited, and the new bytes are recorded too. Raw, evidence,
+pending, and accepted material may move but not change, so `relocate` accepts
+only a file that still holds the record's bytes. Revise a pending record
+before relocating it to an edited file. Use `relocate` rather than
+`mole source reconcile` for a file with a lifecycle record, because it also
+clears the stored path of a superseded or withdrawn record that used to live
+there.
 
-`mole create` refuses to write a draft at a path that the source of a live
-record still claims. That stops a new template from taking the place of a
+If a new file is written at an open record's path and that record is then
+submitted, the reviewer is shown the new file, and approving it accepts what
+they read. Mole cannot tell a replaced file from an edited one. When another
+source is registered at the same path, `submit` prints a note asking the
+submitter to check which file the record describes.
+
+`mole create` refuses to write a draft at a path that an open record still
+owns. That stops a new template from taking the place of a
 draft that was renamed, which could otherwise be submitted and approved under
 the old record. The refusal names the command that frees the path. A
 superseded or withdrawn record does not hold its path, so deleting a draft,
@@ -338,7 +353,7 @@ superseded or withdrawn records for a missing file.
 | `accepted_content_changed` | Restore the accepted bytes, or run `revise` and `submit` so a person reviews the new version. |
 | `pending_content_changed` | Run `revise`, then `submit` again. |
 | `source_unresolved` | The file was renamed and edited, or deleted. Run `relocate` or `withdraw` as the finding advises. |
-| `path_claim_conflict` | Two sources are registered at one path. Relocate or reconcile the one whose file moved. |
+| `path_claim_conflict` | Two open records point at one file. The commands do not create this state. Relocate the record whose file moved, or withdraw the one that should not own the file. |
 | `source_record_missing`, `source_record_invalid`, `unsafe_path`, `no_local_file` | The source record is gone or untrusted. Recover it with the `mole source` commands, or withdraw the record. |
 | `supporting_source_missing` | Recover the source record that the acceptance cites. |
 | `stale_mutation_lock` | Run `mole lifecycle unlock`. |
@@ -359,7 +374,7 @@ Each write takes the lock file `governance/lifecycle/.mutation.lock`, validates
 the whole ledger, checks that the write keeps every earlier history entry, and
 replaces `records.json` with one atomic rename. The lock sits beside the ledger
 so every process that can write the ledger sees it, whatever its temporary
-folder or user account. A second command waits up to two seconds for the
+folder or user account. A second command waits up to ten seconds for the
 first, then fails with `LIFECYCLE_BUSY`.
 
 If a command is killed during a write, its lock stays behind. Mole never
@@ -439,7 +454,10 @@ before they try it.
   record. A person withdraws the record and the new file starts as a draft.
 - Retrieval rules apply to the Mole commands. They do not stop a tool from
   reading a file directly.
-- Registration, submission, relocation, and audit read every source record
-  once to check path claims, so their cost grows with the registry. With 3,000
-  source records a registration took about 70 ms on the development machine.
-  Larger registries have not been measured.
+- Every write validates and rewrites the whole ledger and reads each source
+  record once, so cost grows with the workspace. An independent review
+  measured about 0.5 s per capture and 1.4 to 2.0 s per audit at 3,000
+  records, and about 1 s and 3.6 to 6.4 s at 10,000. Under heavy parallel
+  capture at that size, a capture that waits longer than ten seconds for the
+  lock is saved with a warning and backfilled by `mole lifecycle migrate
+  --apply`.

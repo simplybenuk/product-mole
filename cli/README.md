@@ -118,10 +118,10 @@ mole critique spec drafts/spec.md
 | `mole lifecycle evidence\|draft\|submit\|revise <record-id> [options]` | Moves a record toward review. Agents may run these. |
 | `mole lifecycle approve\|reject <record-id> --actor <name> --actor-type human --confirm-human --reason <text>` | Records a human review decision. Approval also needs a supporting `--source <source-id>` and `--expect-revision <n>`, the revision the reviewer read. |
 | `mole lifecycle supersede <record-id> --replacement <record-id> [human options]` | Replaces an accepted record with another accepted record. |
-| `mole lifecycle withdraw <record-id> [options]` | Closes a record, such as one whose file is gone. An accepted record needs the human options. |
-| `mole lifecycle relocate <record-id> --path <path> [options]` | Points a draft at its renamed file without touching the file. |
+| `mole lifecycle withdraw <record-id> [options]` | Closes a record, such as one whose file is gone. A record that is or was accepted needs the human options. |
+| `mole lifecycle relocate <record-id> --path <path> [options]` | Points a record at the file it now lives in without touching the file. Only a draft may follow a file that was also edited. |
 | `mole lifecycle show <record-id>` | Shows a record and its transition history. |
-| `mole lifecycle list [--state <state>]` | Lists review records. |
+| `mole lifecycle list [--state <state>] [--path <path>]` | Lists review records, or finds the record for a file. |
 | `mole lifecycle audit` | Checks the review ledger and reviewed files without changing them. |
 | `mole lifecycle migrate [--apply]` | Reports untracked files; apply mode registers them as `raw` or `unreviewed`. |
 | `mole lifecycle unlock` | Removes a write lock left by a stopped process. |

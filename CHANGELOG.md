@@ -24,6 +24,9 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   through review under the same record.
 - `mole lifecycle approve` requires `--expect-revision <n>`, the revision the
   reviewer read.
+- `mole lifecycle list --path <path>` finds the record for a file. One file
+  backs one open record; a second registration of a tracked file is pointed
+  at the existing record.
 - Added `mole retrieve`, which returns accepted records only unless
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and

@@ -110,9 +110,9 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole lifecycle evidence\|draft\|submit\|revise <record_id> [options]` | Moves a record toward review. Agents may run these. `revise` also sends an accepted file that was edited in place back to review. |
 | `mole lifecycle approve\|reject <record_id> --actor <name> --actor-type human --confirm-human --reason <text>` | Records a human review decision. Approval also needs a supporting `--source <source_id>` and `--expect-revision <n>`, the revision the reviewer read. |
 | `mole lifecycle supersede <record_id> --replacement <record_id> [human options]` | Replaces an accepted record with another accepted record. |
-| `mole lifecycle withdraw <record_id> [options]` | Closes a record, such as one whose file is gone. An accepted record needs the human options. |
-| `mole lifecycle relocate <record_id> --path <path> [options]` | Points a draft at its renamed file without touching the file. |
-| `mole lifecycle show <record_id>` / `mole lifecycle list [--state <state>]` | Shows one record with its history, or lists records. |
+| `mole lifecycle withdraw <record_id> [options]` | Closes a record, such as one whose file is gone. A record that is or was accepted needs the human options. |
+| `mole lifecycle relocate <record_id> --path <path> [options]` | Points a record at the file it now lives in without touching the file. Only a draft may follow a file that was also edited. |
+| `mole lifecycle show <record_id>` / `mole lifecycle list [--state <state>] [--path <path>]` | Shows one record with its history, lists records, or finds the record for a file. |
 | `mole lifecycle audit` | Checks the review ledger and the reviewed files. Read-only. |
 | `mole lifecycle migrate [--apply]` | Reports files with no review record. `--apply` registers them as `raw` or `unreviewed`, never as accepted. |
 | `mole lifecycle unlock` | Removes a write lock left by a stopped process. |

@@ -437,6 +437,36 @@ describe('renamed, removed, and untrackable files', () => {
     });
   });
 
+  it('points a second registration of a tracked file at its existing record', () => {
+    withWorkspace((workspace, mole) => {
+      const evidenceId = printedId(mole('insight', 'Supporting note').stdout, 'Source ID');
+      const { recordId } = createDraft(mole, 'spec');
+      const relative = '4-context/product/spec-draft.md';
+
+      const found = mole('lifecycle', 'list', '--path', relative);
+      assert.equal(found.status, 0, found.stderr);
+      assert.match(found.stdout, new RegExp(`^${recordId}  draft  r1  ${relative}$`, 'm'));
+      assert.match(mole('lifecycle', 'list', '--path', '4-context/product/other.md').stdout, /No lifecycle records\./);
+      assert.equal(mole('lifecycle', 'list', '--path', '../outside.md').status, 2);
+
+      // An agent follows the "register it" rule on a file that is already tracked.
+      const again = JSON.parse(mole('source', 'register', relative, '--json').stdout);
+      const second = mole('lifecycle', 'register', again.source_id, '--state', 'draft', ...agentFlags);
+      assert.equal(second.status, 1);
+      assert.match(second.stderr, new RegExp(`already belongs to draft lifecycle record ${recordId}\\. One file backs one record, so use that record\\.`));
+
+      assert.equal(mole('lifecycle', 'audit').status, 0);
+      assert.equal(mole('lifecycle', 'migrate').status, 0);
+      fs.appendFileSync(path.join(workspace, ...relative.split('/')), '\nMore detail.\n');
+      const submitted = mole('lifecycle', 'submit', recordId, ...agentFlags, '--reason', 'Ready', '--source', evidenceId);
+      assert.equal(submitted.status, 0, submitted.stderr);
+      assert.match(submitted.stdout, new RegExp(`Note: Source ${again.source_id} is also registered at ${relative} and has no lifecycle record`));
+      assert.equal(mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Agreed', '--expect-revision', '2').status, 0);
+      assert.match(mole('retrieve', recordId).stdout, /More detail\./);
+      assert.equal(mole('lifecycle', 'audit').status, 0);
+    });
+  });
+
   it('lists the recovery commands in help', () => {
     withWorkspace((workspace, mole) => {
       const help = mole('--help').stdout;

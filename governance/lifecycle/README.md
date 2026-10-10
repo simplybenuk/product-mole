@@ -25,8 +25,9 @@ does not seed it, and an upgrade must never replace or delete it.
 - A record ID is `rec_` followed by a lowercase UUIDv4. Each record points to
   one registered source by `source_id`, and one file backs one source.
 - An agent may register, draft, submit, revise, relocate, and withdraw
-  unreviewed material. Only a human may approve, reject, supersede, or withdraw
-  an accepted record, and the human must confirm the decision.
+  material that was never accepted. Only a human may approve, reject,
+  supersede, or withdraw a record that is or was accepted, and the human must
+  confirm the decision.
 - Every transition appends to the record's `history`. The commands refuse a
   write that drops a record or changes an earlier history entry.
 - A sentence in a report that says "approved" changes nothing. Only
@@ -59,7 +60,10 @@ read-only.
 ## When a file moves or goes away
 
 - An unchanged file that moved, such as an archived capture, is found by its
-  registered hash. Nothing to do.
+  registered hash. Nothing to do. `mole lifecycle relocate` stores the new
+  path for any open record.
+- One file backs one open record. Find the record for a file with
+  `mole lifecycle list --path <path>` before registering it again.
 - A draft that was renamed and edited needs
   `mole lifecycle relocate <record_id> --path <new path>`.
 - A record whose file was deleted needs `mole lifecycle withdraw <record_id>`.
