@@ -15,11 +15,15 @@ export const REQUIRED_PACKAGED_FILES = Object.freeze([
   'package.json',
   'cli/mole.mjs',
   'cli/package.json',
+  'governance/lifecycle/README.md',
   'lib/capture.mjs',
   'lib/inbox-audit.mjs',
   'lib/inbox-processing.mjs',
   'lib/metrics.mjs',
+  'lib/review-lifecycle.mjs',
+  'lib/source-registry.mjs',
   'mole.instance-template.yaml',
+  'schemas/review-lifecycle-v1.schema.json',
   'upgrade-ownership.json'
 ]);
 

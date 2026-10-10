@@ -25,3 +25,7 @@ Generate a product update that is tailored to a stakeholder or group, grounded i
 10. Include a concise retrieval receipt listing the Mole files used.
 
 If a stakeholder profile is missing or weak, say what is missing and suggest capturing or synthesising stakeholder context next.
+
+## Review state
+
+Base claims on accepted context. `mole retrieve` lists it. If you use a draft, pending, rejected, or unreviewed file, say so next to the claim and in the retrieval receipt.

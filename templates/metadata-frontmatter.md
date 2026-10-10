@@ -28,6 +28,11 @@ source_refs:
     relationship: supports
 ```
 
+`status` describes the file for readers. It is not the review state. The
+review ledger at `governance/lifecycle/records.json` decides whether a file is
+a draft, pending review, or accepted, and `status: active` never counts as an
+approval. Check a file's state with `mole lifecycle list` or `mole retrieve`.
+
 The ID is required in each reference. The path is an optional hint for display
 and navigation. Resolve references by ID first because a path can change after
 an archive move. Keep any existing `source` field as legacy metadata unless its

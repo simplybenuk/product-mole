@@ -22,9 +22,27 @@ import {
   registerAttachment,
   registerSource,
   resolveSource,
-  createSourceId
+  createSourceId,
+  toWorkspaceRelativePath
 } from '../lib/source-registry.mjs';
 import { migrateSourceReferences } from '../lib/source-migration.mjs';
+import {
+  LIFECYCLE_ACTIONS,
+  LIFECYCLE_USAGE_ERROR_CODES,
+  LifecycleError,
+  auditLifecycle,
+  listLifecycleRecords,
+  migrateLifecycleRecords,
+  readLifecycleRecord,
+  registerLifecycleRecord,
+  relocateLifecycleRecord,
+  assertLifecycleWritable,
+  findPathClaims,
+  retrieveLifecycleRecord,
+  retrieveLifecycleRecords,
+  transitionLifecycleRecord,
+  unlockLifecycle
+} from '../lib/review-lifecycle.mjs';
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
@@ -65,9 +83,13 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
   ['governance/quality-checklist.md', 'governance/quality-checklist.md'],
   ['governance/run-receipts/README.md', 'governance/run-receipts/README.md'],
   ['governance/sources/README.md', 'governance/sources/README.md'],
+  ['governance/lifecycle/README.md', 'governance/lifecycle/README.md'],
   ['schemas/source-record-v1.schema.json', 'schemas/source-record-v1.schema.json'],
+  ['schemas/review-lifecycle-v1.schema.json', 'schemas/review-lifecycle-v1.schema.json'],
   ['mole.instance-template.yaml', 'mole.instance.yaml']
 ]);
+
+const LIFECYCLE_AGENT_GUIDANCE = 'Check review state with `mole retrieve` before relying on context. Only accepted records are approved, and a file without an accepted record is unreviewed. Leave new durable context as a draft and submit it with `mole lifecycle submit`. After editing an accepted file in place, run `mole lifecycle revise` on its record and submit it again. Never approve, reject, or supersede a record yourself; those decisions belong to a human.';
 
 export function getHelpOutput() {
   return `Mole CLI v${getSourceVersion()}
@@ -106,6 +128,26 @@ Usage:
                                       Record an explicit content correction.
   mole source migrate [--apply] [--json]
                                       Classify legacy path references; apply is opt-in.
+  mole lifecycle register <source_id> --state <state> --actor <name> --actor-type <type>
+                                      Open a review record as raw, evidence, draft, or unreviewed.
+  mole lifecycle evidence|draft|submit|revise <record_id> [options]
+                                      Move a record toward review; agents may run these.
+  mole lifecycle approve|reject <record_id> --actor <name> --actor-type human --confirm-human --reason <text>
+                                      Record a human review decision. Approve also needs --expect-revision <n>.
+  mole lifecycle supersede <record_id> --replacement <record_id> [human options]
+                                      Replace an accepted record with another accepted record.
+  mole lifecycle withdraw <record_id> [options]
+                                      Close a record, such as one whose file is gone. Once-accepted records need a human.
+  mole lifecycle relocate <record_id> --path <path> [options]
+                                      Point a record at the file it now lives in.
+  mole lifecycle show <record_id>      Show a record and its transition history.
+  mole lifecycle list [--state <state>] [--path <path>]
+                                      List review records, or find the record for a file.
+  mole lifecycle audit                Check the review ledger and reviewed files (read-only).
+  mole lifecycle migrate [--apply]    Report untracked files; apply registers them as raw or unreviewed.
+  mole lifecycle unlock               Remove a mutation lock left by a stopped process.
+  mole retrieve [record_id] [--include-state <state>]
+                                      Read accepted context; other states are opt-in.
   mole install skills                  Install Mole agent skills into ~/.agents/skills.
   mole check-updates                   Compare this CLI version with the workspace.
   mole upgrade [version]               Update the globally installed Mole CLI from a stable tag.
@@ -140,6 +182,11 @@ Examples:
   mole source register 6-raw/inbox/export.csv --source-type export
   mole source resolve src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --json
   mole source migrate
+  mole lifecycle submit <record_id> --actor "Agent" --actor-type agent --reason "Ready for review"
+  mole lifecycle approve <record_id> --actor "Your Name" --actor-type human --confirm-human --reason "Matches the interview evidence" --source <source_id> --expect-revision 2
+  mole lifecycle audit
+  mole retrieve
+  mole retrieve <record_id> --include-state pending_review
 
 More help:
   ${HELP_URL}
@@ -332,14 +379,64 @@ function createArtifact(kind, outputPath) {
     'product-update': '4-context/product/product-update-draft.md'
   }[kind];
 
-  const target = path.resolve(cwd, outputPath || defaultOutput);
+  let relativeTarget;
+  try {
+    relativeTarget = toWorkspaceRelativePath(cwd, outputPath || defaultOutput);
+  } catch (error) {
+    console.error(`Refusing to create a draft outside the workspace: ${error.message}`);
+    process.exit(1);
+  }
+  const target = path.resolve(cwd, ...relativeTarget.split('/'));
   if (exists(target)) {
     console.error(`Refusing to overwrite existing file: ${target}`);
     process.exit(1);
   }
 
+  // Check everything that could stop the draft being tracked before writing
+  // it, so a refusal never leaves an untracked file behind.
+  try {
+    assertLifecycleWritable(cwd);
+    const claims = findPathClaims(cwd, relativeTarget);
+    if (claims.length) {
+      const claim = claims[0];
+      console.error(`Refusing to create a draft at ${relativeTarget}: that path belongs to ${claim.state} lifecycle record ${claim.record_id}. If its file now lives somewhere else, run "mole lifecycle relocate ${claim.record_id} --path <new path>". If it was deleted, run "mole lifecycle withdraw ${claim.record_id}". Otherwise choose another output path. Nothing was written.`);
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error(`Refusing to create a draft that cannot be tracked: ${error.message} Nothing was written.`);
+    process.exit(1);
+  }
+
   copyFile(source, target);
   console.log(`Created ${kind} draft: ${target}`);
+
+  let sourceId = null;
+  try {
+    sourceId = registerSource(cwd, {
+      path: relativeTarget,
+      source_type: 'file',
+      captured_by: resolveCapturedBy(),
+      channel: 'cli',
+      path_reason: 'created',
+      content_change_type: 'created'
+    }).source_id;
+    const lifecycle = registerLifecycleRecord(cwd, {
+      sourceId,
+      state: 'draft',
+      actor: 'mole-cli',
+      actorType: 'automation',
+      reason: `Created ${kind} draft from a template.`
+    });
+    console.log(`Source ID: ${sourceId}`);
+    console.log(`Lifecycle record: ${lifecycle.record_id} (draft)`);
+  } catch (error) {
+    console.error(`The draft was written to ${relativeTarget} but is not tracked yet: ${error.message}`);
+    console.error(sourceId
+      ? `Keep the file. When the problem is fixed, run: mole lifecycle register ${sourceId} --state draft --actor "<name>" --actor-type <type>`
+      : `Keep the file. When the problem is fixed, run: mole source register ${relativeTarget}, then mole lifecycle register <source_id> --state draft --actor "<name>" --actor-type <type>`);
+    process.exit(1);
+  }
+
   console.log('\nSuggested next agent instruction:\n');
   outputDraftInstruction(kind);
 }
@@ -432,8 +529,31 @@ function captureInsight(values) {
     process.exit(1);
   }
 
+  // The capture is saved and registered at this point.  A lifecycle problem
+  // must not make it look failed, or a retry would capture the note twice.
+  let recordId = null;
+  let lifecycleWarning = null;
+  try {
+    recordId = registerLifecycleRecord(cwd, {
+      sourceId,
+      state: 'raw',
+      actor: 'mole-cli',
+      actorType: 'automation',
+      reason: 'Captured from the CLI.',
+      now: createdAt
+    }).record_id;
+  } catch (err) {
+    lifecycleWarning = err.message;
+  }
+
   console.log(`Captured insight: ${target}`);
   console.log(`Source ID: ${sourceId}`);
+  if (recordId) {
+    console.log(`Lifecycle record: ${recordId} (raw)`);
+  } else {
+    console.error(`Warning: the capture is saved but has no lifecycle record yet: ${lifecycleWarning}`);
+    console.error('Do not capture it again. When the problem is fixed, run: mole lifecycle migrate --apply --actor "<name>" --actor-type <type>');
+  }
   console.log('\nSuggested next command:');
   console.log('mole synthesise inbox');
 }
@@ -520,7 +640,7 @@ function outputDraftInstruction(kind) {
     'product-update': 'Create a stakeholder-specific product update using stakeholder memory, relevant summaries, product context, and evidence. Tailor the format and include a retrieval receipt.'
   };
   const instruction = map[kind] || `Create a ${kind} draft from Mole using progressive retrieval.`;
-  console.log(instruction);
+  console.log(`${instruction} ${LIFECYCLE_AGENT_GUIDANCE}`);
 }
 
 function parseProductUpdateArgs(values) {
@@ -601,13 +721,13 @@ function critique(values) {
 export function buildBootstrapContextInstruction() {
   return `Suggested agent instruction:
 
-Bootstrap this Mole workspace context. Treat blank, placeholder, or starter-template files in \`2-summaries/\` and \`3-indexes/\` as missing top-layer context. Read \`0-bootstrap/\`, \`1-routing/\`, all existing \`4-context/\` modules, useful \`5-evidence/\` material, and current unprocessed inbox material in \`6-raw/inbox/\`. Populate the initial domain summaries and indexes with concise, evidence-backed context, preserving uncertainty and adding missing human questions to \`governance/input-queue.md\`. Do not invent product facts; mark low-confidence conclusions as hypotheses and link to supporting files.`;
+Bootstrap this Mole workspace context. Treat blank, placeholder, or starter-template files in \`2-summaries/\` and \`3-indexes/\` as missing top-layer context. Read \`0-bootstrap/\`, \`1-routing/\`, all existing \`4-context/\` modules, useful \`5-evidence/\` material, and current unprocessed inbox material in \`6-raw/inbox/\`. Populate the initial domain summaries and indexes with concise, evidence-backed context, preserving uncertainty and adding missing human questions to \`governance/input-queue.md\`. Do not invent product facts; mark low-confidence conclusions as hypotheses and link to supporting files. ${LIFECYCLE_AGENT_GUIDANCE}`;
 }
 
 export function buildRefreshTopLayersInstruction() {
   return `Suggested agent instruction:
 
-Refresh the Mole top layers. Compare \`2-summaries/\` and \`3-indexes/\` with lower-layer context in \`4-context/\`, evidence in \`5-evidence/\`, recent processed inbox outputs, and any relevant unprocessed \`6-raw/inbox/\` material. Update blank, placeholder, stale, or incomplete summaries and indexes so they accurately route future retrieval. Keep changes compact and evidence-backed, avoid copying raw detail upward, and add missing human questions to \`governance/input-queue.md\` when the lower layers do not justify a confident summary.`;
+Refresh the Mole top layers. Compare \`2-summaries/\` and \`3-indexes/\` with lower-layer context in \`4-context/\`, evidence in \`5-evidence/\`, recent processed inbox outputs, and any relevant unprocessed \`6-raw/inbox/\` material. Update blank, placeholder, stale, or incomplete summaries and indexes so they accurately route future retrieval. Keep changes compact and evidence-backed, avoid copying raw detail upward, and add missing human questions to \`governance/input-queue.md\` when the lower layers do not justify a confident summary. ${LIFECYCLE_AGENT_GUIDANCE}`;
 }
 
 function productUpdate(values) {
@@ -819,6 +939,365 @@ function runSourceCommand(action, values = []) {
   } catch (error) {
     console.error(`Source command failed: ${error.message}`);
     process.exitCode = 1;
+  }
+}
+
+class UsageError extends Error {}
+
+/**
+ * Strict option parser for the lifecycle and retrieve commands.  Unknown
+ * flags, repeated scalar flags, and missing values are usage errors.
+ */
+export function parseLifecycleValues(values = [], spec = {}) {
+  const scalars = new Set(['--format', ...(spec.scalars || [])]);
+  const lists = new Set(spec.lists || []);
+  const booleans = new Set(['--json', ...(spec.booleans || [])]);
+  const maxPositionals = spec.positionals ?? 0;
+  const options = {};
+  const positionals = [];
+
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    if (!value.startsWith('--')) {
+      positionals.push(value);
+      continue;
+    }
+    if (booleans.has(value)) {
+      if (options[value]) throw new UsageError(`Duplicate option ${value}.`);
+      options[value] = true;
+      continue;
+    }
+    if (!scalars.has(value) && !lists.has(value)) throw new UsageError(`Unknown option ${value}.`);
+    const next = values[index + 1];
+    if (next === undefined || next.startsWith('--')) throw new UsageError(`Missing value for ${value}.`);
+    index += 1;
+    if (lists.has(value)) {
+      options[value] = [...(options[value] || []), next];
+    } else {
+      if (Object.prototype.hasOwnProperty.call(options, value)) throw new UsageError(`Duplicate option ${value}.`);
+      options[value] = next;
+    }
+  }
+
+  if (positionals.length > maxPositionals) throw new UsageError(`Unexpected argument: ${positionals[maxPositionals]}`);
+  const format = options['--format'] ?? (options['--json'] ? 'json' : 'text');
+  if (format !== 'text' && format !== 'json') throw new UsageError('--format must be text or json.');
+  if (options['--json'] && format !== 'json') throw new UsageError('--json conflicts with --format text.');
+  return { positionals, options, format };
+}
+
+// Used only to shape an error raised before the options have been parsed.
+function guessLifecycleFormat(values) {
+  const index = values.indexOf('--format');
+  return values.includes('--json') || (index >= 0 && values[index + 1] === 'json') ? 'json' : 'text';
+}
+
+function requireLifecycleOption(options, name) {
+  if (!options[name]) throw new UsageError(`Missing required option ${name}.`);
+  return options[name];
+}
+
+function requireLifecyclePositional(positionals, label) {
+  if (!positionals[0]) throw new UsageError(`A ${label} is required.`);
+  return positionals[0];
+}
+
+function reportLifecycleFailure(error, format) {
+  const usage = error instanceof UsageError
+    || (error instanceof LifecycleError && LIFECYCLE_USAGE_ERROR_CODES.has(error.code));
+  const code = error.code || (usage ? 'INVALID_ARGUMENT' : 'ERROR');
+  if (format === 'json') {
+    console.log(JSON.stringify({ ok: false, error: { code, message: error.message, details: error.details || {} } }, null, 2));
+  }
+  console.error(`${usage ? 'Invalid arguments' : 'Refused'}: ${error.message}`);
+  process.exitCode = usage ? 2 : 1;
+}
+
+function printLifecycleRecord(record) {
+  console.log(`Record ID: ${record.record_id}`);
+  console.log(`Source ID: ${record.source_id}`);
+  console.log(`State: ${record.state}`);
+  console.log(`Revision: ${record.revision}`);
+  console.log(`Path: ${record.path}`);
+  console.log(`Content: sha256 ${record.content_hash.value.slice(0, 16)} (${record.byte_size} bytes)`);
+  if (record.source_ids.length) console.log(`Supporting sources: ${record.source_ids.join(', ')}`);
+  if (record.decision) {
+    console.log(`Decision: ${record.decision.outcome} by ${record.decision.reviewer} at ${record.decision.decided_at}`);
+    console.log(`Decision reason: ${record.decision.reason}`);
+  }
+  if (record.supersedes.length) console.log(`Supersedes: ${record.supersedes.join(', ')}`);
+  if (record.superseded_by) console.log(`Superseded by: ${record.superseded_by}`);
+}
+
+function printLifecycleHistory(record) {
+  console.log('History:');
+  for (const entry of record.history) {
+    const change = entry.from_state === null ? entry.to_state : `${entry.from_state} -> ${entry.to_state}`;
+    const confirmed = entry.human_confirmed ? ', confirmed' : '';
+    console.log(`- ${entry.revision}. ${entry.at} ${entry.action} (${change}) by ${entry.actor} [${entry.actor_type}${confirmed}]: ${entry.reason}`);
+  }
+}
+
+function printLifecycleFindings(findings) {
+  for (const item of findings) {
+    const subject = item.record_id || item.path || item.source_id || '';
+    console.log(`- ${item.type}${subject ? `: ${subject}` : ''}`);
+    for (const detail of item.errors || []) console.log(`    ${detail}`);
+    if (item.action) console.log(`    ${item.action}`);
+  }
+}
+
+const LIFECYCLE_TRANSITION_SPEC = Object.freeze({
+  positionals: 1,
+  scalars: ['--actor', '--actor-type', '--reason', '--replacement', '--expect-revision'],
+  lists: ['--source', '--remove-source', '--supersedes'],
+  booleans: ['--confirm-human']
+});
+
+function parseExpectedRevision(value) {
+  if (value === undefined) return undefined;
+  if (!/^[1-9][0-9]*$/.test(value)) throw new UsageError('--expect-revision must be a positive integer.');
+  return Number(value);
+}
+
+function runLifecycleCommand(action, values = []) {
+  let format = guessLifecycleFormat(values);
+  const emit = (result, printText) => {
+    if (format === 'json') console.log(JSON.stringify(result, null, 2));
+    else printText();
+  };
+
+  try {
+    if (action === 'register') {
+      const parsed = parseLifecycleValues(values, {
+        positionals: 1,
+        scalars: ['--state', '--actor', '--actor-type', '--reason'],
+        lists: ['--source']
+      });
+      format = parsed.format;
+      const result = registerLifecycleRecord(cwd, {
+        sourceId: requireLifecyclePositional(parsed.positionals, 'source ID'),
+        state: requireLifecycleOption(parsed.options, '--state'),
+        actor: requireLifecycleOption(parsed.options, '--actor'),
+        actorType: requireLifecycleOption(parsed.options, '--actor-type'),
+        reason: parsed.options['--reason'],
+        sourceIds: parsed.options['--source']
+      });
+      emit(result, () => {
+        console.log('Registered lifecycle record.');
+        printLifecycleRecord(result.record);
+      });
+      return;
+    }
+
+    if (LIFECYCLE_ACTIONS.includes(action)) {
+      const parsed = parseLifecycleValues(values, LIFECYCLE_TRANSITION_SPEC);
+      format = parsed.format;
+      if (action === 'approve' && parsed.options['--expect-revision'] === undefined) {
+        // An approval names the revision that was read, so a draft that was
+        // resubmitted in the meantime cannot be accepted unseen.
+        throw new UsageError('Approve needs --expect-revision <n>, the revision you reviewed. Read the submission with "mole retrieve <record_id> --include-state pending_review"; it prints the revision.');
+      }
+      const result = transitionLifecycleRecord(cwd, requireLifecyclePositional(parsed.positionals, 'record ID'), {
+        action,
+        actor: requireLifecycleOption(parsed.options, '--actor'),
+        actorType: requireLifecycleOption(parsed.options, '--actor-type'),
+        humanConfirmed: parsed.options['--confirm-human'] === true,
+        reason: requireLifecycleOption(parsed.options, '--reason'),
+        sourceIds: parsed.options['--source'],
+        removeSourceIds: parsed.options['--remove-source'],
+        supersedes: parsed.options['--supersedes'],
+        replacementId: parsed.options['--replacement'],
+        expectedRevision: parseExpectedRevision(parsed.options['--expect-revision'])
+      });
+      emit(result, () => {
+        console.log(`Record ${result.record_id} is now ${result.state} (revision ${result.record.revision}).`);
+        printLifecycleRecord(result.record);
+        if (result.source_correction) {
+          console.log(`Recorded a source content correction for ${result.record.source_id}: the file changed after it was registered.`);
+        }
+        for (const notice of result.notices || []) console.log(`Note: ${notice}`);
+        if (action === 'submit') {
+          console.log(`A person can read it with: mole retrieve ${result.record_id} --include-state pending_review`);
+          console.log(`and approve what they read with: --expect-revision ${result.record.revision}`);
+        }
+      });
+      return;
+    }
+
+    if (action === 'relocate') {
+      const parsed = parseLifecycleValues(values, {
+        positionals: 1,
+        scalars: ['--path', '--actor', '--actor-type', '--reason', '--expect-revision'],
+        booleans: ['--confirm-human']
+      });
+      format = parsed.format;
+      const result = relocateLifecycleRecord(cwd, requireLifecyclePositional(parsed.positionals, 'record ID'), {
+        path: requireLifecycleOption(parsed.options, '--path'),
+        actor: requireLifecycleOption(parsed.options, '--actor'),
+        actorType: requireLifecycleOption(parsed.options, '--actor-type'),
+        humanConfirmed: parsed.options['--confirm-human'] === true,
+        reason: requireLifecycleOption(parsed.options, '--reason'),
+        expectedRevision: parseExpectedRevision(parsed.options['--expect-revision'])
+      });
+      emit(result, () => {
+        console.log(`Record ${result.record_id} now points to ${result.record.path} (revision ${result.record.revision}).`);
+        printLifecycleRecord(result.record);
+        if (result.source_correction) {
+          console.log(`Recorded a source content correction for ${result.record.source_id}: the file changed after it was registered.`);
+        }
+      });
+      return;
+    }
+
+    if (action === 'show') {
+      const parsed = parseLifecycleValues(values, { positionals: 1 });
+      format = parsed.format;
+      const recordId = requireLifecyclePositional(parsed.positionals, 'record ID');
+      const record = readLifecycleRecord(cwd, recordId);
+      if (!record) throw new LifecycleError(`Lifecycle record not found: ${recordId}`, 'RECORD_NOT_FOUND', { record_id: recordId });
+      emit({ ok: true, record }, () => {
+        printLifecycleRecord(record);
+        printLifecycleHistory(record);
+      });
+      return;
+    }
+
+    if (action === 'list') {
+      const parsed = parseLifecycleValues(values, { lists: ['--state'], scalars: ['--path'] });
+      format = parsed.format;
+      const records = listLifecycleRecords(cwd, { states: parsed.options['--state'], path: parsed.options['--path'] });
+      emit({ ok: true, records }, () => {
+        if (!records.length) console.log('No lifecycle records.');
+        for (const record of records) {
+          console.log(`${record.record_id}  ${record.state}  r${record.revision}  ${record.path}`);
+        }
+      });
+      return;
+    }
+
+    if (action === 'audit') {
+      const parsed = parseLifecycleValues(values);
+      format = parsed.format;
+      const result = auditLifecycle(cwd);
+      emit(result, () => {
+        console.log('Mole lifecycle audit');
+        console.log(`ledger          ${result.ledger_path}${result.ledger_exists ? '' : ' (not created yet)'}`);
+        console.log(`records         ${result.record_count}`);
+        for (const [state, count] of Object.entries(result.state_counts)) {
+          if (count) console.log(`- ${state}: ${count}`);
+        }
+        console.log(`findings        ${result.findings.length}`);
+        printLifecycleFindings(result.findings);
+      });
+      if (!result.ok) process.exitCode = 1;
+      return;
+    }
+
+    if (action === 'migrate') {
+      const parsed = parseLifecycleValues(values, {
+        scalars: ['--actor', '--actor-type'],
+        booleans: ['--apply']
+      });
+      format = parsed.format;
+      const apply = parsed.options['--apply'] === true;
+      const result = migrateLifecycleRecords(cwd, {
+        apply,
+        actor: apply ? requireLifecycleOption(parsed.options, '--actor') : undefined,
+        actorType: apply ? requireLifecycleOption(parsed.options, '--actor-type') : undefined
+      });
+      emit(result, () => {
+        console.log(`Mole lifecycle migration ${apply ? 'apply' : 'dry-run'}.`);
+        console.log(`Files scanned: ${result.scanned}`);
+        console.log(`Already tracked: ${result.tracked}`);
+        console.log(`Untracked: ${result.candidates.length}`);
+        console.log(`Registered: ${result.registered.length}`);
+        console.log(`Skipped: ${result.skipped.length}`);
+        if (!apply) {
+          for (const candidate of result.candidates) {
+            const status = candidate.legacy_status ? ` (frontmatter status: ${candidate.legacy_status})` : '';
+            console.log(`- ${candidate.path} -> ${candidate.proposed_state}${status}`);
+          }
+          if (result.candidates.length) console.log('Nothing was changed. Rerun with --apply --actor <name> --actor-type <type> to register these files. Files under 6-raw/ become raw and the rest become unreviewed. A frontmatter status is not a review decision.');
+        }
+        for (const item of result.registered) console.log(`- ${item.record_id}  ${item.state}  ${item.path}`);
+        for (const item of result.skipped) console.log(`- skipped ${item.path}: ${item.reason}`);
+        if (result.findings.length) {
+          console.log('Findings:');
+          printLifecycleFindings(result.findings);
+        }
+      });
+      if (!result.ok) process.exitCode = 1;
+      return;
+    }
+
+    if (action === 'unlock') {
+      const parsed = parseLifecycleValues(values);
+      format = parsed.format;
+      const result = unlockLifecycle(cwd);
+      emit(result, () => {
+        console.log(result.removed
+          ? 'Removed the lifecycle mutation lock left by a stopped process.'
+          : 'No lifecycle mutation lock is present.');
+      });
+      return;
+    }
+
+    throw new UsageError(`Supported lifecycle commands: register, ${LIFECYCLE_ACTIONS.join(', ')}, relocate, show, list, audit, migrate, unlock`);
+  } catch (error) {
+    if (!(error instanceof UsageError) && !error.code) throw error;
+    reportLifecycleFailure(error, format);
+  }
+}
+
+function runRetrieveCommand(values = []) {
+  let format = guessLifecycleFormat(values);
+  try {
+    const parsed = parseLifecycleValues(values, { positionals: 1, lists: ['--include-state'] });
+    format = parsed.format;
+    const includeStates = parsed.options['--include-state'];
+
+    if (parsed.positionals[0]) {
+      const result = retrieveLifecycleRecord(cwd, parsed.positionals[0], { includeStates });
+      if (format === 'json') {
+        const { absolute_path: _absolutePath, ...portable } = result;
+        console.log(JSON.stringify(portable, null, 2));
+        return;
+      }
+      console.log(`Record ID: ${result.record.record_id}`);
+      console.log(`State: ${result.record.state}`);
+      console.log(`Revision: ${result.record.revision}`);
+      console.log(`Path: ${result.path}`);
+      if (result.content === null) {
+        console.log('Content: binary; read the file at the path above.');
+        return;
+      }
+      console.log('');
+      process.stdout.write(result.content);
+      return;
+    }
+
+    const result = retrieveLifecycleRecords(cwd, { includeStates });
+    if (format === 'json') {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(`Retrievable records (${result.include_states.join(', ')}): ${result.records.length}`);
+      for (const record of result.records) {
+        console.log(`${record.record_id}  ${record.state}  r${record.revision}  ${record.path}`);
+      }
+      if (result.excluded.length) {
+        console.log(`Excluded because the file no longer matches the record: ${result.excluded.length}`);
+        for (const item of result.excluded) console.log(`- ${item.record_id}  ${item.state}  ${item.path}: ${item.reason}`);
+      }
+      const hidden = Object.entries(result.state_counts)
+        .filter(([state, count]) => count && !result.include_states.includes(state))
+        .map(([state, count]) => `${state} ${count}`);
+      if (hidden.length) console.log(`Not included: ${hidden.join(', ')}. Add --include-state <state> to read them.`);
+    }
+    if (result.excluded.length) process.exitCode = 1;
+  } catch (error) {
+    if (!(error instanceof UsageError) && !error.code) throw error;
+    reportLifecycleFailure(error, format);
   }
 }
 
@@ -1329,7 +1808,7 @@ if (isDirectRun) {
       const target = subcommand || 'the requested target';
       if (subcommand === 'inbox') console.log('Shared-folder runs must claim a run ID first, checkpoint promoted paths, and complete only with the active owned claim. Use an explicit stale-lock or missing-lock override with a reason only after checking sync history.');
       const personaInstruction = subcommand === 'inbox' ? ' Treat `6-raw/inbox/` as the flat capture/drop zone; legacy subfolders such as `quick-notes/`, `messages/`, `observations/`, or `new/` are still valid unprocessed input in existing workspaces. If user/customer signals are relevant to a durable user type, update or create evidence-backed personas in `4-context/personas.md`. If internal stakeholder signals, org-chart facts, leadership asks, or update preferences are relevant, update or create evidence-backed stakeholder memory in `4-context/stakeholders.md`. If relevant `2-summaries/` or `3-indexes/` files are blank, placeholder-only, or still contain starter-template content, treat that as a material top-layer gap and populate them from the synthesised durable context. Keep the returned run ID, checkpoint paths as they are safely promoted, and complete with `mole inbox complete --run-id <run-id> --processor "Your Name" --processed <path> ... "summary"`; normal completion requires the active owned claim.' : '';
-      console.log(`Suggested agent instruction:\n\nBefore synthesis, validate the workspace root with \`mole doctor\` and run \`mole inbox audit\`. Treat every recursively discovered non-README file outside \`6-raw/inbox/archive/\` as a candidate. Reconcile the audit's candidate list against the paths you actually process, explicitly report skipped paths, and rerun \`mole inbox audit\` before finishing; do not declare a no-op while unexplained unprocessed files remain. Then synthesise ${target} using the Mole operating model: capture low, distil up, retrieve top-down.${personaInstruction}`);
+      console.log(`Suggested agent instruction:\n\nBefore synthesis, validate the workspace root with \`mole doctor\` and run \`mole inbox audit\`. Treat every recursively discovered non-README file outside \`6-raw/inbox/archive/\` as a candidate. Reconcile the audit's candidate list against the paths you actually process, explicitly report skipped paths, and rerun \`mole inbox audit\` before finishing; do not declare a no-op while unexplained unprocessed files remain. Then synthesise ${target} using the Mole operating model: capture low, distil up, retrieve top-down.${personaInstruction} ${LIFECYCLE_AGENT_GUIDANCE}`);
       break;
     }
     case 'review':
@@ -1343,6 +1822,12 @@ if (isDirectRun) {
       break;
     case 'source':
       runSourceCommand(subcommand, rest);
+      break;
+    case 'lifecycle':
+      runLifecycleCommand(subcommand, rest);
+      break;
+    case 'retrieve':
+      runRetrieveCommand([subcommand, ...rest].filter((value) => value !== undefined));
       break;
     case 'install':
       if (subcommand === 'skills') {

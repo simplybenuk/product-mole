@@ -1,7 +1,7 @@
 ---
 title: Critique
 artifact_type: critique
-status: draft
+status: draft  # descriptive only; review state lives in the lifecycle ledger
 owner:
 last_updated:
 summary: A context-grounded critique of an idea, strategy, roadmap, spec, or decision.

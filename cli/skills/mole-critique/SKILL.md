@@ -22,3 +22,7 @@ Critique the user's idea, strategy, roadmap, spec, or decision using the actual 
 5. Return a structured judgement with a practical next step.
 
 Avoid generic critique. Ground the output in the Mole instance.
+
+## Review state
+
+Base claims on accepted context. `mole retrieve` lists it. If you use a draft, pending, rejected, or unreviewed file, say so next to the claim and in the retrieval receipt.

@@ -171,6 +171,12 @@ describe('help', () => {
     assert.match(output, /mole inbox complete --run-id/);
     assert.match(output, /mole inbox override-stale/);
     assert.match(output, /mole metrics backfill/);
+    assert.match(output, /mole lifecycle register <source_id> --state <state>/);
+    assert.match(output, /mole lifecycle approve\|reject <record_id> .*--actor-type human --confirm-human/);
+    assert.match(output, /mole lifecycle supersede <record_id> --replacement <record_id>/);
+    assert.match(output, /mole lifecycle audit/);
+    assert.match(output, /mole lifecycle migrate \[--apply\]/);
+    assert.match(output, /mole retrieve \[record_id\] \[--include-state <state>\]/);
     assert.match(output, /mole install skills\s+Install Mole agent skills into ~\/\.agents\/skills/);
     assert.match(output, /More help:\n  https:\/\/github\.com\/simplybenuk\/product-mole#readme/);
     assert.match(output, /mole check-updates/);
@@ -307,7 +313,9 @@ describe('workspace scaffold', () => {
         path.join('governance', 'metrics', 'seen-today.json'),
         path.join('governance', 'metrics', 'dashboard.html'),
         path.join('governance', 'sources', 'README.md'),
+        path.join('governance', 'lifecycle', 'README.md'),
         path.join('schemas', 'source-record-v1.schema.json'),
+        path.join('schemas', 'review-lifecycle-v1.schema.json'),
         'mole.instance.yaml'
       ]) {
         assert.ok(fs.existsSync(path.join(dir, relPath)), `${relPath} should exist`);
@@ -327,7 +335,8 @@ describe('workspace scaffold', () => {
         'ui',
         'upgrade-ownership.json',
         'mole.instance-template.yaml',
-        'governance/contribution-guide.md'
+        'governance/contribution-guide.md',
+        'governance/lifecycle/records.json'
       ]) {
         assert.equal(fs.existsSync(path.join(dir, relPath)), false, `${relPath} should not exist`);
       }
@@ -645,6 +654,8 @@ describe('upgrade ownership manifest', () => {
     assert.ok(manifest.classes['never-overwrite'].paths.includes('4-context/'));
     assert.ok(manifest.classes['never-overwrite'].paths.includes('5-evidence/'));
     assert.ok(manifest.classes['never-overwrite'].paths.includes('6-raw/'));
+    assert.ok(manifest.classes['never-overwrite'].paths.includes('governance/lifecycle/'));
+    assert.ok(manifest.classes['safe-copy'].paths.includes('schemas/'));
   });
 });
 

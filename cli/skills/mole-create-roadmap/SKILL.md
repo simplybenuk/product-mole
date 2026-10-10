@@ -20,3 +20,7 @@ Create a concise, decision-ready roadmap draft grounded in the current layered c
 5. Keep it practical and readable.
 
 If the user supplied a scope or timeframe, incorporate it.
+
+## Review state
+
+Rely on accepted context. `mole retrieve` lists it; a file with no accepted lifecycle record is unreviewed. The output of this skill is a draft. Create it with `mole create`, or register it with `mole source register <path>` and `mole lifecycle register <source-id> --state draft --actor "<agent name>" --actor-type agent`. When it is ready, run `mole lifecycle submit <record-id>` with `--source <source-id>` for each supporting source. Never run `approve`, `reject`, or `supersede`; a person makes those decisions.

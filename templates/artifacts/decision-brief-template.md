@@ -1,7 +1,7 @@
 ---
 title: Decision Brief
 artifact_type: decision-brief
-status: draft
+status: draft  # descriptive only; review state lives in the lifecycle ledger
 owner:
 last_updated:
 summary: A decision brief generated from mole context.

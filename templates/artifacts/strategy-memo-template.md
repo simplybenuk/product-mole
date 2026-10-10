@@ -1,7 +1,7 @@
 ---
 title: Strategy Memo
 artifact_type: strategy-memo
-status: draft
+status: draft  # descriptive only; review state lives in the lifecycle ledger
 owner:
 last_updated:
 summary: A strategy memo generated from layered mole context.

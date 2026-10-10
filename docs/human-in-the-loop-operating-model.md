@@ -19,6 +19,13 @@ The agent owns synthesis. The PM owns judgement, context setting, and external h
 - context promotion (raw → evidence → context)
 - gap detection and explicit input requests
 - draft outputs with retrieval receipts
+- drafts submitted for review, never self-approved
+
+The [review lifecycle](review-lifecycle.md) records the last point. An agent
+can submit a draft, and the accept and reject commands refuse an agent actor.
+The actor is a declaration, not an authenticated identity, so the rule depends
+on agents following their instructions and on the history that each command
+leaves behind.
 
 ---
 

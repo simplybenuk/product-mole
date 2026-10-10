@@ -346,6 +346,11 @@ The ID is stable across archive moves. The path is optional and may go stale.
 Keep older path-only fields readable while migration is in progress. See
 [`source-provenance.md`](./source-provenance.md) for the registry contract.
 
+Review state lives in a separate ledger at
+`governance/lifecycle/records.json`. It records which registered files are
+drafts, pending review, or accepted, and normal retrieval returns accepted
+records only. See [`review-lifecycle.md`](./review-lifecycle.md).
+
 ---
 
 ## Implementation plan (phased)

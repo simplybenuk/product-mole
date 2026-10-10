@@ -20,6 +20,8 @@ coverage/
 /mole.instance.yaml
 /governance/inbox-processing.lock.json
 /governance/run-receipts/inbox-processing/
+/governance/lifecycle/records.json
+/governance/lifecycle/.mutation.lock*
 
 # Operating-system noise
 .DS_Store

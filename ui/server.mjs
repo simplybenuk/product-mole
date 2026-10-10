@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
 import { createSourceId, registerSource } from '../lib/source-registry.mjs';
+import { registerLifecycleRecord } from '../lib/review-lifecycle.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -103,6 +104,99 @@ export function buildUiCaptureContent(body, options = {}) {
   ].join('\n');
 }
 
+/**
+ * Save one UI capture under a workspace root and return the HTTP status and
+ * payload for it.  The capture file comes first; source and lifecycle
+ * registration follow.
+ */
+export async function captureNote(root, body = {}) {
+  const type = body.type || 'quick-notes';
+  const source = body.source || 'self';
+  const channel = body.channel || 'chat';
+  const confidence = body.confidence || 'low';
+  const tags = Array.isArray(body.tags) ? body.tags : [];
+  const note = (body.note || '').trim();
+  if (!note) return { status: 400, payload: { error: 'Note is required' } };
+
+  const date = todayDate();
+  const relPath = createCaptureRelPath(type, note);
+  const resolved = path.resolve(root, relPath);
+  const sourceId = createSourceId();
+  const capturedAt = new Date().toISOString();
+
+  const frontmatter = buildUiCaptureContent({
+    source,
+    channel,
+    confidence,
+    tags,
+    note,
+    capturedBy: body.capturedBy || body.captured_by
+  }, { date, sourceId });
+
+  await fs.mkdir(path.dirname(resolved), { recursive: true });
+  try {
+    await fs.writeFile(resolved, frontmatter, { encoding: 'utf8', flag: 'wx' });
+  } catch (err) {
+    if (err.code === 'EEXIST') {
+      return { status: 409, payload: { error: 'Capture already exists; retry to generate a new filename.' } };
+    }
+    throw err;
+  }
+
+  try {
+    registerSource(root, {
+      source_id: sourceId,
+      path: relPath,
+      source_type: 'note',
+      captured_at: capturedAt,
+      captured_by: resolveCapturedBy(body.capturedBy || body.captured_by),
+      channel,
+      original_date: date,
+      visibility: body.visibility || 'internal',
+      path_reason: 'captured',
+      content_change_type: 'captured'
+    });
+  } catch (err) {
+    return {
+      status: 500,
+      payload: {
+        error: `Capture written but source registration failed: ${err.message}`,
+        path: relPath,
+        source_id: sourceId
+      }
+    };
+  }
+
+  // The capture is saved and registered.  A lifecycle problem is reported as
+  // a warning so the client does not retry and capture the note twice.
+  let recordId = null;
+  let warning = null;
+  try {
+    recordId = registerLifecycleRecord(root, {
+      sourceId,
+      state: 'raw',
+      actor: 'mole-ui',
+      actorType: 'automation',
+      reason: 'Captured from the UI.',
+      now: capturedAt
+    }).record_id;
+  } catch (err) {
+    warning = `The capture is saved but has no lifecycle record yet: ${err.message}`;
+  }
+
+  return {
+    status: 200,
+    payload: {
+      ok: true,
+      source_id: sourceId,
+      record_id: recordId,
+      state: recordId ? 'raw' : null,
+      path: relPath,
+      ...(warning ? { warning } : {})
+    }
+  };
+}
+
 async function routeApi(req, res, urlObj) {
   if (req.method === 'GET' && urlObj.pathname === '/api/tree') {
     const p = urlObj.searchParams.get('path') || '';
@@ -131,62 +225,8 @@ async function routeApi(req, res, urlObj) {
   }
 
   if (req.method === 'POST' && urlObj.pathname === '/api/capture') {
-    const body = await readBody(req);
-    const type = body.type || 'quick-notes';
-    const source = body.source || 'self';
-    const channel = body.channel || 'chat';
-    const confidence = body.confidence || 'low';
-    const tags = Array.isArray(body.tags) ? body.tags : [];
-    const note = (body.note || '').trim();
-    if (!note) return send(res, 400, { error: 'Note is required' });
-
-    const date = todayDate();
-    const relPath = createCaptureRelPath(type, note);
-    const { resolved } = safeRepoPath(relPath);
-    const sourceId = createSourceId();
-    const capturedAt = new Date().toISOString();
-
-    const frontmatter = buildUiCaptureContent({
-      source,
-      channel,
-      confidence,
-      tags,
-      note,
-      capturedBy: body.capturedBy || body.captured_by
-    }, { date, sourceId });
-
-    await fs.mkdir(path.dirname(resolved), { recursive: true });
-    try {
-      await fs.writeFile(resolved, frontmatter, { encoding: 'utf8', flag: 'wx' });
-    } catch (err) {
-      if (err.code === 'EEXIST') {
-        return send(res, 409, { error: 'Capture already exists; retry to generate a new filename.' });
-      }
-      throw err;
-    }
-
-    try {
-      registerSource(REPO_ROOT, {
-        source_id: sourceId,
-        path: relPath,
-        source_type: 'note',
-        captured_at: capturedAt,
-        captured_by: resolveCapturedBy(body.capturedBy || body.captured_by),
-        channel,
-        original_date: date,
-        visibility: body.visibility || 'internal',
-        path_reason: 'captured',
-        content_change_type: 'captured'
-      });
-    } catch (err) {
-      return send(res, 500, {
-        error: `Capture written but source registration failed: ${err.message}`,
-        path: relPath,
-        source_id: sourceId
-      });
-    }
-
-    return send(res, 200, { ok: true, source_id: sourceId, path: relPath });
+    const result = await captureNote(REPO_ROOT, await readBody(req));
+    return send(res, result.status, result.payload);
   }
 
   return false;

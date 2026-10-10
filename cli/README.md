@@ -114,7 +114,50 @@ mole critique spec drafts/spec.md
 | `mole source reconcile <source-id> --path <path>` | Records an explicitly confirmed source move. |
 | `mole source correct <source-id> --reason <text>` | Records an explicit content correction while preserving the source ID. |
 | `mole source migrate [--apply] [--json]` | Classifies legacy path references; apply mode updates resolved structured references and writes a report. |
+| `mole lifecycle register <source-id> --state <state> --actor <name> --actor-type <type>` | Opens a review record as `raw`, `evidence`, `draft`, or `unreviewed`. |
+| `mole lifecycle evidence\|draft\|submit\|revise <record-id> [options]` | Moves a record toward review. Agents may run these. |
+| `mole lifecycle approve\|reject <record-id> --actor <name> --actor-type human --confirm-human --reason <text>` | Records a human review decision. Approval also needs a supporting `--source <source-id>` and `--expect-revision <n>`, the revision the reviewer read. |
+| `mole lifecycle supersede <record-id> --replacement <record-id> [human options]` | Replaces an accepted record with another accepted record. |
+| `mole lifecycle withdraw <record-id> [options]` | Closes a record, such as one whose file is gone. A record that is or was accepted needs the human options. |
+| `mole lifecycle relocate <record-id> --path <path> [options]` | Points a record at the file it now lives in without touching the file. Only a draft may follow a file that was also edited. |
+| `mole lifecycle show <record-id>` | Shows a record and its transition history. |
+| `mole lifecycle list [--state <state>] [--path <path>]` | Lists review records, or finds the record for a file. |
+| `mole lifecycle audit` | Checks the review ledger and reviewed files without changing them. |
+| `mole lifecycle migrate [--apply]` | Reports untracked files; apply mode registers them as `raw` or `unreviewed`. |
+| `mole lifecycle unlock` | Removes a write lock left by a stopped process. |
+| `mole retrieve [record-id] [--include-state <state>]` | Lists or prints accepted context; other states are opt-in. |
 | `mole upgrade [version]` | Updates the globally installed Mole CLI from a stable release tag. With no version, it uses the installed CLI's version tag. |
+
+## Review lifecycle
+
+`mole create` registers the new file as a source and opens a `draft` record.
+`mole insight`, `mole note`, and `mole signal` open a `raw` record. Each prints
+the record ID.
+
+`mole create` checks the ledger first and writes nothing if the draft could
+not be tracked, or if another source is still registered at the output path.
+A capture is different. It is always saved. If the ledger cannot be written,
+the command exits 0 with a warning, and `mole lifecycle migrate --apply`
+backfills the record later.
+
+```bash
+mole lifecycle submit <record-id> --actor "Agent" --actor-type agent --reason "Ready for review"
+mole lifecycle approve <record-id> --actor "Your Name" --actor-type human --confirm-human \
+  --reason "Matches the interview evidence" --source <source-id> --expect-revision 2
+mole retrieve
+mole retrieve <record-id> --include-state pending_review --format json
+```
+
+Lifecycle and retrieve commands reject unknown flags, repeated single-value
+flags, and missing values. They accept `--format text|json`. Exit code 0 means
+success, 1 means Mole refused the operation or reported findings, and 2 means
+the arguments were invalid. `--source`, `--remove-source`, `--supersedes`,
+`--state` on `list`, and `--include-state` may repeat. `--expect-revision <n>`
+makes a transition fail if the record changed since revision `n`. `approve`
+requires it, so a reviewer always names the revision they read.
+
+See [`../docs/review-lifecycle.md`](../docs/review-lifecycle.md) for states,
+the transition table, migration, and recovery.
 
 ## Inbox completion metrics
 

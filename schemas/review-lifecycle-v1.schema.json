@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://product-mole.local/schemas/review-lifecycle-v1.schema.json",
+  "title": "Mole review lifecycle ledger version 1",
+  "description": "A local-first ledger of review state for registered source files. The ledger is authoritative; frontmatter status fields are descriptive. The Mole library also checks rules a schema cannot express: each history entry continues from the previous one, the record state equals the latest entry, a decision matches its history entry, and supersession links are reciprocal.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "ledger_revision", "updated_at", "records"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "ledger_revision": { "type": "integer", "minimum": 0 },
+    "updated_at": {
+      "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/timestamp" }]
+    },
+    "records": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/record" }
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "description": "RFC 3339 UTC timestamp with millisecond precision.",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "workspace_path": {
+      "description": "Normalized workspace-relative path with forward slashes and no traversal.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!(?:.*/)?\\.\\.?(?:/|$))(?!.*//)(?!.*/$).+$"
+    },
+    "record_id": {
+      "type": "string",
+      "pattern": "^rec_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "source_id": {
+      "type": "string",
+      "pattern": "^src_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "state": {
+      "type": "string",
+      "enum": ["raw", "evidence", "draft", "pending_review", "accepted", "rejected", "superseded", "unreviewed", "withdrawn"]
+    },
+    "initial_state": {
+      "type": "string",
+      "enum": ["raw", "evidence", "draft", "unreviewed"]
+    },
+    "actor_type": {
+      "type": "string",
+      "enum": ["human", "agent", "automation"]
+    },
+    "action": {
+      "type": "string",
+      "enum": ["register", "evidence", "draft", "submit", "revise", "approve", "reject", "supersede", "withdraw", "replace", "relocate"]
+    },
+    "content_hash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "value": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "source_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/source_id" }
+    },
+    "record_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/record_id" }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "reviewer", "decided_at", "reason"],
+      "properties": {
+        "outcome": { "type": "string", "enum": ["accepted", "rejected"] },
+        "reviewer": { "type": "string", "minLength": 1 },
+        "decided_at": { "$ref": "#/$defs/timestamp" },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "history_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision",
+        "action",
+        "from_state",
+        "to_state",
+        "actor",
+        "actor_type",
+        "human_confirmed",
+        "at",
+        "reason",
+        "content_hash",
+        "byte_size",
+        "source_ids",
+        "related_record_ids"
+      ],
+      "properties": {
+        "revision": { "type": "integer", "minimum": 1 },
+        "action": { "$ref": "#/$defs/action" },
+        "from_state": {
+          "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/state" }]
+        },
+        "to_state": { "$ref": "#/$defs/state" },
+        "actor": { "type": "string", "minLength": 1 },
+        "actor_type": { "$ref": "#/$defs/actor_type" },
+        "human_confirmed": { "type": "boolean" },
+        "at": { "$ref": "#/$defs/timestamp" },
+        "reason": { "type": "string", "minLength": 1 },
+        "content_hash": { "$ref": "#/$defs/content_hash" },
+        "byte_size": { "type": "integer", "minimum": 0 },
+        "source_ids": { "$ref": "#/$defs/source_ids" },
+        "related_record_ids": { "$ref": "#/$defs/record_ids" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "action": { "enum": ["approve", "reject", "supersede", "replace"] } }
+          },
+          "then": {
+            "properties": {
+              "actor_type": { "const": "human" },
+              "human_confirmed": { "const": true }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "action": { "const": "withdraw" },
+              "from_state": { "const": "accepted" }
+            }
+          },
+          "then": {
+            "properties": {
+              "actor_type": { "const": "human" },
+              "human_confirmed": { "const": true }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "action": { "const": "register" } } },
+          "then": {
+            "properties": {
+              "from_state": { "type": "null" },
+              "to_state": { "$ref": "#/$defs/initial_state" }
+            }
+          }
+        }
+      ]
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_id",
+        "source_id",
+        "state",
+        "revision",
+        "path",
+        "content_hash",
+        "byte_size",
+        "source_ids",
+        "supersedes",
+        "superseded_by",
+        "decision",
+        "created_at",
+        "updated_at",
+        "history"
+      ],
+      "properties": {
+        "record_id": { "$ref": "#/$defs/record_id" },
+        "source_id": { "$ref": "#/$defs/source_id" },
+        "state": { "$ref": "#/$defs/state" },
+        "revision": { "type": "integer", "minimum": 1 },
+        "path": { "$ref": "#/$defs/workspace_path" },
+        "content_hash": { "$ref": "#/$defs/content_hash" },
+        "byte_size": { "type": "integer", "minimum": 0 },
+        "source_ids": { "$ref": "#/$defs/source_ids" },
+        "supersedes": { "$ref": "#/$defs/record_ids" },
+        "superseded_by": {
+          "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/record_id" }]
+        },
+        "decision": {
+          "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/decision" }]
+        },
+        "created_at": { "$ref": "#/$defs/timestamp" },
+        "updated_at": { "$ref": "#/$defs/timestamp" },
+        "history": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/history_entry" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "enum": ["accepted", "superseded"] } } },
+          "then": {
+            "properties": {
+              "decision": {
+                "type": "object",
+                "properties": { "outcome": { "const": "accepted" } }
+              },
+              "source_ids": { "minItems": 1 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "state": { "const": "rejected" } } },
+          "then": {
+            "properties": {
+              "decision": {
+                "type": "object",
+                "properties": { "outcome": { "const": "rejected" } }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": { "enum": ["raw", "evidence", "draft", "pending_review", "unreviewed", "withdrawn"] }
+            }
+          },
+          "then": { "properties": { "decision": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "state": { "const": "superseded" } } },
+          "then": { "properties": { "superseded_by": { "$ref": "#/$defs/record_id" } } },
+          "else": { "properties": { "superseded_by": { "type": "null" } } }
+        }
+      ]
+    }
+  }
+}

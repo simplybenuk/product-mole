@@ -19,6 +19,7 @@ Interpret the user input as a short raw product insight and capture it before an
 4. Write minimal frontmatter with `title`, `capture_type`, `source`, `created_at`, `summary`, and `tags`.
 5. Put the exact insight text under `## Insight`.
 6. Leave `## Context / why it matters` blank unless the user included extra context.
-7. End by telling the user where it was saved and suggest synthesising the inbox next.
+7. Prefer `mole insight "<text>"` when the CLI is available. It writes the file, registers the source, and opens a `raw` lifecycle record.
+8. End by telling the user where it was saved and suggest synthesising the inbox next.
 
 Do not over-analyse the insight unless asked.

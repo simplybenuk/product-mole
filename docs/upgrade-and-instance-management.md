@@ -65,6 +65,7 @@ Typical examples:
 - `5-evidence/`
 - `6-raw/`
 - `governance/sources/`
+- `governance/lifecycle/`
 
 ---
 
