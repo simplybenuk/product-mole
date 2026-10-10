@@ -105,7 +105,7 @@ Used to inspect what needs human input or validation.
 
 Examples:
 ```bash
-mole review input-queue
+mole review input-queue            # ranked human-input requests; see docs/input-queue.md
 mole review stale-summaries
 mole review conflicts
 ```

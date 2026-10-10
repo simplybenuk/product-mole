@@ -6,7 +6,7 @@
 
 ### safe-copy
 
-Source-owned paths that can usually be copied or refreshed when absent. Upgrade tools should still avoid blind overwrites of changed files. The versioned source-record and review-lifecycle schemas belong here.
+Source-owned paths that can usually be copied or refreshed when absent. Upgrade tools should still avoid blind overwrites of changed files. The versioned source-record, review-lifecycle, and input-queue schemas belong here.
 
 ### merge-carefully
 
@@ -14,7 +14,7 @@ Paths that may contain local customisation and should be reviewed before upstrea
 
 ### never-overwrite
 
-Instance-owned product context, evidence, raw inputs, source registry data, and the review ledger. Upgrade automation must not overwrite these paths. Keep the entire `governance/sources/` and `governance/lifecycle/` directories with the workspace that created them.
+Instance-owned product context, evidence, raw inputs, source registry data, the review ledger, and the human-input queue. Upgrade automation must not overwrite these paths. Keep the entire `governance/sources/`, `governance/lifecycle/`, and `governance/input-queue/` directories with the workspace that created them. `governance/input-queue.md` stays in merge-carefully: its table is generated from the queue, and the text around it may be local.
 
 ## Current Rule
 

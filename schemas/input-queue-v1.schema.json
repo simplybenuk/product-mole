@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://product-mole.local/schemas/input-queue-v1.schema.json",
+  "title": "Mole human-input queue version 1",
+  "description": "Requests an agent has made for human input, with their ranking fields, links, closure, and history. The ledger is authoritative; the table in governance/input-queue.md is generated from it. The Mole library also checks rules a schema cannot express: input IDs are unique, linked requests exist, history revisions count up from 1, and the record revision equals the number of history entries.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "queue_revision", "updated_at", "requests"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "queue_revision": { "type": "integer", "minimum": 0 },
+    "updated_at": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/timestamp" }] },
+    "requests": { "type": "array", "items": { "$ref": "#/$defs/request" } }
+  },
+  "$defs": {
+    "timestamp": {
+      "description": "RFC 3339 UTC timestamp with millisecond precision.",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "date": {
+      "description": "Calendar date.",
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "text": {
+      "description": "Non-empty text with no leading or trailing whitespace.",
+      "type": "string",
+      "pattern": "^\\S(?:[\\s\\S]*\\S)?$"
+    },
+    "nullable_text": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/text" }] },
+    "nullable_date": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/date" }] },
+    "input_id": {
+      "type": "string",
+      "pattern": "^inq_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "nullable_input_id": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/input_id" }] },
+    "source_id": {
+      "type": "string",
+      "pattern": "^src_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "actor_type": { "enum": ["human", "agent", "automation"] },
+    "history_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "action", "actor", "actor_type", "human_confirmed", "at", "reason", "changes"],
+      "properties": {
+        "revision": { "type": "integer", "minimum": 1 },
+        "action": { "enum": ["add", "migrate", "update", "close", "reopen"] },
+        "actor": { "$ref": "#/$defs/text" },
+        "actor_type": { "$ref": "#/$defs/actor_type" },
+        "human_confirmed": { "type": "boolean" },
+        "at": { "$ref": "#/$defs/timestamp" },
+        "reason": { "$ref": "#/$defs/text" },
+        "changes": {
+          "description": "Each changed field with its value before and after.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to"],
+            "properties": { "from": {}, "to": {} }
+          }
+        }
+      },
+      "if": { "properties": { "human_confirmed": { "const": true } } },
+      "then": { "properties": { "actor_type": { "const": "human" } } }
+    },
+    "closure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "answer", "outcome", "closed_by", "closed_by_type", "human_confirmed", "closed_at"],
+      "properties": {
+        "reason": { "enum": ["answered", "duplicate", "superseded", "stale", "not_needed"] },
+        "answer": {
+          "description": "What the person said or decided. Null when the request was not answered, or was already complete in the legacy queue.",
+          "$ref": "#/$defs/nullable_text"
+        },
+        "outcome": { "description": "What the closure changed.", "$ref": "#/$defs/text" },
+        "closed_by": { "$ref": "#/$defs/text" },
+        "closed_by_type": { "$ref": "#/$defs/actor_type" },
+        "human_confirmed": { "type": "boolean" },
+        "closed_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "legacy": {
+      "description": "The Markdown table row a migrated request came from, kept verbatim.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "line", "row", "columns"],
+      "properties": {
+        "path": { "$ref": "#/$defs/text" },
+        "line": { "type": "integer", "minimum": 1 },
+        "row": { "type": "string", "minLength": 1 },
+        "columns": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_id", "revision", "request", "impact", "unblocks", "answer_format", "effort", "priority", "blocking",
+        "status", "requester", "owner", "due", "next_review", "source_ids", "references", "duplicate_of",
+        "superseded_by", "closure", "legacy", "created_at", "updated_at", "history"
+      ],
+      "properties": {
+        "input_id": { "$ref": "#/$defs/input_id" },
+        "revision": { "type": "integer", "minimum": 1 },
+        "request": { "description": "What the person is asked.", "$ref": "#/$defs/text" },
+        "impact": { "description": "Why the answer matters.", "$ref": "#/$defs/text" },
+        "unblocks": { "description": "The output that becomes possible once answered.", "$ref": "#/$defs/nullable_text" },
+        "answer_format": { "description": "The fastest way to give the input.", "$ref": "#/$defs/nullable_text" },
+        "effort": { "$ref": "#/$defs/nullable_text" },
+        "priority": { "enum": ["high", "medium", "low"] },
+        "blocking": { "description": "Whether work is stopped until this is answered.", "type": "boolean" },
+        "status": { "enum": ["open", "waiting", "in_progress", "deferred", "closed"] },
+        "requester": { "$ref": "#/$defs/text" },
+        "owner": { "description": "The person expected to answer.", "$ref": "#/$defs/nullable_text" },
+        "due": { "$ref": "#/$defs/nullable_date" },
+        "next_review": { "$ref": "#/$defs/nullable_date" },
+        "source_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/source_id" } },
+        "references": {
+          "description": "Artefacts the request concerns: paths, lifecycle record IDs, or links.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/text" }
+        },
+        "duplicate_of": { "$ref": "#/$defs/nullable_input_id" },
+        "superseded_by": { "$ref": "#/$defs/nullable_input_id" },
+        "closure": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/closure" }] },
+        "legacy": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/legacy" }] },
+        "created_at": { "$ref": "#/$defs/timestamp" },
+        "updated_at": { "$ref": "#/$defs/timestamp" },
+        "history": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/history_entry" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "closed" } } },
+          "then": { "properties": { "closure": { "$ref": "#/$defs/closure" } } },
+          "else": { "properties": { "closure": { "type": "null" } } }
+        }
+      ]
+    }
+  }
+}
