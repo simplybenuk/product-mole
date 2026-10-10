@@ -437,7 +437,7 @@ output. A refusal prints `{ "ok": false, "error": { "code", "message",
 functions that take the workspace root first.
 
 ```js
-registerLifecycleRecord(root, { sourceId, state, actor, actorType, sourceIds, reason, now, lockWaitMs })
+registerLifecycleRecord(root, { sourceId, state, actor, actorType, sourceIds, reason, now })
 transitionLifecycleRecord(root, recordId, {
   action, actor, actorType, humanConfirmed, reason,
   sourceIds, removeSourceIds, supersedes, replacementId, expectedRevision, now
@@ -456,6 +456,8 @@ validateLifecycleLedger(ledger)
 ```
 
 A refused operation throws a `LifecycleError` with a `code` and `details`.
+Every call that writes also accepts `lockWaitMs`, the time to wait for another
+writer. The default is 10,000.
 `LIFECYCLE_TRANSITIONS` holds the transition table above and
 `transitionRequiresHuman(action, fromState)` answers the human question, so
 other features such as travel logs and evidence promotion can check a move
