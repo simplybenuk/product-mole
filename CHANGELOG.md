@@ -29,7 +29,10 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   support it and the `revise --remove-source` command that clears them.
 - `mole lifecycle list --path <path>` finds the record for a file. One file
   backs one open record; a second registration of a tracked file is pointed
-  at the existing record.
+  at the existing record. That includes a file that moved without
+  `mole lifecycle relocate`, which its record follows by content. When an
+  earlier registration left such a duplicate, `mole lifecycle audit` names the
+  duplicate record to withdraw.
 - Added `mole retrieve`, which returns accepted records only unless
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and
