@@ -332,23 +332,27 @@ A registered file that moved without a reconcile keeps its source ID. Migration
 matches it to the registered source whose path is empty and whose hash equals
 the file's bytes. It never gives one file a second identity.
 
-A file that already has an open lifecycle record counts as tracked, whatever
-`source_id` its frontmatter names. That holds at its registered path and after
-a move without a reconcile.
+A file that already has an open lifecycle record is never reported as a
+`source_id_mismatch`, whatever `source_id` its frontmatter names. That holds at
+its registered path and after a move without a reconcile.
 
 A copy can keep the `source_id:` frontmatter of the file it was copied from,
 such as a capture copied into `5-evidence/` and then edited. When the original
 is still at its registered path, or migration matched it as a moved file, the
 copy is registered under a new source. The dry run names the frontmatter ID
-next to the copy, and the record's first history entry keeps it.
+next to the copy, and the record's first history entry keeps it. A file that
+holds the named source's bytes while a different file sits at the registered
+path is the original, not a copy, and is reported instead.
 
 Migration skips `README.md` files, symlinks, and sync conflict copies without
 a finding. It skips these with a finding, and exits 1:
 
-- `source_id_mismatch`: a file that the registry gives no source, and whose
-  frontmatter names a `source_id` that does not match the file's bytes and
-  that no other file holds. Run `mole source register <path>` to track the
-  file as its own source.
+- `source_id_mismatch`: a file that migration cannot match to a source by
+  its path or its bytes, and whose frontmatter names a `source_id` that no
+  other file holds. The finding prints the commands that clear it: `mole
+  source register <path>` to track the file as its own source, `mole source
+  reconcile` when the file is the named source after a move, and `mole
+  lifecycle withdraw` for a record the named source leaves without a file.
 - `ambiguous_source`: a file that could belong to more than one moved source,
   or a moved source that matches more than one file. Run the `mole source` or
   `mole lifecycle` command the finding names.
