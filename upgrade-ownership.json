@@ -31,12 +31,13 @@
       ]
     },
     "never-overwrite": {
-      "description": "Instance-owned product context, captured evidence, and source registry data. Upgrade automation must not overwrite these paths.",
+      "description": "Instance-owned product context, captured evidence, source registry data, and the review ledger. Upgrade automation must not overwrite these paths.",
       "paths": [
         "4-context/",
         "5-evidence/",
         "6-raw/",
-        "governance/sources/"
+        "governance/sources/",
+        "governance/lifecycle/"
       ]
     }
   }

@@ -147,6 +147,30 @@ It must leave raw bytes and ambiguous references untouched. See
 [`source-provenance.md`](./source-provenance.md) for the record, reference,
 security, and recovery rules.
 
+### Review lifecycle
+
+Used to record which files are drafts, which are waiting for review, and which
+a person has accepted. These commands operate on the local ledger at
+`governance/lifecycle/records.json`:
+
+```bash
+mole lifecycle register src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --state draft --actor "Agent" --actor-type agent
+mole lifecycle submit rec_5b0f6c1e-2f0a-4d39-9d5e-0c7a1b2d3e4f --actor "Agent" --actor-type agent --reason "Ready for review"
+mole lifecycle approve rec_5b0f6c1e-2f0a-4d39-9d5e-0c7a1b2d3e4f --actor "Your Name" --actor-type human --confirm-human --reason "Matches the evidence" --source src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0
+mole lifecycle reject rec_5b0f6c1e-2f0a-4d39-9d5e-0c7a1b2d3e4f --actor "Your Name" --actor-type human --confirm-human --reason "Missing pricing data"
+mole lifecycle audit
+mole lifecycle migrate
+mole retrieve
+```
+
+`show`, `list`, `audit`, `retrieve`, and the default `migrate` mode are
+read-only. `approve`, `reject`, and `supersede` fail unless the actor type is
+`human` and `--confirm-human` is present. `retrieve` returns accepted records
+only unless `--include-state` names another state. Migration `--apply`
+registers untracked files as `unreviewed` and never accepts them. See
+[`review-lifecycle.md`](./review-lifecycle.md) for the transition table and
+recovery rules.
+
 ---
 
 ## Output philosophy

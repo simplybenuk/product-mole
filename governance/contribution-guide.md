@@ -28,6 +28,16 @@ that created them. They are instance-owned data and must not be overwritten by
 an upgrade. Read [`docs/source-provenance.md`](../docs/source-provenance.md)
 before registering, moving, correcting, or migrating a source.
 
+## Review lifecycle
+
+Generated context starts as a draft. Submit it with `mole lifecycle submit`
+and let a person decide. Only a human runs `approve`, `reject`, or
+`supersede`. Do not edit an accepted file in place, and do not edit
+`governance/lifecycle/records.json` by hand. The ledger is instance-owned data
+and an upgrade must not overwrite it. Read
+[`docs/review-lifecycle.md`](../docs/review-lifecycle.md) for the states,
+transitions, and recovery steps.
+
 ## Development checks
 
 Mole supports Node.js 18.x, 20.x, 22.x, and 24.x. CI runs the root checks on

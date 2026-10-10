@@ -106,6 +106,15 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole inbox complete [options] [summary]` | Writes one idempotent receipt for the owned run, records metrics, and releases its lock. |
 | `mole inbox override-stale [options]` | Replaces an expired lock only after an explicit, auditable recovery decision. |
 | `mole metrics backfill` | Rebuilds local metrics from inbox processing receipts that already contain processed paths. |
+| `mole lifecycle register <source_id> --state <state> --actor <name> --actor-type <type>` | Opens a review record for a registered file as `raw`, `evidence`, `draft`, or `unreviewed`. |
+| `mole lifecycle evidence\|draft\|submit\|revise <record_id> [options]` | Moves a record toward review. Agents may run these. |
+| `mole lifecycle approve\|reject <record_id> --actor <name> --actor-type human --confirm-human --reason <text>` | Records a human review decision. Approval also needs a supporting `--source <source_id>`. |
+| `mole lifecycle supersede <record_id> --replacement <record_id> [human options]` | Replaces an accepted record with another accepted record. |
+| `mole lifecycle show <record_id>` / `mole lifecycle list [--state <state>]` | Shows one record with its history, or lists records. |
+| `mole lifecycle audit` | Checks the review ledger and the reviewed files. Read-only. |
+| `mole lifecycle migrate [--apply]` | Reports files with no review record. `--apply` registers them as `unreviewed`, never as accepted. |
+| `mole lifecycle unlock` | Removes a write lock left by a stopped process. |
+| `mole retrieve [record_id] [--include-state <state>]` | Lists or prints accepted context. Drafts, pending, and rejected records need `--include-state`. |
 | `mole upgrade [version]` | Updates the globally installed Mole CLI from a stable release tag. With no version, it reuses the installed CLI's version tag. |
 
 ## Development
@@ -194,6 +203,38 @@ Mole never deletes or moves source files to resolve a sync conflict. Conflict-na
 The audit also fails closed when receipts from different run IDs claim the same canonical inbox path. Those split-brain paths are excluded from the normal processed count, and metrics backfill reports them without counting them. Malformed override JSON is likewise reported as invalid rather than silently omitted.
 
 Expired locks from older Mole versions cannot be completed normally. An explicit stale override can migrate a structurally recognizable legacy lock into the current lease format while preserving the original lock in the audit record; incomplete receipts with processed paths are never used as processing evidence.
+
+## Review lifecycle
+
+Agents draft. People decide. Mole records the difference in
+`governance/lifecycle/records.json`, so a draft cannot pass as accepted context.
+
+```bash
+mole create spec
+mole lifecycle submit <record_id> --actor "Agent" --actor-type agent --reason "Ready for review"
+mole lifecycle approve <record_id> --actor "Your Name" --actor-type human --confirm-human \
+  --reason "Matches the interview evidence" --source <source_id>
+mole retrieve
+```
+
+`mole create` and the capture commands open a record and print its ID. A record
+moves through `raw`, `evidence`, `draft`, `pending_review`, and `accepted`, with
+`rejected` and `superseded` as outcomes. Only a human can approve, reject, or
+supersede, and the command fails for an agent actor or without
+`--confirm-human`. Each transition appends the actor, time, and reason to the
+record's history. Transitions never rewrite the file under review.
+
+`mole retrieve` returns accepted records only. Add `--include-state` to read
+drafts, pending, or rejected material on purpose. If an accepted file changes
+after approval, retrieval drops it and `mole lifecycle audit` reports it.
+
+Existing workspaces start with no records. `mole lifecycle migrate` lists
+untracked files, and `--apply` registers them as `unreviewed`. Nothing becomes
+accepted without a person running `approve`.
+
+The actor fields are declarations, not authentication, and the write lock is
+local to one machine. See [`docs/review-lifecycle.md`](docs/review-lifecycle.md)
+for the transition table, migration, recovery, and shared-folder limits.
 
 ## How Mole Works
 
@@ -290,6 +331,7 @@ What exists now:
 - read-only update report using `upgrade-ownership.json`
 - raw insight capture
 - draft artifact generation
+- review lifecycle with human-only approval and accepted-only retrieval
 - stakeholder memory and product update guidance
 - lightweight local Molehill Metrics for processed inbox items
 - docs for upgrade/adoption/command UX

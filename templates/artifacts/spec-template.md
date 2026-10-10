@@ -1,7 +1,7 @@
 ---
 title: Product Spec Draft
 artifact_type: spec
-status: draft
+status: draft  # descriptive only; review state lives in the lifecycle ledger
 owner:
 last_updated:
 summary: A product spec draft generated from layered mole context.

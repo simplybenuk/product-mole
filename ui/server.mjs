@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
 import { createSourceId, registerSource } from '../lib/source-registry.mjs';
+import { registerLifecycleRecord } from '../lib/review-lifecycle.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -186,7 +187,25 @@ async function routeApi(req, res, urlObj) {
       });
     }
 
-    return send(res, 200, { ok: true, source_id: sourceId, path: relPath });
+    let recordId;
+    try {
+      recordId = registerLifecycleRecord(REPO_ROOT, {
+        sourceId,
+        state: 'raw',
+        actor: 'mole-ui',
+        actorType: 'automation',
+        reason: 'Captured from the UI.',
+        now: capturedAt
+      }).record_id;
+    } catch (err) {
+      return send(res, 500, {
+        error: `Capture written but lifecycle registration failed: ${err.message}`,
+        path: relPath,
+        source_id: sourceId
+      });
+    }
+
+    return send(res, 200, { ok: true, source_id: sourceId, record_id: recordId, state: 'raw', path: relPath });
   }
 
   return false;

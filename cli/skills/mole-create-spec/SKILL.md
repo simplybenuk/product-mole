@@ -20,3 +20,7 @@ Create a strong product spec draft from the best available Mole context.
 5. Keep assumptions explicit.
 
 If the user supplied a specific feature or problem, focus the spec around that.
+
+## Review state
+
+Rely on accepted context. `mole retrieve` lists it; a file with no accepted lifecycle record is unreviewed. The output of this skill is a draft. Create it with `mole create`, or register it with `mole source register <path>` and `mole lifecycle register <source-id> --state draft --actor "<agent name>" --actor-type agent`. When it is ready, run `mole lifecycle submit <record-id>` with `--source <source-id>` for each supporting source. Never run `approve`, `reject`, or `supersede`; a person makes those decisions.

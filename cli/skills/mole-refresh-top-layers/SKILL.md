@@ -22,3 +22,7 @@ Keep the top retrieval layers accurate enough that future work can start top-dow
 7. Report which files changed, which lower-layer sources justified the refresh, and which top-layer gaps remain.
 
 Use this after first-time bootstrap, after a large inbox synthesis pass, or as a weekly maintenance check.
+
+## Review state
+
+Rely on accepted context. `mole retrieve` lists it; a file with no accepted lifecycle record is unreviewed, and so is anything this skill writes. Do not edit an accepted file in place. Put the change in a draft, register it with `mole source register <path>` and `mole lifecycle register <source-id> --state draft --actor "<agent name>" --actor-type agent`, and run `mole lifecycle submit <record-id>` when it is ready. Never run `approve`, `reject`, or `supersede`; a person makes those decisions.

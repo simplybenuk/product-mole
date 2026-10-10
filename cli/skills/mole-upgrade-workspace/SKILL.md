@@ -45,13 +45,18 @@ Upgrade a workspace conservatively:
    - Apply `safe-copy` additions/refreshes only.
    - Do **not** auto-overwrite `merge-carefully` or `never-overwrite` paths.
 
-7. **Produce upgrade report**
+7. **Report review state**
+   - Run `mole lifecycle migrate` without `--apply` and include its list of untracked files in the report.
+   - Do not run `--apply` unless the user asks. It registers old files as `unreviewed`, and no file becomes accepted without a person running `mole lifecycle approve`.
+   - Never treat a legacy `status: active` field as an approval.
+
+8. **Produce upgrade report**
    - Output a concise report with:
      - what was auto-applied
      - what needs manual merge/review
      - blockers and follow-ups
 
-8. **Update workspace metadata**
+9. **Update workspace metadata**
    - Update `mole.instance.yaml` fields where appropriate:
      - `last_upgraded_from`
      - `last_upgraded_to`

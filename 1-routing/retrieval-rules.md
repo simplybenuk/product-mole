@@ -14,5 +14,13 @@ Prefer newer sources in this order:
 3. summaries,
 4. archive/raw.
 
+## Review state
+Normal retrieval uses accepted context only.
+- Run `mole retrieve` to list accepted records, or `mole retrieve <record-id>` to read one.
+- Treat `draft`, `pending_review`, `rejected`, `superseded`, and `unreviewed` records as unapproved. A file with no lifecycle record is unreviewed too.
+- Read unapproved material only when the task asks for it, such as reviewing a draft or processing raw input. Use `--include-state <state>` and name the state in the retrieval receipt.
+- If retrieval excludes an accepted record because its file changed, do not use the file. Report it and run `mole lifecycle audit`.
+- When accepted and unapproved material disagree, the accepted record wins.
+
 ## Missing input protocol
 If essential context is unavailable, request it via `governance/input-queue.md`.
