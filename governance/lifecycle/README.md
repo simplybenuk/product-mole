@@ -40,7 +40,7 @@ does not seed it, and an upgrade must never replace or delete it.
 ```text
 mole lifecycle register <source_id> --state <state> --actor <name> --actor-type <type>
 mole lifecycle submit <record_id> --actor <name> --actor-type <type> --reason <text>
-mole lifecycle approve <record_id> --actor <name> --actor-type human --confirm-human --reason <text> --source <source_id>
+mole lifecycle approve <record_id> --actor <name> --actor-type human --confirm-human --reason <text> --source <source_id> --expect-revision <n>
 mole lifecycle reject <record_id> --actor <name> --actor-type human --confirm-human --reason <text>
 mole lifecycle supersede <record_id> --replacement <record_id> --actor <name> --actor-type human --confirm-human --reason <text>
 mole lifecycle relocate <record_id> --path <path> --actor <name> --actor-type <type> --reason <text>
@@ -63,6 +63,10 @@ read-only.
 - A draft that was renamed and edited needs
   `mole lifecycle relocate <record_id> --path <new path>`.
 - A record whose file was deleted needs `mole lifecycle withdraw <record_id>`.
+- An accepted file that was edited in place needs `mole lifecycle revise` and
+  `submit`, then a new approval.
+- A superseded or withdrawn record does not hold its old path. A new file
+  there is a new source.
 - `mole lifecycle audit` names the command for each record it reports.
 
 ## Editing by hand

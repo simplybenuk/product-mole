@@ -60,6 +60,8 @@ abandoned, and lets a person retire accepted context that has no successor.
 | `draft` | `raw`, `evidence`, `unreviewed` | `draft` | anyone |
 | `submit` | `draft`, `unreviewed` | `pending_review` | anyone |
 | `revise` | `pending_review`, `rejected` | `draft` | anyone |
+| `revise` | `accepted`, file edited since approval | `draft` | anyone |
+| `revise` | `accepted`, file unchanged | `draft` | human, confirmed |
 | `approve` | `pending_review` | `accepted` | human, confirmed |
 | `reject` | `pending_review` | `rejected` | human, confirmed |
 | `supersede` | `accepted` | `superseded` | human, confirmed |
@@ -70,7 +72,10 @@ abandoned, and lets a person retire accepted context that has no successor.
 Any other move fails and leaves the record unchanged. Registration cannot
 create a `pending_review`, `accepted`, `rejected`, `superseded`, or `withdrawn`
 record, so the commands offer no way to skip the review. Every action that
-enters or leaves `accepted` needs a confirmed human.
+enters `accepted` needs a confirmed human. So does every action that takes
+valid accepted context away. The one exception is `revise` on an accepted
+record whose file was already edited. That file has already dropped out of
+retrieval, so sending it back to review takes nothing away.
 
 Every transition needs an actor name, an actor type, and a reason.
 
@@ -78,22 +83,32 @@ Every transition needs an actor name, an actor type, and a reason.
 - `agent` is an AI assistant.
 - `automation` is Mole tooling, such as `mole create` or a capture.
 
-An accepted record has no direct edit path. To correct it, register the new
-version as a draft, take it through review, and supersede the old record.
+An accepted record is never edited through the ledger. There are two ways to
+change accepted context, described under
+[changing accepted context](#changing-accepted-context).
 
 ## Human decisions
 
-`approve`, `reject`, `supersede`, and `withdraw` on an accepted record require
+`approve`, `reject`, `supersede`, `withdraw` on an accepted record, and
+`revise` on an accepted record whose file is unchanged require
 `--actor-type human` and `--confirm-human`. If either is missing, the command
 fails with exit code 1 and the record keeps its state. An agent that tries to
 approve its own draft gets a refusal, and the draft stays pending.
 
 ```bash
+mole retrieve rec_... --include-state pending_review
 mole lifecycle approve rec_... \
   --actor "Sam Reviewer" --actor-type human --confirm-human \
   --reason "Matches the three onboarding interviews" \
-  --source src_...
+  --source src_... --expect-revision 2
 ```
+
+The `approve` command requires `--expect-revision <n>`. The reviewer reads the
+submission with `mole retrieve`, which prints its revision, and passes that
+number. If an agent revised and resubmitted in the meantime, the revision no
+longer matches and the approval fails with `REVISION_CONFLICT`. A person
+cannot accept text they did not read by accident. The library function leaves
+`expectedRevision` optional for callers that enforce this another way.
 
 Approval also needs:
 
@@ -131,8 +146,8 @@ and review changes to `governance/lifecycle/records.json`.
   bytes. Run `revise`, then `submit` again so the review covers the new text.
 - An accepted record whose file changes is excluded from normal retrieval, and
   `mole lifecycle audit` reports `accepted_content_changed`. Restore the
-  accepted bytes, or register the new version as its own draft and supersede
-  the old record.
+  accepted bytes, or run `revise` and `submit` so a person reviews the new
+  version.
 
 Drafts change after `mole create` registers them, so their bytes stop matching
 the source registry. `submit` records that change as an explicit source
@@ -140,9 +155,38 @@ correction with the submitter and reason. The registry hash then matches the
 reviewed bytes, and Mole can still find the file by hash after an archive move.
 Transitions never write to the reviewed file itself.
 
-Use `--expect-revision <n>` on any transition to make it fail if the record
-has moved on since you looked at it. A reviewer who read revision 4 can approve
-with `--expect-revision 4` and be sure nobody resubmitted in between.
+`--expect-revision <n>` makes any transition fail if the record has moved on
+since you looked at it. `approve` requires it. It is optional elsewhere.
+
+## Changing accepted context
+
+Accepted context changes in one of two ways. Both end with a human approval.
+
+**The same file, edited in place.** This suits living files such as
+`4-context/personas.md`, summaries, and indexes, which agents refresh
+routinely. The edit itself takes the file out of retrieval, because its bytes
+no longer match the approval. Then:
+
+```bash
+mole lifecycle revise rec_... --actor "Agent" --actor-type agent --reason "Refreshed from the inbox"
+mole lifecycle submit rec_... --actor "Agent" --actor-type agent --reason "Ready for review"
+mole lifecycle approve rec_... --actor "Sam Reviewer" --actor-type human --confirm-human \
+  --reason "New persona matches the interviews" --expect-revision 5
+```
+
+The record keeps its ID and its whole history, including the earlier approval.
+The earlier text is not kept by Mole. Use version control if you need it.
+Between the edit and the new approval the file is not accepted context, and
+`mole retrieve` does not return it.
+
+**A separate new file.** Create the new file, take it through review, and
+approve it with `--supersedes` naming the old record, as shown under
+[supersession](#supersession). Both versions stay on disk and both records
+keep their history.
+
+A person can also run `revise` on an accepted record whose file has not
+changed, to reopen it for review. An agent cannot, because that would take
+valid context away from readers.
 
 ## Files that move, change, or disappear
 
@@ -155,7 +199,8 @@ registered path. Mole handles the common cases this way.
 | A draft was renamed and edited | Cannot match it by hash. `submit` fails and audit reports `source_unresolved`. | `mole lifecycle relocate <record_id> --path <new path>` |
 | The file was deleted or abandoned | Audit reports `source_unresolved`. | `mole lifecycle withdraw <record_id>` |
 | Two unclaimed copies hold a moved file's bytes | Refuses to guess. Audit lists both under `candidate_paths`. | `mole source reconcile <source_id> --path <path>` |
-| A second source is registered at a path a record still claims | Refuses to register or submit either one. Audit reports `path_claim_conflict`. | Relocate or reconcile the source whose file moved. |
+| A second source is registered at a path a live record still claims | Refuses to register or submit either one. Audit reports `path_claim_conflict`. | Relocate or reconcile the source whose file moved, or withdraw the record whose file is gone. |
+| A new file appears at the old path of a superseded or withdrawn record | Treats the new file as untracked. When it is registered, Mole clears the closed record's stored path. | Register the new file, or run `mole lifecycle migrate --apply`. |
 
 `relocate` works on `draft`, `unreviewed`, and `rejected` records. It records
 the new path in the source registry, and the new bytes when they changed. It
@@ -164,10 +209,12 @@ first. Raw, evidence, and accepted material is not meant to change, so those
 records use `mole source reconcile` for an unchanged move and `withdraw`
 otherwise.
 
-`mole create` refuses to write a draft at a path that another source still
-claims. That stops a new template from taking the place of a draft that was
-renamed, which could otherwise be submitted and approved under the old
-record.
+`mole create` refuses to write a draft at a path that the source of a live
+record still claims. That stops a new template from taking the place of a
+draft that was renamed, which could otherwise be submitted and approved under
+the old record. The refusal names the command that frees the path. A
+superseded or withdrawn record does not hold its path, so deleting a draft,
+withdrawing its record, and running `mole create` again works.
 
 Agent guidance tells agents to remove or archive an inbox copy after promoting
 it. An archived copy keeps working. Withdraw the record of a copy you delete.
@@ -179,7 +226,7 @@ To replace accepted context, approve the new record and name the old one.
 ```bash
 mole lifecycle approve rec_new... --supersedes rec_old... \
   --actor "Sam Reviewer" --actor-type human --confirm-human \
-  --reason "Q4 pricing replaces Q3" --source src_...
+  --reason "Q4 pricing replaces Q3" --source src_... --expect-revision 2
 ```
 
 Both records change in one ledger write. The new record becomes `accepted` and
@@ -288,7 +335,7 @@ superseded or withdrawn records for a missing file.
 | --- | --- |
 | `invalid_ledger` | The JSON or its history rules are broken. Restore the ledger from a retained copy. |
 | `ledger_conflict_copy` | A sync tool left a second ledger. Keep every copy, compare them, and leave one. |
-| `accepted_content_changed` | Restore the accepted bytes, or review the new version and supersede. |
+| `accepted_content_changed` | Restore the accepted bytes, or run `revise` and `submit` so a person reviews the new version. |
 | `pending_content_changed` | Run `revise`, then `submit` again. |
 | `source_unresolved` | The file was renamed and edited, or deleted. Run `relocate` or `withdraw` as the finding advises. |
 | `path_claim_conflict` | Two sources are registered at one path. Relocate or reconcile the one whose file moved. |
@@ -384,6 +431,12 @@ before they try it.
 - Actor fields are declarations. Mole does not authenticate a human.
 - The ledger is not tamper-evident. A consistent hand edit passes validation.
 - Synced folders can produce a conflict copy that a person must reconcile.
+- If `records.json` is deleted, Mole sees an empty ledger and reports no
+  finding. Nothing unreviewed is returned as accepted, but the history is
+  gone. Keep the ledger in version control or backup.
+- Mole does not keep earlier versions of a file that is edited in place.
+- An accepted file that was renamed and edited cannot be revised under its
+  record. A person withdraws the record and the new file starts as a draft.
 - Retrieval rules apply to the Mole commands. They do not stop a tool from
   reading a file directly.
 - Registration, submission, relocation, and audit read every source record

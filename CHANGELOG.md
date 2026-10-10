@@ -20,6 +20,10 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   declared human actor and `--confirm-human`.
 - Added `mole lifecycle relocate` for a draft that was renamed and edited, and
   `mole lifecycle withdraw` for a record whose file is gone.
+- `mole lifecycle revise` sends an accepted file that was edited in place back
+  through review under the same record.
+- `mole lifecycle approve` requires `--expect-revision <n>`, the revision the
+  reviewer read.
 - Added `mole retrieve`, which returns accepted records only unless
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and

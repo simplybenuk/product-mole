@@ -29,6 +29,7 @@ import { migrateSourceReferences } from '../lib/source-migration.mjs';
 import {
   LIFECYCLE_ACTIONS,
   LIFECYCLE_USAGE_ERROR_CODES,
+  RELOCATABLE_STATES,
   LifecycleError,
   auditLifecycle,
   listLifecycleRecords,
@@ -89,7 +90,7 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
   ['mole.instance-template.yaml', 'mole.instance.yaml']
 ]);
 
-const LIFECYCLE_AGENT_GUIDANCE = 'Check review state with `mole retrieve` before relying on context. Only accepted records are approved, and a file without an accepted record is unreviewed. Leave new or changed durable context as a draft and submit it with `mole lifecycle submit`. Never approve, reject, or supersede a record yourself; those decisions belong to a human.';
+const LIFECYCLE_AGENT_GUIDANCE = 'Check review state with `mole retrieve` before relying on context. Only accepted records are approved, and a file without an accepted record is unreviewed. Leave new durable context as a draft and submit it with `mole lifecycle submit`. After editing an accepted file in place, run `mole lifecycle revise` on its record and submit it again. Never approve, reject, or supersede a record yourself; those decisions belong to a human.';
 
 export function getHelpOutput() {
   return `Mole CLI v${getSourceVersion()}
@@ -133,7 +134,7 @@ Usage:
   mole lifecycle evidence|draft|submit|revise <record_id> [options]
                                       Move a record toward review; agents may run these.
   mole lifecycle approve|reject <record_id> --actor <name> --actor-type human --confirm-human --reason <text>
-                                      Record a human review decision.
+                                      Record a human review decision. Approve also needs --expect-revision <n>.
   mole lifecycle supersede <record_id> --replacement <record_id> [human options]
                                       Replace an accepted record with another accepted record.
   mole lifecycle withdraw <record_id> [options]
@@ -183,7 +184,7 @@ Examples:
   mole source resolve src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --json
   mole source migrate
   mole lifecycle submit <record_id> --actor "Agent" --actor-type agent --reason "Ready for review"
-  mole lifecycle approve <record_id> --actor "Your Name" --actor-type human --confirm-human --reason "Matches the interview evidence" --source <source_id>
+  mole lifecycle approve <record_id> --actor "Your Name" --actor-type human --confirm-human --reason "Matches the interview evidence" --source <source_id> --expect-revision 2
   mole lifecycle audit
   mole retrieve
   mole retrieve <record_id> --include-state pending_review
@@ -399,11 +400,15 @@ function createArtifact(kind, outputPath) {
     const claims = findPathClaims(cwd, relativeTarget);
     if (claims.length) {
       const claim = claims.find((item) => item.record_id) || claims[0];
-      const owner = claim.record_id ? `source ${claim.source_id} (lifecycle record ${claim.record_id})` : `source ${claim.source_id}`;
-      const fix = claim.record_id
-        ? `run "mole lifecycle relocate ${claim.record_id} --path <new path>" or "mole source reconcile ${claim.source_id} --path <new path>"`
-        : `run "mole source reconcile ${claim.source_id} --path <new path>"`;
-      console.error(`Refusing to create a draft at ${relativeTarget}: ${owner} is still registered at that path. If that file moved, ${fix}. Otherwise choose another output path. Nothing was written.`);
+      const owner = claim.record_id ? `source ${claim.source_id} (${claim.state} lifecycle record ${claim.record_id})` : `source ${claim.source_id}`;
+      const steps = [];
+      if (claim.record_id && RELOCATABLE_STATES.includes(claim.state)) {
+        steps.push(`If that file was renamed, run "mole lifecycle relocate ${claim.record_id} --path <new path>".`);
+      } else {
+        steps.push(`If that file moved unchanged, run "mole source reconcile ${claim.source_id} --path <new path>".`);
+      }
+      if (claim.record_id) steps.push(`If it was deleted, run "mole lifecycle withdraw ${claim.record_id}".`);
+      console.error(`Refusing to create a draft at ${relativeTarget}: ${owner} is still registered at that path. ${steps.join(' ')} Otherwise choose another output path. Nothing was written.`);
       process.exit(1);
     }
   } catch (error) {
@@ -1023,6 +1028,7 @@ function printLifecycleRecord(record) {
   console.log(`State: ${record.state}`);
   console.log(`Revision: ${record.revision}`);
   console.log(`Path: ${record.path}`);
+  console.log(`Content: sha256 ${record.content_hash.value.slice(0, 16)} (${record.byte_size} bytes)`);
   if (record.source_ids.length) console.log(`Supporting sources: ${record.source_ids.join(', ')}`);
   if (record.decision) {
     console.log(`Decision: ${record.decision.outcome} by ${record.decision.reviewer} at ${record.decision.decided_at}`);
@@ -1096,6 +1102,11 @@ function runLifecycleCommand(action, values = []) {
     if (LIFECYCLE_ACTIONS.includes(action)) {
       const parsed = parseLifecycleValues(values, LIFECYCLE_TRANSITION_SPEC);
       format = parsed.format;
+      if (action === 'approve' && parsed.options['--expect-revision'] === undefined) {
+        // An approval names the revision that was read, so a draft that was
+        // resubmitted in the meantime cannot be accepted unseen.
+        throw new UsageError('Approve needs --expect-revision <n>, the revision you reviewed. Read the submission with "mole retrieve <record_id> --include-state pending_review"; it prints the revision.');
+      }
       const result = transitionLifecycleRecord(cwd, requireLifecyclePositional(parsed.positionals, 'record ID'), {
         action,
         actor: requireLifecycleOption(parsed.options, '--actor'),
@@ -1113,6 +1124,10 @@ function runLifecycleCommand(action, values = []) {
         printLifecycleRecord(result.record);
         if (result.source_correction) {
           console.log(`Recorded a source content correction for ${result.record.source_id}: the file changed after it was registered.`);
+        }
+        if (action === 'submit') {
+          console.log(`A person can read it with: mole retrieve ${result.record_id} --include-state pending_review`);
+          console.log(`and approve what they read with: --expect-revision ${result.record.revision}`);
         }
       });
       return;
@@ -1259,6 +1274,7 @@ function runRetrieveCommand(values = []) {
       }
       console.log(`Record ID: ${result.record.record_id}`);
       console.log(`State: ${result.record.state}`);
+      console.log(`Revision: ${result.record.revision}`);
       console.log(`Path: ${result.path}`);
       if (result.content === null) {
         console.log('Content: binary; read the file at the path above.');

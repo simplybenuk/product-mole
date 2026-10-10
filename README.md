@@ -107,8 +107,8 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole inbox override-stale [options]` | Replaces an expired lock only after an explicit, auditable recovery decision. |
 | `mole metrics backfill` | Rebuilds local metrics from inbox processing receipts that already contain processed paths. |
 | `mole lifecycle register <source_id> --state <state> --actor <name> --actor-type <type>` | Opens a review record for a registered file as `raw`, `evidence`, `draft`, or `unreviewed`. |
-| `mole lifecycle evidence\|draft\|submit\|revise <record_id> [options]` | Moves a record toward review. Agents may run these. |
-| `mole lifecycle approve\|reject <record_id> --actor <name> --actor-type human --confirm-human --reason <text>` | Records a human review decision. Approval also needs a supporting `--source <source_id>`. |
+| `mole lifecycle evidence\|draft\|submit\|revise <record_id> [options]` | Moves a record toward review. Agents may run these. `revise` also sends an accepted file that was edited in place back to review. |
+| `mole lifecycle approve\|reject <record_id> --actor <name> --actor-type human --confirm-human --reason <text>` | Records a human review decision. Approval also needs a supporting `--source <source_id>` and `--expect-revision <n>`, the revision the reviewer read. |
 | `mole lifecycle supersede <record_id> --replacement <record_id> [human options]` | Replaces an accepted record with another accepted record. |
 | `mole lifecycle withdraw <record_id> [options]` | Closes a record, such as one whose file is gone. An accepted record needs the human options. |
 | `mole lifecycle relocate <record_id> --path <path> [options]` | Points a draft at its renamed file without touching the file. |
@@ -215,7 +215,7 @@ Agents draft. People decide. Mole records the difference in
 mole create spec
 mole lifecycle submit <record_id> --actor "Agent" --actor-type agent --reason "Ready for review"
 mole lifecycle approve <record_id> --actor "Your Name" --actor-type human --confirm-human \
-  --reason "Matches the interview evidence" --source <source_id>
+  --reason "Matches the interview evidence" --source <source_id> --expect-revision 2
 mole retrieve
 ```
 
@@ -230,6 +230,10 @@ under review.
 `mole retrieve` returns accepted records only. Add `--include-state` to read
 drafts, pending, or rejected material on purpose. If an accepted file changes
 after approval, retrieval drops it and `mole lifecycle audit` reports it.
+
+Accepted files change too. After an in-place edit, such as a refreshed
+`4-context/personas.md`, run `mole lifecycle revise` and `submit`, and a person
+approves the new version under the same record.
 
 Files move. An archived file with unchanged bytes is found by its hash. A
 draft that was renamed and edited needs `mole lifecycle relocate`, and a record

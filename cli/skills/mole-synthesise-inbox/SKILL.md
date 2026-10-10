@@ -27,6 +27,6 @@ Avoid over-promoting weak signals. Distil responsibly.
 
 ## Review state
 
-Rely on accepted context. `mole retrieve` lists it; a file with no accepted lifecycle record is unreviewed, and so is anything this skill writes. Do not edit an accepted file in place. Put the change in a draft, register it with `mole source register <path>` and `mole lifecycle register <source-id> --state draft --actor "<agent name>" --actor-type agent`, and run `mole lifecycle submit <record-id>` when it is ready. Never run `approve`, `reject`, or `supersede`; a person makes those decisions.
+Rely on accepted context. `mole retrieve` lists it; a file with no accepted lifecycle record is unreviewed, and so is anything this skill writes. When you edit an accepted file in place, it stops counting as accepted until a person reviews it again, so run `mole lifecycle revise <record-id>` and then `mole lifecycle submit <record-id>`. Register a new file with `mole source register <path>` and `mole lifecycle register <source-id> --state draft --actor "<agent name>" --actor-type agent`, and submit it when it is ready. Never run `approve`, `reject`, or `supersede`; a person makes those decisions.
 
 Metrics count processed inbox item paths in `governance/metrics/`. They must not contain raw insight text or source content.

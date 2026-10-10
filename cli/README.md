@@ -116,7 +116,7 @@ mole critique spec drafts/spec.md
 | `mole source migrate [--apply] [--json]` | Classifies legacy path references; apply mode updates resolved structured references and writes a report. |
 | `mole lifecycle register <source-id> --state <state> --actor <name> --actor-type <type>` | Opens a review record as `raw`, `evidence`, `draft`, or `unreviewed`. |
 | `mole lifecycle evidence\|draft\|submit\|revise <record-id> [options]` | Moves a record toward review. Agents may run these. |
-| `mole lifecycle approve\|reject <record-id> --actor <name> --actor-type human --confirm-human --reason <text>` | Records a human review decision. Approval also needs a supporting `--source <source-id>`. |
+| `mole lifecycle approve\|reject <record-id> --actor <name> --actor-type human --confirm-human --reason <text>` | Records a human review decision. Approval also needs a supporting `--source <source-id>` and `--expect-revision <n>`, the revision the reviewer read. |
 | `mole lifecycle supersede <record-id> --replacement <record-id> [human options]` | Replaces an accepted record with another accepted record. |
 | `mole lifecycle withdraw <record-id> [options]` | Closes a record, such as one whose file is gone. An accepted record needs the human options. |
 | `mole lifecycle relocate <record-id> --path <path> [options]` | Points a draft at its renamed file without touching the file. |
@@ -143,7 +143,7 @@ backfills the record later.
 ```bash
 mole lifecycle submit <record-id> --actor "Agent" --actor-type agent --reason "Ready for review"
 mole lifecycle approve <record-id> --actor "Your Name" --actor-type human --confirm-human \
-  --reason "Matches the interview evidence" --source <source-id>
+  --reason "Matches the interview evidence" --source <source-id> --expect-revision 2
 mole retrieve
 mole retrieve <record-id> --include-state pending_review --format json
 ```
@@ -153,7 +153,8 @@ flags, and missing values. They accept `--format text|json`. Exit code 0 means
 success, 1 means Mole refused the operation or reported findings, and 2 means
 the arguments were invalid. `--source`, `--remove-source`, `--supersedes`,
 `--state` on `list`, and `--include-state` may repeat. `--expect-revision <n>`
-makes a transition fail if the record changed since revision `n`.
+makes a transition fail if the record changed since revision `n`. `approve`
+requires it, so a reviewer always names the revision they read.
 
 See [`../docs/review-lifecycle.md`](../docs/review-lifecycle.md) for states,
 the transition table, migration, and recovery.

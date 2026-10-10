@@ -74,10 +74,10 @@ describe('review lifecycle commands', () => {
       assert.equal(submission.source_correction, true);
       assert.deepEqual(submission.record.source_ids, [evidenceId]);
 
-      const agentApproval = mole('lifecycle', 'approve', recordId, ...agentFlags, '--confirm-human', '--reason', 'Looks fine');
+      const agentApproval = mole('lifecycle', 'approve', recordId, ...agentFlags, '--confirm-human', '--reason', 'Looks fine', '--expect-revision', '2');
       assert.equal(agentApproval.status, 1);
       assert.match(agentApproval.stderr, /Refused: Only a human can approve a record\. The record stays pending_review\./);
-      const unconfirmed = mole('lifecycle', 'approve', recordId, '--actor', 'Sam Reviewer', '--actor-type', 'human', '--reason', 'Looks fine', '--format', 'json');
+      const unconfirmed = mole('lifecycle', 'approve', recordId, '--actor', 'Sam Reviewer', '--actor-type', 'human', '--reason', 'Looks fine', '--expect-revision', '2', '--format', 'json');
       assert.equal(unconfirmed.status, 1);
       assert.equal(JSON.parse(unconfirmed.stdout).error.code, 'HUMAN_CONFIRMATION_REQUIRED');
 
@@ -110,7 +110,7 @@ describe('review lifecycle commands', () => {
 
       const replacement = createDraft(mole, 'spec', '4-context/product/spec-v2.md');
       mole('lifecycle', 'submit', replacement.recordId, ...agentFlags, '--reason', 'Second version', '--source', evidenceId);
-      const superseding = mole('lifecycle', 'approve', replacement.recordId, ...humanFlags, '--reason', 'Replaces the first spec', '--supersedes', recordId);
+      const superseding = mole('lifecycle', 'approve', replacement.recordId, ...humanFlags, '--reason', 'Replaces the first spec', '--supersedes', recordId, '--expect-revision', '2');
       assert.equal(superseding.status, 0, superseding.stderr);
       assert.match(superseding.stdout, new RegExp('Supersedes: ' + recordId));
 
@@ -145,11 +145,11 @@ describe('review lifecycle commands', () => {
       assert.equal(rejected.status, 0, rejected.stderr);
       assert.match(rejected.stdout, /Decision: rejected by Sam Reviewer/);
       assert.equal(mole('retrieve', recordId).status, 1);
-      assert.equal(mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Changed my mind').status, 1);
+      assert.equal(mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Changed my mind', '--expect-revision', '3').status, 1);
 
       assert.equal(mole('lifecycle', 'revise', recordId, ...agentFlags, '--reason', 'Adding options').status, 0);
       assert.equal(mole('lifecycle', 'submit', recordId, ...agentFlags, '--reason', 'Options added').status, 0);
-      assert.equal(mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Options are clear').status, 0);
+      assert.equal(mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Options are clear', '--expect-revision', '5').status, 0);
 
       fs.appendFileSync(path.join(workspace, '4-context', 'decisions', 'decision-brief-draft.md'), '\nUnreviewed edit.\n');
       const retrieval = mole('retrieve');
@@ -286,7 +286,7 @@ describe('renamed, removed, and untrackable files', () => {
       const second = createDraft(mole, 'spec');
       fs.appendFileSync(draftPath, '\nUNFINISHED UNRELATED DRAFT\n');
       assert.equal(mole('lifecycle', 'submit', first.recordId, ...agentFlags, '--reason', 'Ready', '--source', evidenceId).status, 0);
-      assert.equal(mole('lifecycle', 'approve', first.recordId, ...humanFlags, '--reason', 'Matches the report').status, 0);
+      assert.equal(mole('lifecycle', 'approve', first.recordId, ...humanFlags, '--reason', 'Matches the report', '--expect-revision', '3').status, 0);
 
       const retrieved = mole('retrieve', first.recordId);
       assert.match(retrieved.stdout, /Path: 4-context\/product\/checkout-spec\.md/);
@@ -318,7 +318,7 @@ describe('renamed, removed, and untrackable files', () => {
       const evidenceId = printedId(mole('insight', 'Supporting note').stdout, 'Source ID');
       const { recordId } = createDraft(mole, 'roadmap');
       mole('lifecycle', 'submit', recordId, ...agentFlags, '--reason', 'Ready', '--source', evidenceId);
-      mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Agreed');
+      mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Agreed', '--expect-revision', '2');
       const agent = mole('lifecycle', 'withdraw', recordId, ...agentFlags, '--confirm-human', '--reason', 'Tidying');
       assert.equal(agent.status, 1);
       assert.match(agent.stderr, /Only a human can withdraw an accepted record\. The record stays accepted\./);
@@ -356,6 +356,84 @@ describe('renamed, removed, and untrackable files', () => {
       assert.ok(entry, 'the capture should be backfilled under its original source ID');
       assert.equal(entry.state, 'raw');
       assert.equal(createDraft(mole, 'spec').recordId.length, 40);
+    });
+  });
+
+  it('lets a default path be reused after its draft is deleted and withdrawn', () => {
+    withWorkspace((workspace, mole) => {
+      const first = createDraft(mole, 'spec');
+      const draftPath = path.join(workspace, '4-context', 'product', 'spec-draft.md');
+      fs.rmSync(draftPath);
+
+      const blocked = mole('create', 'spec');
+      assert.equal(blocked.status, 1);
+      assert.match(blocked.stderr, new RegExp(`If it was deleted, run "mole lifecycle withdraw ${first.recordId}"\\.`));
+      assert.equal(fs.existsSync(draftPath), false);
+
+      assert.equal(mole('lifecycle', 'withdraw', first.recordId, ...agentFlags, '--reason', 'Deleted').status, 0);
+      const second = createDraft(mole, 'spec');
+      assert.notEqual(second.recordId, first.recordId);
+      assert.equal(readSourceRecord(workspace, first.sourceId).current_path, null);
+      assert.equal(readSourceRecord(workspace, second.sourceId).current_path, '4-context/product/spec-draft.md');
+      assert.equal(mole('lifecycle', 'audit').status, 0);
+
+      const closed = mole('lifecycle', 'relocate', first.recordId, '--path', '4-context/product/spec-draft.md', ...agentFlags, '--reason', 'x');
+      assert.equal(closed.status, 1);
+      assert.match(closed.stderr, /This record is closed and nothing more can be done to it\./);
+      assert.doesNotMatch(closed.stderr, /mole lifecycle withdraw/);
+    });
+  });
+
+  it('makes an approval name the revision that was read', () => {
+    withWorkspace((workspace, mole) => {
+      const evidenceId = printedId(mole('insight', 'Supporting note').stdout, 'Source ID');
+      const { recordId } = createDraft(mole, 'strategy-memo');
+      const draftPath = path.join(workspace, '4-context', 'strategy', 'strategy-memo-draft.md');
+      const submitted = mole('lifecycle', 'submit', recordId, ...agentFlags, '--reason', 'Ready', '--source', evidenceId);
+      assert.match(submitted.stdout, new RegExp(`mole retrieve ${recordId} --include-state pending_review`));
+      assert.match(submitted.stdout, /--expect-revision 2/);
+      assert.match(mole('retrieve', recordId, '--include-state', 'pending_review').stdout, /Revision: 2/);
+
+      const unpinned = mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Fine');
+      assert.equal(unpinned.status, 2);
+      assert.match(unpinned.stderr, /Approve needs --expect-revision <n>, the revision you reviewed/);
+
+      // The agent reworks and resubmits while the reviewer is still reading.
+      mole('lifecycle', 'revise', recordId, ...agentFlags, '--reason', 'One more change');
+      fs.appendFileSync(draftPath, '\nA paragraph the reviewer has not seen.\n');
+      mole('lifecycle', 'submit', recordId, ...agentFlags, '--reason', 'Ready again');
+
+      const stale = mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Fine', '--expect-revision', '2', '--format', 'json');
+      assert.equal(stale.status, 1);
+      assert.equal(JSON.parse(stale.stdout).error.code, 'REVISION_CONFLICT');
+      assert.match(mole('lifecycle', 'show', recordId).stdout, /State: pending_review/);
+      assert.equal(mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Read the new paragraph', '--expect-revision', '4').status, 0);
+    });
+  });
+
+  it('routes an accepted file that was edited in place back through review', () => {
+    withWorkspace((workspace, mole) => {
+      const evidenceId = printedId(mole('insight', 'Supporting note').stdout, 'Source ID');
+      const { recordId } = createDraft(mole, 'roadmap');
+      const roadmapPath = path.join(workspace, '4-context', 'product', 'roadmap-draft.md');
+      mole('lifecycle', 'submit', recordId, ...agentFlags, '--reason', 'Ready', '--source', evidenceId);
+      mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Agreed', '--expect-revision', '2');
+
+      const untouched = mole('lifecycle', 'revise', recordId, ...agentFlags, '--reason', 'Tidying');
+      assert.equal(untouched.status, 1);
+      assert.match(untouched.stderr, /Only a human can reopen accepted context whose file has not changed\. The record stays accepted\./);
+
+      fs.appendFileSync(roadmapPath, '\nQ4 item added in place.\n');
+      const audit = mole('lifecycle', 'audit');
+      assert.equal(audit.status, 1);
+      assert.match(audit.stdout, new RegExp(`run "mole lifecycle revise ${recordId}" and submit the new version for review`));
+
+      assert.equal(mole('lifecycle', 'revise', recordId, ...agentFlags, '--reason', 'Roadmap refreshed').status, 0);
+      assert.equal(mole('lifecycle', 'audit').status, 0);
+      assert.match(mole('retrieve').stdout, /Retrievable records \(accepted\): 0/);
+      assert.equal(mole('lifecycle', 'submit', recordId, ...agentFlags, '--reason', 'Ready again').status, 0);
+      assert.equal(mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Q4 item agreed', '--expect-revision', '5').status, 0);
+      assert.match(mole('retrieve', recordId).stdout, /Q4 item added in place\./);
     });
   });
 

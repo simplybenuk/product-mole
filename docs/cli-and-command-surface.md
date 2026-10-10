@@ -156,7 +156,7 @@ a person has accepted. These commands operate on the local ledger at
 ```bash
 mole lifecycle register src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --state draft --actor "Agent" --actor-type agent
 mole lifecycle submit rec_5b0f6c1e-2f0a-4d39-9d5e-0c7a1b2d3e4f --actor "Agent" --actor-type agent --reason "Ready for review"
-mole lifecycle approve rec_5b0f6c1e-2f0a-4d39-9d5e-0c7a1b2d3e4f --actor "Your Name" --actor-type human --confirm-human --reason "Matches the evidence" --source src_1f6a2b7c-93d4-4e58-a0b1-6c2d3e4f5a6b
+mole lifecycle approve rec_5b0f6c1e-2f0a-4d39-9d5e-0c7a1b2d3e4f --actor "Your Name" --actor-type human --confirm-human --reason "Matches the evidence" --source src_1f6a2b7c-93d4-4e58-a0b1-6c2d3e4f5a6b --expect-revision 2
 mole lifecycle reject rec_5b0f6c1e-2f0a-4d39-9d5e-0c7a1b2d3e4f --actor "Your Name" --actor-type human --confirm-human --reason "Missing pricing data"
 mole lifecycle relocate rec_5b0f6c1e-2f0a-4d39-9d5e-0c7a1b2d3e4f --path 4-context/product/checkout-spec.md --actor "Agent" --actor-type agent --reason "Renamed"
 mole lifecycle withdraw rec_5b0f6c1e-2f0a-4d39-9d5e-0c7a1b2d3e4f --actor "Agent" --actor-type agent --reason "Draft abandoned"
@@ -166,7 +166,8 @@ mole retrieve
 ```
 
 The `--source` on `approve` names a different registered source that supports
-the record. A record cannot cite its own source.
+the record. A record cannot cite its own source. `--expect-revision` is the
+revision the reviewer read, and `approve` requires it.
 
 `show`, `list`, `audit`, `retrieve`, and the default `migrate` mode are
 read-only. `approve`, `reject`, `supersede`, and `withdraw` on an accepted

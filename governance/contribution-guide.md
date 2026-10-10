@@ -32,7 +32,8 @@ before registering, moving, correcting, or migrating a source.
 
 Generated context starts as a draft. Submit it with `mole lifecycle submit`
 and let a person decide. Only a human runs `approve`, `reject`, or
-`supersede`. Do not edit an accepted file in place, and do not edit
+`supersede`. An accepted file that is edited in place needs
+`mole lifecycle revise` and a new review before it counts again. Do not edit
 `governance/lifecycle/records.json` by hand. The ledger is instance-owned data
 and an upgrade must not overwrite it. Read
 [`docs/review-lifecycle.md`](../docs/review-lifecycle.md) for the states,
