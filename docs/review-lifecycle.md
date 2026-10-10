@@ -349,10 +349,11 @@ a finding. It skips these with a finding, and exits 1:
 
 - `source_id_mismatch`: a file that migration cannot match to a source by
   its path or its bytes, and whose frontmatter names a `source_id` that no
-  other file holds. The finding prints the commands that clear it: `mole
-  source register <path>` to track the file as its own source, `mole source
-  reconcile` when the file is the named source after a move, and `mole
-  lifecycle withdraw` for a record the named source leaves without a file.
+  other file holds. The finding prints the command that clears it: `mole
+  source register <path>` to track the file as its own source, or `mole
+  source reconcile` when the file is the named source after a move. When the
+  named source has an open record, the finding also points to `mole lifecycle
+  audit`, which reports that record if its file is gone.
 - `ambiguous_source`: a file that could belong to more than one moved source,
   or a moved source that matches more than one file. Run the `mole source` or
   `mole lifecycle` command the finding names.
