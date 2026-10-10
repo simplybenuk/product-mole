@@ -1,8 +1,9 @@
 # Review and promotion lifecycle
 
 Mole asks people to review what agents write. The review lifecycle makes that
-review a recorded fact. A draft cannot pass as accepted context, and a later
-workflow can see who approved a record, when, why, and on what evidence.
+review a recorded fact. A draft cannot pass as accepted context through the
+Mole commands, and a later workflow can see who approved a record, when, why,
+and on what evidence.
 
 The lifecycle is a JSON ledger at `governance/lifecycle/records.json`. Its
 schema is `schemas/review-lifecycle-v1.schema.json`. The ledger describes
@@ -12,7 +13,8 @@ files. It never edits them.
 
 A lifecycle record points to one registered source file by `source_id`. See
 [source IDs and archive-safe provenance](source-provenance.md) for how files
-get those IDs. A source has at most one lifecycle record.
+get those IDs. A source has at most one lifecycle record, and one file backs at
+most one source.
 
 | Field | Meaning |
 | --- | --- |
@@ -20,11 +22,11 @@ get those IDs. A source has at most one lifecycle record.
 | `source_id` | The registered file this record describes. |
 | `state` | The current lifecycle state. |
 | `revision` | The number of history entries. |
-| `path` | Where the file was at the last registration or submission. A hint only. |
-| `content_hash`, `byte_size` | SHA-256 and size of the bytes last registered or submitted. |
+| `path` | Where the file was at the last registration, submission, or relocation. A hint only. |
+| `content_hash`, `byte_size` | SHA-256 and size of the bytes last registered, submitted, or relocated. |
 | `source_ids` | Registered sources that support the record. |
 | `supersedes`, `superseded_by` | Links between an accepted record and the records it replaced. |
-| `decision` | The current review decision with reviewer, time, and reason. `null` before review. |
+| `decision` | The current review decision with reviewer, time, and reason. `null` unless the record is accepted, rejected, or superseded. |
 | `history` | Every transition in order. Append-only. |
 
 Frontmatter fields such as `status: draft` or `status: active` describe a file
@@ -42,9 +44,12 @@ for human readers. They do not set or prove a lifecycle state.
 | `rejected` | A human declined the submission. |
 | `superseded` | Was accepted, then replaced by another accepted record. |
 | `unreviewed` | A file that existed before the lifecycle. Nobody has reviewed it under these rules. |
+| `withdrawn` | Closed without a replacement. The file may be gone. Nothing leaves this state. |
 
-`unreviewed` is the one state beyond the list in the original design. It lets
-a migration register old files without guessing whether anyone approved them.
+`unreviewed` and `withdrawn` are additions to the list in the original design.
+`unreviewed` lets a migration register old files without guessing whether
+anyone approved them. `withdrawn` closes a record whose file was deleted or
+abandoned, and lets a person retire accepted context that has no successor.
 
 ## Transitions
 
@@ -58,10 +63,14 @@ a migration register old files without guessing whether anyone approved them.
 | `approve` | `pending_review` | `accepted` | human, confirmed |
 | `reject` | `pending_review` | `rejected` | human, confirmed |
 | `supersede` | `accepted` | `superseded` | human, confirmed |
+| `withdraw` | `raw`, `evidence`, `draft`, `pending_review`, `rejected`, `unreviewed` | `withdrawn` | anyone |
+| `withdraw` | `accepted` | `withdrawn` | human, confirmed |
+| `relocate` | `draft`, `unreviewed`, `rejected` | same state | anyone |
 
 Any other move fails and leaves the record unchanged. Registration cannot
-create a `pending_review`, `accepted`, `rejected`, or `superseded` record, so
-there is no way to skip the review.
+create a `pending_review`, `accepted`, `rejected`, `superseded`, or `withdrawn`
+record, so the commands offer no way to skip the review. Every action that
+enters or leaves `accepted` needs a confirmed human.
 
 Every transition needs an actor name, an actor type, and a reason.
 
@@ -74,10 +83,10 @@ version as a draft, take it through review, and supersede the old record.
 
 ## Human decisions
 
-`approve`, `reject`, and `supersede` require `--actor-type human` and
-`--confirm-human`. If either is missing, the command fails with exit code 1
-and the record keeps its state. An agent that tries to approve its own draft
-gets a refusal, and the draft stays pending.
+`approve`, `reject`, `supersede`, and `withdraw` on an accepted record require
+`--actor-type human` and `--confirm-human`. If either is missing, the command
+fails with exit code 1 and the record keeps its state. An agent that tries to
+approve its own draft gets a refusal, and the draft stays pending.
 
 ```bash
 mole lifecycle approve rec_... \
@@ -90,7 +99,7 @@ Approval also needs:
 
 - at least one supporting source ID that the source registry knows, other than
   the record's own source. Pass it with `--source` at registration, submission,
-  or approval.
+  or approval. The source of a rejected or withdrawn record does not count.
 - the file to hold the same bytes that were submitted.
 
 The decision stores the reviewer, the time, and the reason, and the same facts
@@ -103,11 +112,16 @@ the product lead" changes nothing until that person runs `approve`.
 
 The actor name and type are declarations by whoever runs the command. Mole does
 not authenticate them. A process with access to the workspace can pass
-`--actor-type human --confirm-human`, or edit the JSON file. The rule works as
-an operating contract. Agents follow their instructions and never run the human
-commands, and the history shows what each actor claimed. If you need to detect
-tampering, keep the workspace in version control and review changes to
-`governance/lifecycle/records.json`.
+`--actor-type human --confirm-human`, and Mole cannot tell that from a person
+typing the same flags. The same process can edit the JSON file. Mole checks a
+hand-edited ledger for consistency, so a state without a matching history entry
+is refused, but a consistent forgery passes.
+
+The rule is an operating contract backed by a record. Agents follow their
+instructions and never run the human commands, the commands refuse an honest
+agent declaration, and the history shows what each actor claimed. If you need
+to detect a false claim or a hand edit, keep the workspace in version control
+and review changes to `governance/lifecycle/records.json`.
 
 ## Content binding
 
@@ -123,12 +137,40 @@ tampering, keep the workspace in version control and review changes to
 Drafts change after `mole create` registers them, so their bytes stop matching
 the source registry. `submit` records that change as an explicit source
 correction with the submitter and reason. The registry hash then matches the
-reviewed bytes, and the registry can still find the file by hash after an
-archive move. Transitions never write to the reviewed file itself.
+reviewed bytes, and Mole can still find the file by hash after an archive move.
+Transitions never write to the reviewed file itself.
 
 Use `--expect-revision <n>` on any transition to make it fail if the record
 has moved on since you looked at it. A reviewer who read revision 4 can approve
 with `--expect-revision 4` and be sure nobody resubmitted in between.
+
+## Files that move, change, or disappear
+
+The source registry owns paths. A record's file is the one at its source's
+registered path. Mole handles the common cases this way.
+
+| What happened | What Mole does | What you do |
+| --- | --- | --- |
+| The file moved and its bytes are unchanged, such as an archived capture | Finds it by its registered hash, if exactly one unclaimed file has those bytes | Nothing. Run `mole source reconcile` to update the stored path when convenient. |
+| A draft was renamed and edited | Cannot match it by hash. `submit` fails and audit reports `source_unresolved`. | `mole lifecycle relocate <record_id> --path <new path>` |
+| The file was deleted or abandoned | Audit reports `source_unresolved`. | `mole lifecycle withdraw <record_id>` |
+| Two unclaimed copies hold a moved file's bytes | Refuses to guess. Audit lists both under `candidate_paths`. | `mole source reconcile <source_id> --path <path>` |
+| A second source is registered at a path a record still claims | Refuses to register or submit either one. Audit reports `path_claim_conflict`. | Relocate or reconcile the source whose file moved. |
+
+`relocate` works on `draft`, `unreviewed`, and `rejected` records. It records
+the new path in the source registry, and the new bytes when they changed. It
+does not move or edit the file. A `pending_review` record must be revised
+first. Raw, evidence, and accepted material is not meant to change, so those
+records use `mole source reconcile` for an unchanged move and `withdraw`
+otherwise.
+
+`mole create` refuses to write a draft at a path that another source still
+claims. That stops a new template from taking the place of a draft that was
+renamed, which could otherwise be submitted and approved under the old
+record.
+
+Agent guidance tells agents to remove or archive an inbox copy after promoting
+it. An archived copy keeps working. Withdraw the record of a copy you delete.
 
 ## Supersession
 
@@ -152,33 +194,39 @@ mole lifecycle supersede rec_old... --replacement rec_new... \
   --reason "Duplicate of the newer decision"
 ```
 
-Mole refuses a replacement that is not accepted, a record that would supersede
-itself, and a record that is already superseded. A record cannot be withdrawn
-without a replacement in this version.
+Mole refuses a replacement that is not accepted or whose file no longer
+matches its accepted bytes, a record that would supersede itself, and a record
+that is already superseded. To retire accepted context with no successor, a
+person runs `withdraw`.
 
 ## Retrieval
 
 `mole retrieve` is the way to ask what a workflow may rely on.
 
 ```bash
-mole retrieve                                 # list accepted records
-mole retrieve rec_...                         # print one accepted record's file
-mole retrieve --include-state pending_review  # also list pending records
+mole retrieve
+mole retrieve rec_...
+mole retrieve --include-state pending_review
 mole retrieve rec_... --include-state draft --format json
 ```
 
-Only `accepted` records come back unless the caller names more states. That
-holds for a direct request by ID too. Asking for a pending or rejected record
-without `--include-state` fails with `NOT_ELIGIBLE`.
+The first form lists accepted records. The second prints one accepted record's
+file. Only `accepted` records come back unless the caller names more states
+with `--include-state`. That holds for a direct request by ID too. Asking for a
+pending or rejected record without the flag fails with `NOT_ELIGIBLE`.
 
 The list shows how many records sit in states that were not included, so a
-reader knows more material exists without seeing it. Records whose file no
-longer matches appear under `excluded` with a reason, and the command exits
-with code 1.
+reader knows more material exists without seeing it. Records whose file is
+missing or no longer matches appear under `excluded` with a reason, and the
+command exits with code 1.
 
 Files with no lifecycle record are untracked. Retrieval does not return them.
 Routing guidance in `0-bootstrap/` and `1-routing/` and the templates are Mole
 instructions, not reviewed product context, and agents read them directly.
+
+Retrieval governs what the commands return. An agent can still open any file
+in the workspace, so the agent rules in `0-bootstrap/agents.md` tell it to
+check `mole retrieve` first.
 
 ## Existing workspaces
 
@@ -191,28 +239,50 @@ mole lifecycle migrate --apply --actor "Sam Reviewer" --actor-type human
 ```
 
 The first command is a dry run. It lists files in `2-summaries/`, `3-indexes/`,
-`4-context/`, and `5-evidence/` that have no lifecycle record, and it changes
-nothing. `--apply` registers each of them as `unreviewed`. A file without a
-source record gets one first. The file bytes do not change.
+`4-context/`, `5-evidence/`, and `6-raw/` that have no lifecycle record, and it
+changes nothing. `--apply` registers files under `6-raw/` as `raw` and every
+other file as `unreviewed`. A file without a source record gets one first. The
+file bytes do not change.
 
 Migration reads a legacy `status:` field only to show it in the report. A file
 that says `status: active`, or whose text says someone approved it, still
 becomes `unreviewed`. To accept such a file, run `submit` and then have a
 person run `approve`.
 
-Migration skips `README.md` files, symlinks, and sync conflict copies. It also
-skips a file whose frontmatter names a `source_id` that the registry does not
-place at that path, because a second ID would give one file two identities.
-Fix those with the `mole source` commands and run the migration again.
+A registered file that moved without a reconcile keeps its source ID. Migration
+matches it to the registered source whose path is empty and whose hash equals
+the file's bytes. It never gives one file a second identity.
 
-Captures in `6-raw/` made before the upgrade are not scanned. Register one
-with `mole lifecycle register <source_id> --state raw` when a workflow needs
-it tracked.
+Migration skips, and reports:
+
+- `README.md` files, symlinks, and sync conflict copies
+- a file whose frontmatter names a `source_id` that the registry does not
+  place at that path and that does not match the file's bytes
+- a file that could belong to more than one moved source, or a moved source
+  that matches more than one file
+
+Fix the last two with the `mole source` commands and run the migration again.
+
+Running the migration again is safe. It is also the way to backfill a capture
+that was saved while the ledger could not be written.
+
+## Captures and drafts when the ledger is unavailable
+
+A capture must never be lost or duplicated because of a ledger problem. If the
+ledger is invalid, in conflict, or locked when `mole insight` runs, the capture
+and its source record are still written, the command exits 0, and a warning on
+standard error says the note has no lifecycle record yet. The UI returns the
+same warning with a 200 response. Do not capture the note again. Fix the
+ledger, then run `mole lifecycle migrate --apply`.
+
+`mole create` checks the ledger before it writes anything. If the draft could
+not be tracked, it refuses and writes nothing.
 
 ## Audit and recovery
 
 `mole lifecycle audit` is read-only and safe to run at any time, including on
-a damaged ledger. It exits with code 1 when it has findings.
+a damaged ledger. It exits with code 1 when it has findings. It does not check
+superseded or withdrawn records for a missing file.
 
 | Finding | What to do |
 | --- | --- |
@@ -220,22 +290,30 @@ a damaged ledger. It exits with code 1 when it has findings.
 | `ledger_conflict_copy` | A sync tool left a second ledger. Keep every copy, compare them, and leave one. |
 | `accepted_content_changed` | Restore the accepted bytes, or review the new version and supersede. |
 | `pending_content_changed` | Run `revise`, then `submit` again. |
-| `source_record_missing`, `source_record_invalid`, `source_unresolved`, `unsafe_path`, `no_local_file` | The record's file cannot be found or trusted. Recover or reconcile the source with `mole source resolve` and `mole source reconcile`. |
+| `source_unresolved` | The file was renamed and edited, or deleted. Run `relocate` or `withdraw` as the finding advises. |
+| `path_claim_conflict` | Two sources are registered at one path. Relocate or reconcile the one whose file moved. |
+| `source_record_missing`, `source_record_invalid`, `unsafe_path`, `no_local_file` | The source record is gone or untrusted. Recover it with the `mole source` commands, or withdraw the record. |
 | `supporting_source_missing` | Recover the source record that the acceptance cites. |
 | `stale_mutation_lock` | Run `mole lifecycle unlock`. |
 | `stale_temp_file` | An interrupted write left a temporary file. Remove it once no command is running. |
 | `unexpected_entry` | Move the unrelated file out of `governance/lifecycle/`. |
 
 While the ledger is invalid or has a conflict copy, every command except
-`audit` and `unlock` fails. Mole will not guess which history is correct, and it will not
-return context from a ledger it cannot trust.
+`audit` and `unlock` fails. Mole will not guess which history is correct, and
+it will not return context from a ledger it cannot trust.
+
+The audit checks the ledger against its own rules and against the files. It
+cannot tell that someone edited an earlier history entry by hand if the result
+is still consistent. Use version control for that.
 
 ### Writes and locks
 
-Each write takes a lock file in the operating system's temporary folder,
-validates the whole ledger, checks that no earlier history entry changed, and
-replaces `records.json` with one atomic rename. A second command waits up to
-two seconds for the first, then fails with `LIFECYCLE_BUSY`.
+Each write takes the lock file `governance/lifecycle/.mutation.lock`, validates
+the whole ledger, checks that the write keeps every earlier history entry, and
+replaces `records.json` with one atomic rename. The lock sits beside the ledger
+so every process that can write the ledger sees it, whatever its temporary
+folder or user account. A second command waits up to two seconds for the
+first, then fails with `LIFECYCLE_BUSY`.
 
 If a command is killed during a write, its lock stays behind. Mole never
 removes another process's lock on its own. Run `mole lifecycle unlock`. It
@@ -243,12 +321,21 @@ removes the lock only when the process that took it has stopped.
 
 ### Shared folders
 
-The lock is local to one machine. Two machines that write before their folders
-sync will both succeed locally, and the sync tool will keep one ledger and a
-conflict copy. Mole detects that copy and stops until a person reconciles the
-two. It does not merge ledgers. Teams that review often on several machines
-should agree who records decisions, or keep the workspace in version control,
-where a merge conflict shows the same problem earlier.
+The lock gives real mutual exclusion on one machine and on a network drive
+that several machines mount. A folder synced by OneDrive, Dropbox, Google
+Drive, or a similar tool is different. Each machine has its own copy, so two
+machines can both write before they sync. The sync tool then keeps one ledger
+and a conflict copy. Mole detects that copy and stops until a person reconciles
+the two. It does not merge ledgers.
+
+A sync tool may also copy the lock file to another machine for a moment. Mole
+cannot check a process on another host, so it treats such a lock as live for
+five minutes. After that, audit reports it and `mole lifecycle unlock` removes
+it. Exclude `.mutation.lock` from sync if your tool allows it.
+
+Teams that review often on several machines should agree who records
+decisions, or keep the workspace in version control, where a merge conflict
+shows the same problem earlier.
 
 ## Exit codes
 
@@ -273,17 +360,33 @@ transitionLifecycleRecord(root, recordId, {
   action, actor, actorType, humanConfirmed, reason,
   sourceIds, removeSourceIds, supersedes, replacementId, expectedRevision, now
 })
+relocateLifecycleRecord(root, recordId, { path, actor, actorType, reason, expectedRevision, now })
 readLifecycleRecord(root, recordId)
 listLifecycleRecords(root, { states })
 retrieveLifecycleRecords(root, { includeStates })
 retrieveLifecycleRecord(root, recordId, { includeStates })
 auditLifecycle(root)
 migrateLifecycleRecords(root, { apply, actor, actorType, now })
+assertLifecycleWritable(root)
+findPathClaims(root, path)
 unlockLifecycle(root)
 validateLifecycleLedger(ledger)
 ```
 
 A refused operation throws a `LifecycleError` with a `code` and `details`.
-`LIFECYCLE_TRANSITIONS` holds the transition table above, so other features
-such as travel logs and evidence promotion can check a move before they try
-it.
+`LIFECYCLE_TRANSITIONS` holds the transition table above and
+`transitionRequiresHuman(action, fromState)` answers the human question, so
+other features such as travel logs and evidence promotion can check a move
+before they try it.
+
+## Limits
+
+- Actor fields are declarations. Mole does not authenticate a human.
+- The ledger is not tamper-evident. A consistent hand edit passes validation.
+- Synced folders can produce a conflict copy that a person must reconcile.
+- Retrieval rules apply to the Mole commands. They do not stop a tool from
+  reading a file directly.
+- Registration, submission, relocation, and audit read every source record
+  once to check path claims, so their cost grows with the registry. With 3,000
+  source records a registration took about 70 ms on the development machine.
+  Larger registries have not been measured.

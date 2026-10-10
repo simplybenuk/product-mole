@@ -12,11 +12,14 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 - Added packed-artifact and clean-install verification for the published package.
 - Added a review lifecycle ledger at `governance/lifecycle/records.json` with
   the states `raw`, `evidence`, `draft`, `pending_review`, `accepted`,
-  `rejected`, `superseded`, and `unreviewed`, and an append-only transition
-  history per record.
+  `rejected`, `superseded`, `unreviewed`, and `withdrawn`, and an append-only
+  transition history per record.
 - Added `mole lifecycle` commands to register, submit, revise, approve, reject,
-  supersede, list, show, audit, and migrate records. Approve, reject, and
-  supersede require a declared human actor and `--confirm-human`.
+  supersede, withdraw, relocate, list, show, audit, and migrate records.
+  Approve, reject, supersede, and withdrawing an accepted record require a
+  declared human actor and `--confirm-human`.
+- Added `mole lifecycle relocate` for a draft that was renamed and edited, and
+  `mole lifecycle withdraw` for a record whose file is gone.
 - Added `mole retrieve`, which returns accepted records only unless
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and
@@ -24,14 +27,17 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ### Changed
 - `mole upgrade [version]` now installs from an explicit `vX.Y.Z` release tag.
-- `mole create` registers the new file as a source, opens a `draft` lifecycle
-  record, and refuses an output path outside the workspace.
-- CLI and UI captures open a `raw` lifecycle record and return its ID.
+- `mole create` registers the new file as a source and opens a `draft`
+  lifecycle record. It refuses an output path outside the workspace, a path
+  that another source is still registered at, and a workspace whose ledger
+  cannot be written. In each case it writes nothing.
+- CLI and UI captures open a `raw` lifecycle record and return its ID. A
+  capture is still saved, with a warning, when the ledger cannot be written.
 - Agent guidance and generated instructions tell agents to rely on accepted
   context, submit drafts for review, and leave decisions to a person.
 - Existing workspaces start with no lifecycle records. `mole lifecycle migrate
-  --apply` registers old files as `unreviewed`; nothing is accepted without a
-  human decision.
+  --apply` registers files under `6-raw/` as `raw` and other old files as
+  `unreviewed`; nothing is accepted without a human decision.
 - Added release, upgrade, contribution, and development guidance for the
   open-source package lifecycle.
 

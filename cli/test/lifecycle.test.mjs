@@ -6,6 +6,7 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { readSourceRecord } from '../../lib/source-registry.mjs';
+import { captureNote } from '../../ui/server.mjs';
 import { createWorkspaceScaffold, parseLifecycleValues } from '../mole.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
@@ -235,7 +236,7 @@ describe('review lifecycle commands', () => {
       const dryRun = mole('lifecycle', 'migrate');
       assert.equal(dryRun.status, 0, dryRun.stderr);
       assert.match(dryRun.stdout, /Mole lifecycle migration dry-run\./);
-      assert.match(dryRun.stdout, /- 4-context\/pricing\.md \(frontmatter status: active\)/);
+      assert.match(dryRun.stdout, /- 4-context\/pricing\.md -> unreviewed \(frontmatter status: active\)/);
       assert.match(dryRun.stdout, /Nothing was changed\./);
       assert.equal(fs.existsSync(path.join(workspace, ledgerRelPath)), false);
 
@@ -253,6 +254,161 @@ describe('review lifecycle commands', () => {
       assert.equal(retrieval.state_counts.accepted, 0);
       assert.match(mole('lifecycle', 'migrate').stdout, /Untracked: 0/);
     });
+  });
+});
+
+describe('renamed, removed, and untrackable files', () => {
+  it('refuses to reuse a path that a moved draft still claims until the draft is relocated', () => {
+    withWorkspace((workspace, mole) => {
+      const evidenceId = printedId(mole('insight', 'Checkout drops carts on slow networks').stdout, 'Source ID');
+      const first = createDraft(mole, 'spec');
+      const draftPath = path.join(workspace, '4-context', 'product', 'spec-draft.md');
+      const renamedPath = path.join(workspace, '4-context', 'product', 'checkout-spec.md');
+      fs.renameSync(draftPath, renamedPath);
+      fs.appendFileSync(renamedPath, '\nThe real checkout spec.\n');
+
+      const reused = mole('create', 'spec');
+      assert.equal(reused.status, 1);
+      assert.match(reused.stderr, /Refusing to create a draft at 4-context\/product\/spec-draft\.md/);
+      assert.match(reused.stderr, new RegExp(`mole lifecycle relocate ${first.recordId} --path <new path>`));
+      assert.match(reused.stderr, /Nothing was written\./);
+      assert.equal(fs.existsSync(draftPath), false);
+
+      const stuck = mole('lifecycle', 'submit', first.recordId, ...agentFlags, '--reason', 'Ready');
+      assert.equal(stuck.status, 1);
+      assert.match(stuck.stderr, new RegExp(`mole lifecycle relocate ${first.recordId} --path <new path>`));
+
+      const relocated = mole('lifecycle', 'relocate', first.recordId, '--path', '4-context/product/checkout-spec.md', ...agentFlags, '--reason', 'Renamed');
+      assert.equal(relocated.status, 0, relocated.stderr);
+      assert.match(relocated.stdout, /now points to 4-context\/product\/checkout-spec\.md \(revision 2\)/);
+      assert.match(relocated.stdout, /Recorded a source content correction/);
+
+      const second = createDraft(mole, 'spec');
+      fs.appendFileSync(draftPath, '\nUNFINISHED UNRELATED DRAFT\n');
+      assert.equal(mole('lifecycle', 'submit', first.recordId, ...agentFlags, '--reason', 'Ready', '--source', evidenceId).status, 0);
+      assert.equal(mole('lifecycle', 'approve', first.recordId, ...humanFlags, '--reason', 'Matches the report').status, 0);
+
+      const retrieved = mole('retrieve', first.recordId);
+      assert.match(retrieved.stdout, /Path: 4-context\/product\/checkout-spec\.md/);
+      assert.match(retrieved.stdout, /The real checkout spec\./);
+      assert.doesNotMatch(retrieved.stdout, /UNFINISHED/);
+      const listed = mole('lifecycle', 'list').stdout;
+      assert.match(listed, new RegExp(`${first.recordId}  accepted  r4  4-context/product/checkout-spec\\.md`));
+      assert.match(listed, new RegExp(`${second.recordId}  draft  r1  4-context/product/spec-draft\\.md`));
+      assert.equal(mole('lifecycle', 'audit').status, 0);
+    });
+  });
+
+  it('withdraws a record whose file was removed and keeps accepted records for a human', () => {
+    withWorkspace((workspace, mole) => {
+      const captured = mole('insight', 'A note that gets promoted and removed');
+      const rawRecordId = printedId(captured.stdout, 'Lifecycle record');
+      fs.rmSync(captured.stdout.match(/Captured insight: (.+)/)[1]);
+
+      const failing = mole('lifecycle', 'audit');
+      assert.equal(failing.status, 1);
+      assert.match(failing.stdout, new RegExp(`mole lifecycle withdraw ${rawRecordId}`));
+
+      const withdrawn = mole('lifecycle', 'withdraw', rawRecordId, ...agentFlags, '--reason', 'Inbox copy removed after promotion');
+      assert.equal(withdrawn.status, 0, withdrawn.stderr);
+      assert.match(withdrawn.stdout, /is now withdrawn \(revision 2\)/);
+      assert.equal(mole('lifecycle', 'audit').status, 0);
+      assert.equal(mole('retrieve', '--include-state', 'raw').status, 0);
+
+      const evidenceId = printedId(mole('insight', 'Supporting note').stdout, 'Source ID');
+      const { recordId } = createDraft(mole, 'roadmap');
+      mole('lifecycle', 'submit', recordId, ...agentFlags, '--reason', 'Ready', '--source', evidenceId);
+      mole('lifecycle', 'approve', recordId, ...humanFlags, '--reason', 'Agreed');
+      const agent = mole('lifecycle', 'withdraw', recordId, ...agentFlags, '--confirm-human', '--reason', 'Tidying');
+      assert.equal(agent.status, 1);
+      assert.match(agent.stderr, /Only a human can withdraw an accepted record\. The record stays accepted\./);
+      assert.equal(mole('lifecycle', 'withdraw', recordId, ...humanFlags, '--reason', 'Plan cancelled').status, 0);
+      assert.match(mole('retrieve').stdout, /Retrievable records \(accepted\): 0/);
+    });
+  });
+
+  it('keeps a capture when the ledger cannot be written and backfills it later', () => {
+    withWorkspace((workspace, mole) => {
+      mole('insight', 'First note');
+      const ledgerPath = path.join(workspace, ledgerRelPath);
+      const conflictCopy = path.join(path.dirname(ledgerPath), 'records (conflicted copy).json');
+      fs.copyFileSync(ledgerPath, conflictCopy);
+      const before = fs.readFileSync(ledgerPath);
+
+      const captured = mole('insight', 'Captured while the ledger is in conflict');
+      assert.equal(captured.status, 0, captured.stderr);
+      assert.match(captured.stdout, /Captured insight: /);
+      assert.doesNotMatch(captured.stdout, /Lifecycle record:/);
+      assert.match(captured.stderr, /Warning: the capture is saved but has no lifecycle record yet/);
+      assert.match(captured.stderr, /Do not capture it again\./);
+      const sourceId = printedId(captured.stdout, 'Source ID');
+      assert.ok(fs.existsSync(captured.stdout.match(/Captured insight: (.+)/)[1]));
+
+      const blocked = mole('create', 'spec');
+      assert.equal(blocked.status, 1);
+      assert.match(blocked.stderr, /Refusing to create a draft that cannot be tracked: .*competing copies.* Nothing was written\./);
+      assert.equal(fs.existsSync(path.join(workspace, '4-context', 'product', 'spec-draft.md')), false);
+      assert.deepEqual(fs.readFileSync(ledgerPath), before);
+
+      fs.rmSync(conflictCopy);
+      const backfill = JSON.parse(mole('lifecycle', 'migrate', '--apply', ...agentFlags, '--format', 'json').stdout);
+      const entry = backfill.registered.find((item) => item.source_id === sourceId);
+      assert.ok(entry, 'the capture should be backfilled under its original source ID');
+      assert.equal(entry.state, 'raw');
+      assert.equal(createDraft(mole, 'spec').recordId.length, 40);
+    });
+  });
+
+  it('lists the recovery commands in help', () => {
+    withWorkspace((workspace, mole) => {
+      const help = mole('--help').stdout;
+      assert.match(help, /mole lifecycle withdraw <record_id>/);
+      assert.match(help, /mole lifecycle relocate <record_id> --path <path>/);
+      const unknown = mole('lifecycle', 'publish');
+      assert.equal(unknown.status, 2);
+      assert.match(unknown.stderr, /withdraw, relocate, show, list, audit, migrate, unlock/);
+      const missingPath = mole('lifecycle', 'relocate', 'rec_00000000-0000-4000-8000-000000000000', ...agentFlags, '--reason', 'x');
+      assert.equal(missingPath.status, 2);
+      assert.match(missingPath.stderr, /Missing required option --path/);
+    });
+  });
+});
+
+describe('UI capture', () => {
+  it('opens a raw record and keeps the capture when the ledger is in conflict', async () => {
+    const workspace = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mole-lifecycle-ui-')));
+    try {
+      createWorkspaceScaffold(workspace);
+      assert.deepEqual(await captureNote(workspace, { note: '   ' }), { status: 400, payload: { error: 'Note is required' } });
+
+      const saved = await captureNote(workspace, { note: 'Heard in the pricing call', capturedBy: 'Sam Reviewer' });
+      assert.equal(saved.status, 200);
+      assert.equal(saved.payload.state, 'raw');
+      assert.match(saved.payload.record_id, /^rec_[0-9a-f-]{36}$/);
+      assert.equal(saved.payload.warning, undefined);
+      const shown = JSON.parse(runCli(['lifecycle', 'show', saved.payload.record_id, '--format', 'json'], workspace).stdout).record;
+      assert.equal(shown.source_id, saved.payload.source_id);
+      assert.equal(shown.history[0].actor, 'mole-ui');
+      assert.equal(shown.history[0].actor_type, 'automation');
+
+      const ledgerPath = path.join(workspace, ledgerRelPath);
+      const conflictCopy = path.join(path.dirname(ledgerPath), 'records (conflicted copy).json');
+      fs.copyFileSync(ledgerPath, conflictCopy);
+      const kept = await captureNote(workspace, { note: 'Heard while the ledger was in conflict' });
+      assert.equal(kept.status, 200);
+      assert.equal(kept.payload.ok, true);
+      assert.equal(kept.payload.record_id, null);
+      assert.equal(kept.payload.state, null);
+      assert.match(kept.payload.warning, /The capture is saved but has no lifecycle record yet: .*competing copies/);
+      assert.ok(fs.existsSync(path.join(workspace, kept.payload.path)));
+      assert.equal(readSourceRecord(workspace, kept.payload.source_id).current_path, kept.payload.path.split(path.sep).join('/'));
+
+      fs.rmSync(conflictCopy);
+      const backfill = JSON.parse(runCli(['lifecycle', 'migrate', '--apply', ...agentFlags, '--format', 'json'], workspace).stdout);
+      assert.equal(backfill.registered.find((item) => item.source_id === kept.payload.source_id)?.state, 'raw');
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
   });
 });
 

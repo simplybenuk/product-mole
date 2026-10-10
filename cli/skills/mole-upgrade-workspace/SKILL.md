@@ -47,7 +47,7 @@ Upgrade a workspace conservatively:
 
 7. **Report review state**
    - Run `mole lifecycle migrate` without `--apply` and include its list of untracked files in the report.
-   - Do not run `--apply` unless the user asks. It registers old files as `unreviewed`, and no file becomes accepted without a person running `mole lifecycle approve`.
+   - Do not run `--apply` unless the user asks. It registers files under `6-raw/` as `raw` and other old files as `unreviewed`, and no file becomes accepted without a person running `mole lifecycle approve`.
    - Never treat a legacy `status: active` field as an approval.
 
 8. **Produce upgrade report**

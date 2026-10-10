@@ -118,10 +118,12 @@ mole critique spec drafts/spec.md
 | `mole lifecycle evidence\|draft\|submit\|revise <record-id> [options]` | Moves a record toward review. Agents may run these. |
 | `mole lifecycle approve\|reject <record-id> --actor <name> --actor-type human --confirm-human --reason <text>` | Records a human review decision. Approval also needs a supporting `--source <source-id>`. |
 | `mole lifecycle supersede <record-id> --replacement <record-id> [human options]` | Replaces an accepted record with another accepted record. |
+| `mole lifecycle withdraw <record-id> [options]` | Closes a record, such as one whose file is gone. An accepted record needs the human options. |
+| `mole lifecycle relocate <record-id> --path <path> [options]` | Points a draft at its renamed file without touching the file. |
 | `mole lifecycle show <record-id>` | Shows a record and its transition history. |
 | `mole lifecycle list [--state <state>]` | Lists review records. |
 | `mole lifecycle audit` | Checks the review ledger and reviewed files without changing them. |
-| `mole lifecycle migrate [--apply]` | Reports untracked files; apply mode registers them as `unreviewed`. |
+| `mole lifecycle migrate [--apply]` | Reports untracked files; apply mode registers them as `raw` or `unreviewed`. |
 | `mole lifecycle unlock` | Removes a write lock left by a stopped process. |
 | `mole retrieve [record-id] [--include-state <state>]` | Lists or prints accepted context; other states are opt-in. |
 | `mole upgrade [version]` | Updates the globally installed Mole CLI from a stable release tag. With no version, it uses the installed CLI's version tag. |
@@ -131,6 +133,12 @@ mole critique spec drafts/spec.md
 `mole create` registers the new file as a source and opens a `draft` record.
 `mole insight`, `mole note`, and `mole signal` open a `raw` record. Each prints
 the record ID.
+
+`mole create` checks the ledger first and writes nothing if the draft could
+not be tracked, or if another source is still registered at the output path.
+A capture is different. It is always saved. If the ledger cannot be written,
+the command exits 0 with a warning, and `mole lifecycle migrate --apply`
+backfills the record later.
 
 ```bash
 mole lifecycle submit <record-id> --actor "Agent" --actor-type agent --reason "Ready for review"

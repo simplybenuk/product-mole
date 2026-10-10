@@ -110,9 +110,11 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole lifecycle evidence\|draft\|submit\|revise <record_id> [options]` | Moves a record toward review. Agents may run these. |
 | `mole lifecycle approve\|reject <record_id> --actor <name> --actor-type human --confirm-human --reason <text>` | Records a human review decision. Approval also needs a supporting `--source <source_id>`. |
 | `mole lifecycle supersede <record_id> --replacement <record_id> [human options]` | Replaces an accepted record with another accepted record. |
+| `mole lifecycle withdraw <record_id> [options]` | Closes a record, such as one whose file is gone. An accepted record needs the human options. |
+| `mole lifecycle relocate <record_id> --path <path> [options]` | Points a draft at its renamed file without touching the file. |
 | `mole lifecycle show <record_id>` / `mole lifecycle list [--state <state>]` | Shows one record with its history, or lists records. |
 | `mole lifecycle audit` | Checks the review ledger and the reviewed files. Read-only. |
-| `mole lifecycle migrate [--apply]` | Reports files with no review record. `--apply` registers them as `unreviewed`, never as accepted. |
+| `mole lifecycle migrate [--apply]` | Reports files with no review record. `--apply` registers them as `raw` or `unreviewed`, never as accepted. |
 | `mole lifecycle unlock` | Removes a write lock left by a stopped process. |
 | `mole retrieve [record_id] [--include-state <state>]` | Lists or prints accepted context. Drafts, pending, and rejected records need `--include-state`. |
 | `mole upgrade [version]` | Updates the globally installed Mole CLI from a stable release tag. With no version, it reuses the installed CLI's version tag. |
@@ -219,22 +221,29 @@ mole retrieve
 
 `mole create` and the capture commands open a record and print its ID. A record
 moves through `raw`, `evidence`, `draft`, `pending_review`, and `accepted`, with
-`rejected` and `superseded` as outcomes. Only a human can approve, reject, or
-supersede, and the command fails for an agent actor or without
-`--confirm-human`. Each transition appends the actor, time, and reason to the
-record's history. Transitions never rewrite the file under review.
+`rejected`, `superseded`, and `withdrawn` as outcomes. Only a human can approve,
+reject, supersede, or withdraw accepted context, and the command fails for an
+agent actor or without `--confirm-human`. Each transition appends the actor,
+time, and reason to the record's history. Transitions never rewrite the file
+under review.
 
 `mole retrieve` returns accepted records only. Add `--include-state` to read
 drafts, pending, or rejected material on purpose. If an accepted file changes
 after approval, retrieval drops it and `mole lifecycle audit` reports it.
 
-Existing workspaces start with no records. `mole lifecycle migrate` lists
-untracked files, and `--apply` registers them as `unreviewed`. Nothing becomes
-accepted without a person running `approve`.
+Files move. An archived file with unchanged bytes is found by its hash. A
+draft that was renamed and edited needs `mole lifecycle relocate`, and a record
+whose file was deleted needs `mole lifecycle withdraw`. The audit names the
+command for each record it reports.
 
-The actor fields are declarations, not authentication, and the write lock is
-local to one machine. See [`docs/review-lifecycle.md`](docs/review-lifecycle.md)
-for the transition table, migration, recovery, and shared-folder limits.
+Existing workspaces start with no records. `mole lifecycle migrate` lists
+untracked files. `--apply` registers files under `6-raw/` as `raw` and the rest
+as `unreviewed`. Nothing becomes accepted without a person running `approve`.
+
+The actor fields are declarations, not authentication. A synced folder can
+still produce a conflict copy of the ledger, which Mole detects and does not
+merge. See [`docs/review-lifecycle.md`](docs/review-lifecycle.md) for the
+transition table, migration, recovery, and shared-folder limits.
 
 ## How Mole Works
 

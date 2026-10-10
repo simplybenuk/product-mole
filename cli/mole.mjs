@@ -35,6 +35,9 @@ import {
   migrateLifecycleRecords,
   readLifecycleRecord,
   registerLifecycleRecord,
+  relocateLifecycleRecord,
+  assertLifecycleWritable,
+  findPathClaims,
   retrieveLifecycleRecord,
   retrieveLifecycleRecords,
   transitionLifecycleRecord,
@@ -133,11 +136,15 @@ Usage:
                                       Record a human review decision.
   mole lifecycle supersede <record_id> --replacement <record_id> [human options]
                                       Replace an accepted record with another accepted record.
+  mole lifecycle withdraw <record_id> [options]
+                                      Close a record, such as one whose file is gone. Accepted records need a human.
+  mole lifecycle relocate <record_id> --path <path> [options]
+                                      Point a draft at its renamed file.
   mole lifecycle show <record_id>      Show a record and its transition history.
   mole lifecycle list [--state <state>]
                                       List review records.
   mole lifecycle audit                Check the review ledger and reviewed files (read-only).
-  mole lifecycle migrate [--apply]    Report untracked files; apply registers them as unreviewed.
+  mole lifecycle migrate [--apply]    Report untracked files; apply registers them as raw or unreviewed.
   mole lifecycle unlock               Remove a mutation lock left by a stopped process.
   mole retrieve [record_id] [--include-state <state>]
                                       Read accepted context; other states are opt-in.
@@ -385,29 +392,52 @@ function createArtifact(kind, outputPath) {
     process.exit(1);
   }
 
+  // Check everything that could stop the draft being tracked before writing
+  // it, so a refusal never leaves an untracked file behind.
+  try {
+    assertLifecycleWritable(cwd);
+    const claims = findPathClaims(cwd, relativeTarget);
+    if (claims.length) {
+      const claim = claims.find((item) => item.record_id) || claims[0];
+      const owner = claim.record_id ? `source ${claim.source_id} (lifecycle record ${claim.record_id})` : `source ${claim.source_id}`;
+      const fix = claim.record_id
+        ? `run "mole lifecycle relocate ${claim.record_id} --path <new path>" or "mole source reconcile ${claim.source_id} --path <new path>"`
+        : `run "mole source reconcile ${claim.source_id} --path <new path>"`;
+      console.error(`Refusing to create a draft at ${relativeTarget}: ${owner} is still registered at that path. If that file moved, ${fix}. Otherwise choose another output path. Nothing was written.`);
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error(`Refusing to create a draft that cannot be tracked: ${error.message} Nothing was written.`);
+    process.exit(1);
+  }
+
   copyFile(source, target);
   console.log(`Created ${kind} draft: ${target}`);
 
+  let sourceId = null;
   try {
-    const registration = registerSource(cwd, {
+    sourceId = registerSource(cwd, {
       path: relativeTarget,
       source_type: 'file',
       captured_by: resolveCapturedBy(),
       channel: 'cli',
       path_reason: 'created',
       content_change_type: 'created'
-    });
+    }).source_id;
     const lifecycle = registerLifecycleRecord(cwd, {
-      sourceId: registration.source_id,
+      sourceId,
       state: 'draft',
       actor: 'mole-cli',
       actorType: 'automation',
       reason: `Created ${kind} draft from a template.`
     });
-    console.log(`Source ID: ${registration.source_id}`);
+    console.log(`Source ID: ${sourceId}`);
     console.log(`Lifecycle record: ${lifecycle.record_id} (draft)`);
   } catch (error) {
-    console.error(`Draft written but lifecycle registration failed: ${error.message}`);
+    console.error(`The draft was written to ${relativeTarget} but is not tracked yet: ${error.message}`);
+    console.error(sourceId
+      ? `Keep the file. When the problem is fixed, run: mole lifecycle register ${sourceId} --state draft --actor "<name>" --actor-type <type>`
+      : `Keep the file. When the problem is fixed, run: mole source register ${relativeTarget}, then mole lifecycle register <source_id> --state draft --actor "<name>" --actor-type <type>`);
     process.exit(1);
   }
 
@@ -503,7 +533,10 @@ function captureInsight(values) {
     process.exit(1);
   }
 
-  let recordId;
+  // The capture is saved and registered at this point.  A lifecycle problem
+  // must not make it look failed, or a retry would capture the note twice.
+  let recordId = null;
+  let lifecycleWarning = null;
   try {
     recordId = registerLifecycleRecord(cwd, {
       sourceId,
@@ -514,13 +547,17 @@ function captureInsight(values) {
       now: createdAt
     }).record_id;
   } catch (err) {
-    console.error(`Capture written but lifecycle registration failed: ${err.message}`);
-    process.exit(1);
+    lifecycleWarning = err.message;
   }
 
   console.log(`Captured insight: ${target}`);
   console.log(`Source ID: ${sourceId}`);
-  console.log(`Lifecycle record: ${recordId} (raw)`);
+  if (recordId) {
+    console.log(`Lifecycle record: ${recordId} (raw)`);
+  } else {
+    console.error(`Warning: the capture is saved but has no lifecycle record yet: ${lifecycleWarning}`);
+    console.error('Do not capture it again. When the problem is fixed, run: mole lifecycle migrate --apply --actor "<name>" --actor-type <type>');
+  }
   console.log('\nSuggested next command:');
   console.log('mole synthesise inbox');
 }
@@ -1081,6 +1118,31 @@ function runLifecycleCommand(action, values = []) {
       return;
     }
 
+    if (action === 'relocate') {
+      const parsed = parseLifecycleValues(values, {
+        positionals: 1,
+        scalars: ['--path', '--actor', '--actor-type', '--reason', '--expect-revision'],
+        booleans: ['--confirm-human']
+      });
+      format = parsed.format;
+      const result = relocateLifecycleRecord(cwd, requireLifecyclePositional(parsed.positionals, 'record ID'), {
+        path: requireLifecycleOption(parsed.options, '--path'),
+        actor: requireLifecycleOption(parsed.options, '--actor'),
+        actorType: requireLifecycleOption(parsed.options, '--actor-type'),
+        humanConfirmed: parsed.options['--confirm-human'] === true,
+        reason: requireLifecycleOption(parsed.options, '--reason'),
+        expectedRevision: parseExpectedRevision(parsed.options['--expect-revision'])
+      });
+      emit(result, () => {
+        console.log(`Record ${result.record_id} now points to ${result.record.path} (revision ${result.record.revision}).`);
+        printLifecycleRecord(result.record);
+        if (result.source_correction) {
+          console.log(`Recorded a source content correction for ${result.record.source_id}: the file changed after it was registered.`);
+        }
+      });
+      return;
+    }
+
     if (action === 'show') {
       const parsed = parseLifecycleValues(values, { positionals: 1 });
       format = parsed.format;
@@ -1142,16 +1204,16 @@ function runLifecycleCommand(action, values = []) {
         console.log(`Files scanned: ${result.scanned}`);
         console.log(`Already tracked: ${result.tracked}`);
         console.log(`Untracked: ${result.candidates.length}`);
-        console.log(`Registered as unreviewed: ${result.registered.length}`);
+        console.log(`Registered: ${result.registered.length}`);
         console.log(`Skipped: ${result.skipped.length}`);
         if (!apply) {
           for (const candidate of result.candidates) {
             const status = candidate.legacy_status ? ` (frontmatter status: ${candidate.legacy_status})` : '';
-            console.log(`- ${candidate.path}${status}`);
+            console.log(`- ${candidate.path} -> ${candidate.proposed_state}${status}`);
           }
-          if (result.candidates.length) console.log('Nothing was changed. Rerun with --apply --actor <name> --actor-type <type> to register these files as unreviewed. A frontmatter status is not a review decision.');
+          if (result.candidates.length) console.log('Nothing was changed. Rerun with --apply --actor <name> --actor-type <type> to register these files. Files under 6-raw/ become raw and the rest become unreviewed. A frontmatter status is not a review decision.');
         }
-        for (const item of result.registered) console.log(`- ${item.record_id}  unreviewed  ${item.path}`);
+        for (const item of result.registered) console.log(`- ${item.record_id}  ${item.state}  ${item.path}`);
         for (const item of result.skipped) console.log(`- skipped ${item.path}: ${item.reason}`);
         if (result.findings.length) {
           console.log('Findings:');
@@ -1174,7 +1236,7 @@ function runLifecycleCommand(action, values = []) {
       return;
     }
 
-    throw new UsageError(`Supported lifecycle commands: register, ${LIFECYCLE_ACTIONS.join(', ')}, show, list, audit, migrate, unlock`);
+    throw new UsageError(`Supported lifecycle commands: register, ${LIFECYCLE_ACTIONS.join(', ')}, relocate, show, list, audit, migrate, unlock`);
   } catch (error) {
     if (!(error instanceof UsageError) && !error.code) throw error;
     reportLifecycleFailure(error, format);
