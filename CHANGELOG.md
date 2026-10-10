@@ -44,6 +44,11 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 - CLI and UI captures open a `raw` lifecycle record and return its ID. A
   capture is still saved, with a warning, when the ledger cannot be written.
   A UI capture waits 1.5 seconds for a busy ledger before it does so.
+- A reviewed file replaced by a link that leaves the workspace is reported as
+  `unsafe_path` in audit findings, retrieval exclusions, and error details. It
+  was `source_record_invalid`.
+- `mole lifecycle list --path` hashes only files that moved away from their
+  registered path.
 - Agent guidance and generated instructions tell agents to rely on accepted
   context, submit drafts for review, and leave decisions to a person.
 - Existing workspaces start with no lifecycle records. `mole lifecycle migrate

@@ -437,7 +437,7 @@ output. A refusal prints `{ "ok": false, "error": { "code", "message",
 functions that take the workspace root first.
 
 ```js
-registerLifecycleRecord(root, { sourceId, state, actor, actorType, sourceIds, reason, now })
+registerLifecycleRecord(root, { sourceId, state, actor, actorType, sourceIds, reason, now, lockWaitMs })
 transitionLifecycleRecord(root, recordId, {
   action, actor, actorType, humanConfirmed, reason,
   sourceIds, removeSourceIds, supersedes, replacementId, expectedRevision, now
