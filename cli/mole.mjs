@@ -1216,7 +1216,8 @@ function runLifecycleCommand(action, values = []) {
         if (!apply) {
           for (const candidate of result.candidates) {
             const status = candidate.legacy_status ? ` (frontmatter status: ${candidate.legacy_status})` : '';
-            console.log(`- ${candidate.path} -> ${candidate.proposed_state}${status}`);
+            const named = candidate.named_source_id ? ` (frontmatter names ${candidate.named_source_id}, which the registry does not place here; this file gets its own source)` : '';
+            console.log(`- ${candidate.path} -> ${candidate.proposed_state}${status}${named}`);
           }
           if (result.candidates.length) console.log('Nothing was changed. Rerun with --apply --actor <name> --actor-type <type> to register these files. Files under 6-raw/ become raw and the rest become unreviewed. A frontmatter status is not a review decision.');
         }

@@ -315,15 +315,27 @@ A registered file that moved without a reconcile keeps its source ID. Migration
 matches it to the registered source whose path is empty and whose hash equals
 the file's bytes. It never gives one file a second identity.
 
-Migration skips, and reports:
+A file that already has an open lifecycle record counts as tracked, whatever
+`source_id` its frontmatter names.
 
-- `README.md` files, symlinks, and sync conflict copies
-- a file whose frontmatter names a `source_id` that the registry does not
-  place at that path and that does not match the file's bytes
-- a file that could belong to more than one moved source, or a moved source
-  that matches more than one file
+A copy can keep the `source_id:` frontmatter of the file it was copied from,
+such as a capture copied into `5-evidence/` and then edited. When the original
+is still at its registered path, or migration matched it as a moved file, the
+copy is registered under a new source. The dry run names the frontmatter ID
+next to the copy, and the record's first history entry keeps it.
 
-Fix the last two with the `mole source` commands and run the migration again.
+Migration skips `README.md` files, symlinks, and sync conflict copies without
+a finding. It skips these with a finding, and exits 1:
+
+- `source_id_mismatch`: a file whose frontmatter names a `source_id` that the
+  registry does not place at that path, that does not match the file's bytes,
+  and that no other file holds. Run `mole source register <path>` to track
+  the file as its own source.
+- `ambiguous_source`: a file that could belong to more than one moved source,
+  or a moved source that matches more than one file. Run the `mole source` or
+  `mole lifecycle` command the finding names.
+
+Then run the migration again.
 
 Running the migration again is safe. It is also the way to backfill a capture
 that was saved while the ledger could not be written.
