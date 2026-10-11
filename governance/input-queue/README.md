@@ -11,7 +11,7 @@ governance/input-queue/
 ├── README.md
 ├── requests.json                 # the queue; created by the first request
 ├── legacy/                       # copies of the Markdown file from before a rewrite that removed text
-├── .view-pending                 # present only while the Markdown table is out of date
+├── .view-pending                 # present only while the Markdown table is out of date; lists the lines Mole generated
 └── .mutation.lock                # present only while a command is writing
 ```
 

@@ -220,7 +220,7 @@ copies the file to `governance/input-queue/legacy/` and prints the path.
 | `view_markers_invalid` | Fix the marker lines in `governance/input-queue.md`, or delete them all. |
 | `view_unreadable` | `governance/input-queue.md` is not a readable regular file. |
 | `unmanaged_text_in_view` | Text inside the markers is not part of the table. Move it outside the markers. The next change replaces it after copying the file. |
-| `request_table_outside_view` | A note, not a failure: a table outside the markers lists requests by queue ID. Mole leaves it alone. Delete it if it is a stale copy. |
+| `request_table_outside_view` | A note, not a failure: a table outside the markers lists requests by queue ID. Mole leaves it alone. Delete it if it is a stale copy. The JSON finding carries `"advisory": true`, and the audit prints "passed, with notes" and exits 0 when it is the only finding. |
 | `view_pending_unusable` | `governance/input-queue/.view-pending` is not a regular file. Remove it. |
 | `legacy_rows_pending` | Run `mole input-queue migrate --apply`. |
 | `legacy_rows_without_request` | Fill in the Request cell or move the text out of the table. |
