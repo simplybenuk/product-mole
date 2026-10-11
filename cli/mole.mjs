@@ -52,6 +52,7 @@ import {
   listInputRequests,
   migrateInputQueue,
   readInputRequest,
+  refreshInputQueueView,
   reopenInputRequest,
   reviewInputQueue,
   unlockInputQueue,
@@ -128,7 +129,8 @@ Usage:
   mole review input-queue [--limit <n>] [--format json]
                                       Show the highest-value human-input requests and why they rank.
   mole input-queue add --request <text> --impact <text> --unblocks <text> --actor <name> --actor-type <type>
-                                      Ask a person for input. Options: --priority, --blocking, --owner, --due, --source, --ref.
+                                      Ask a person for input. Options: --priority, --blocking, --owner, --due,
+                                      --next-review, --answer-format, --effort, --requester, --source, --ref.
   mole input-queue update <input_id> [fields] --actor <name> --actor-type <type> --reason <text>
                                       Change a request. Changing its owner needs a human.
   mole input-queue close <input_id> --answer <text> --outcome <text> --actor <name> --actor-type <type>
@@ -141,6 +143,7 @@ Usage:
                                       List open requests; --all includes closed ones.
   mole input-queue migrate [--apply --actor <name> --actor-type <type>]
                                       Give rows in governance/input-queue.md stable IDs.
+  mole input-queue refresh-view       Rewrite the generated table from the queue.
   mole input-queue audit              Check the input queue (read-only).
   mole input-queue unlock             Remove a queue lock left by a stopped process.
   mole inbox claim [processor]         Claim a run with a leased, owned lock.
@@ -755,13 +758,13 @@ function critique(values) {
 export function buildBootstrapContextInstruction() {
   return `Suggested agent instruction:
 
-Bootstrap this Mole workspace context. Treat blank, placeholder, or starter-template files in \`2-summaries/\` and \`3-indexes/\` as missing top-layer context. Read \`0-bootstrap/\`, \`1-routing/\`, all existing \`4-context/\` modules, useful \`5-evidence/\` material, and current unprocessed inbox material in \`6-raw/inbox/\`. Populate the initial domain summaries and indexes with concise, evidence-backed context, preserving uncertainty and adding missing human questions to \`governance/input-queue.md\`. Do not invent product facts; mark low-confidence conclusions as hypotheses and link to supporting files. ${LIFECYCLE_AGENT_GUIDANCE}`;
+Bootstrap this Mole workspace context. Treat blank, placeholder, or starter-template files in \`2-summaries/\` and \`3-indexes/\` as missing top-layer context. Read \`0-bootstrap/\`, \`1-routing/\`, all existing \`4-context/\` modules, useful \`5-evidence/\` material, and current unprocessed inbox material in \`6-raw/inbox/\`. Populate the initial domain summaries and indexes with concise, evidence-backed context, preserving uncertainty and adding missing human questions with \`mole input-queue add\`. Do not invent product facts; mark low-confidence conclusions as hypotheses and link to supporting files. ${LIFECYCLE_AGENT_GUIDANCE}`;
 }
 
 export function buildRefreshTopLayersInstruction() {
   return `Suggested agent instruction:
 
-Refresh the Mole top layers. Compare \`2-summaries/\` and \`3-indexes/\` with lower-layer context in \`4-context/\`, evidence in \`5-evidence/\`, recent processed inbox outputs, and any relevant unprocessed \`6-raw/inbox/\` material. Update blank, placeholder, stale, or incomplete summaries and indexes so they accurately route future retrieval. Keep changes compact and evidence-backed, avoid copying raw detail upward, and add missing human questions to \`governance/input-queue.md\` when the lower layers do not justify a confident summary. ${LIFECYCLE_AGENT_GUIDANCE}`;
+Refresh the Mole top layers. Compare \`2-summaries/\` and \`3-indexes/\` with lower-layer context in \`4-context/\`, evidence in \`5-evidence/\`, recent processed inbox outputs, and any relevant unprocessed \`6-raw/inbox/\` material. Update blank, placeholder, stale, or incomplete summaries and indexes so they accurately route future retrieval. Keep changes compact and evidence-backed, avoid copying raw detail upward, and add missing human questions with \`mole input-queue add\` when the lower layers do not justify a confident summary. ${LIFECYCLE_AGENT_GUIDANCE}`;
 }
 
 function productUpdate(values) {
@@ -1397,6 +1400,9 @@ function runInputQueueCommand(action, values = []) {
   const emit = (result, printText) => {
     if (format === 'json') console.log(JSON.stringify(result, null, 2));
     else printText();
+    if (format !== 'json' && result.legacy_copy && !result.applied) console.log(`The queue file as it was is kept at ${result.legacy_copy}.`);
+    // The change is saved even when the Markdown table could not be rewritten.
+    if (result.view?.warning) console.error(`Warning: ${result.view.warning}`);
   };
 
   try {
@@ -1517,13 +1523,18 @@ function runInputQueueCommand(action, values = []) {
         printLifecycleFindings(result.findings);
       });
       if (!result.ok) process.exitCode = 1;
+    } else if (action === 'refresh-view') {
+      const parsed = parseLifecycleValues(values);
+      format = parsed.format;
+      const result = refreshInputQueueView(cwd);
+      emit(result, () => console.log(result.view.changed ? `Rewrote the generated table in ${result.view.path}.` : `The generated table in ${result.view.path} is already current.`));
     } else if (action === 'unlock') {
       const parsed = parseLifecycleValues(values);
       format = parsed.format;
       const result = unlockInputQueue(cwd);
       emit(result, () => console.log(result.message));
     } else {
-      throw new UsageError(`Unknown input-queue command: ${action ?? '(none)'}. Use add, update, close, reopen, show, list, review, migrate, audit, or unlock.`);
+      throw new UsageError(`Unknown input-queue command: ${action ?? '(none)'}. Use add, update, close, reopen, show, list, review, migrate, refresh-view, audit, or unlock.`);
     }
   } catch (error) {
     if (!(error instanceof UsageError) && !error.code) throw error;

@@ -172,7 +172,7 @@ If a decision is ambiguous, put it under "Needs human confirmation".
 ```text
 Review the context below and identify the top missing human-only inputs required to proceed.
 
-Output target: governance/input-queue.md
+Output target: one `mole input-queue add` command per request (see docs/input-queue.md)
 
 Context:
 <paste summaries/indexes/context snippets>
@@ -244,4 +244,4 @@ Return:
 3. Build key Layer 4 context/decision docs.
 4. Cluster leftover notes into Layer 5 evidence.
 5. Dump remaining fragments into Layer 6 inbox.
-6. Run human-input gap finder to populate `governance/input-queue.md`.
+6. Run human-input gap finder and add each request with `mole input-queue add`.

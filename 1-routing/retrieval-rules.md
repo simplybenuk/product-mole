@@ -23,4 +23,4 @@ Normal retrieval uses accepted context only.
 - When accepted and unapproved material disagree, the accepted record wins.
 
 ## Missing input protocol
-If essential context is unavailable, request it via `governance/input-queue.md`.
+If essential context is unavailable, request it with `mole input-queue add`. The table in `governance/input-queue.md` is generated from the queue.

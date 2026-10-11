@@ -17,6 +17,13 @@ closed request still says who answered it and what changed.
 `requests.json` is the authority. Do not edit it or the generated table by
 hand. An upgrade must never replace `governance/input-queue/`.
 
+The generated table sits between a `<!-- mole:input-queue:start -->` line and
+a `<!-- mole:input-queue:end -->` line. Each marker must be a line of its own,
+and the file must hold exactly one of each, in that order. If it does not, the
+commands that write refuse with `INVALID_QUEUE_VIEW` and change nothing,
+because rewriting the table could delete your text. A file with no markers
+gets the table in place of its first request table, or at the end.
+
 ## The record
 
 | Field | Meaning |
@@ -56,14 +63,15 @@ mole input-queue close <input_id> --answer "Team tier" \
 | Command | What it does |
 | --- | --- |
 | `mole review input-queue [--limit <n>] [--stale-after-days <n>] [--duplicate-threshold <0-1>]` | Returns the highest-value requests and suggestions. Read-only. `mole input-queue review` is the same command. |
-| `mole input-queue add` | Adds a request. Needs `--request`, `--impact`, `--unblocks`, `--actor`, and `--actor-type`. |
-| `mole input-queue update <input_id> [fields] --reason <text>` | Changes fields. Takes the `add` fields plus `--status`, `--not-blocking`, and `--next-review`. `--due none` clears a date. `--source` and `--ref` add to the lists. |
+| `mole input-queue add` | Adds a request. Needs `--request`, `--impact`, `--unblocks`, `--actor`, and `--actor-type`. Optional: `--priority`, `--blocking`, `--owner`, `--due`, `--next-review`, `--answer-format`, `--effort`, `--requester` (default: the actor), `--source`, `--ref`, `--reason`. |
+| `mole input-queue update <input_id> [fields] --reason <text>` | Changes fields. Takes the `add` fields plus `--status` and `--not-blocking`. `--due none` and `--next-review none` clear a date. `--source` and `--ref` add to the lists. |
 | `mole input-queue close <input_id> --answer <text> --outcome <text>` | Records the answer and what it changed. |
 | `mole input-queue close <input_id> --closure-reason <reason> --outcome <text> --reason <text>` | Closes a request that was not answered. Reasons: `duplicate` (with `--duplicate-of`), `superseded` (with `--superseded-by`), `stale`, `not_needed`. |
 | `mole input-queue reopen <input_id> --reason <text>` | Reopens a closed request. The closure stays in the history. |
 | `mole input-queue show <input_id>` | Prints a request and its history. |
 | `mole input-queue list [--status <status>] [--all]` | Lists open requests. `--all` includes closed ones. |
 | `mole input-queue migrate [--apply]` | Imports rows from the Markdown table. |
+| `mole input-queue refresh-view` | Rewrites the generated table from the queue. Use it when a command warns that the table could not be rewritten, or when `audit` reports `view_stale`. |
 | `mole input-queue audit` | Checks the queue. Read-only. Exits 1 with findings. |
 | `mole input-queue unlock` | Removes a write lock left by a stopped process. |
 
@@ -78,9 +86,12 @@ machine-readable output. A refusal prints `{ "ok": false, "error": { "code",
 | --- | --- |
 | Add a request, update it, name an owner for a request that has none | anyone |
 | Record an answer with `close --answer` | anyone. The answer and the outcome are required. |
-| Reopen a request | anyone |
+| Defer a request with a `--next-review` date | anyone |
+| Reopen a request that was closed without human confirmation | anyone |
 | Close as `duplicate`, `superseded`, `stale`, or `not_needed` | a person, with `--actor-type human --confirm-human` |
 | Change an owner that is already set | a person, with `--actor-type human --confirm-human` |
+| Defer a request with no review date | a person, with `--actor-type human --confirm-human` |
+| Reopen a request whose closure a person confirmed | a person, with `--actor-type human --confirm-human` |
 
 The actor fields are declarations. Mole does not authenticate a human. An
 agent must not pass `--actor-type human` or `--confirm-human`.
@@ -98,8 +109,10 @@ Each gets a score:
 | Due date | overdue 30, within 3 days 20, within 7 days 10 |
 | Not updated for the stale threshold | 5 |
 
+Dates are compared in UTC, so "due today" follows the UTC day.
+
 Higher scores come first. Equal scores go to the earlier due date, then to the
-older request. The command returns the top 3 by default and at most 50. Each
+older request, then to the order the requests were added. The command returns the top 3 by default and at most 50. Each
 result carries its score, the reasons for its rank, its impact, and what it
 unblocks. The JSON output also carries the rule under `ranking`.
 
@@ -110,7 +123,8 @@ reassigns anything.
 
 - A request is a stale candidate when it has not been updated for 14 days
   (`--stale-after-days`), its `next_review` date has arrived, or its due date
-  has passed.
+  has passed. Rows that are not migrated yet carry no dates and are never
+  stale candidates.
 - Two open requests are duplicate candidates when their request texts share at
   least 60% of their significant words (`--duplicate-threshold`). Words of one
   or two letters and common words such as "the" and "which" are ignored. The
@@ -137,7 +151,10 @@ nothing. With `--apply` it:
    `legacy`, with every column;
 3. replaces the tables with the generated view and leaves other text alone.
 
-Any table with a `Request` column is read. Columns map by name: `Priority`,
+A table is read when it has a `Request` column and at least one of
+`Priority`, `Status`, `Why this matters`, or `Impact`. A table with a
+`Request` column and none of those, such as API notes, is left alone. Tables
+in code fences are ignored. Columns map by name: `Priority`,
 `Request`, `Why this matters`, `Quick input format`, `Effort`, `Due`,
 `Status`, and, when present, `Owner`, `Blocking`, and `Unblocks`.
 
@@ -150,13 +167,37 @@ Any table with a `Request` column is read. Columns map by name: `Priority`,
 | Status `Complete`, `Done`, `Closed` | `closed`, with a closure that says the answer was not recorded |
 | Any other status | `open` |
 | A due date that is not `YYYY-MM-DD` | null. The text stays in `legacy.columns`. |
-| A row whose request is empty or `_TBD_` | skipped and reported |
+| A row whose cells are all empty or `_TBD_` | skipped and reported as `placeholder_row` |
+| A row with text but an empty or `_TBD_` request | skipped and reported as `request_missing`. It cannot be imported. It stays in the copy under `legacy/`. |
 
 Until the rows are migrated, `mole review input-queue` still ranks them under
-a `legacy:<line>` ID and says how many are waiting. The commands that add
-requests refuse to run, so a row is not dropped from the generated table.
+a `legacy:<line>` ID and says how many are waiting. Every command that writes
+refuses with `MIGRATION_REQUIRED`, so a row is not dropped when the table is
+rewritten.
 
-Running the migration again imports only rows added by hand since.
+Running the migration again imports only rows added by hand since. That
+includes a row typed into the generated table: a row there whose ID is not in
+the queue is treated as a new request, not overwritten.
+
+A row is imported once. If the migration saves the queue and then cannot
+rewrite the Markdown file, it reports success with a warning, and the rows
+left in the file are recognised as already imported. Run
+`mole input-queue refresh-view` when the file can be written.
+
+When a command removes a table that holds a `request_missing` row, it first
+copies the file to `governance/input-queue/legacy/` and prints the path.
+
+## Audit findings
+
+| Finding | What to do |
+| --- | --- |
+| `invalid_queue` | `requests.json` is not valid. Restore it from version control or a backup. |
+| `view_markers_invalid` | Fix the marker lines in `governance/input-queue.md`, or delete them all. |
+| `legacy_rows_pending` | Run `mole input-queue migrate --apply`. |
+| `legacy_rows_without_request` | Fill in the Request cell or move the text out of the table. |
+| `view_stale` | Run `mole input-queue refresh-view`. |
+| `stale_lock` | Run `mole input-queue unlock`. |
+| `foreign_lock` | The lock came from another host. Delete it by hand once no command is running there. |
 
 ## Library
 
@@ -173,6 +214,7 @@ readInputRequest(root, inputId)
 listInputRequests(root, { statuses, all })
 reviewInputQueue(root, { limit, staleAfterDays, duplicateThreshold, now })
 migrateInputQueue(root, { apply, actor, actorType, now })
+refreshInputQueueView(root)
 auditInputQueue(root)
 unlockInputQueue(root)
 validateInputQueueLedger(ledger)
@@ -184,6 +226,8 @@ A refused operation throws an `InputQueueError` with a `code` and `details`.
 
 - Actor fields are declarations. Mole does not authenticate a human.
 - The ledger is not tamper-evident. A consistent hand edit passes validation.
+- A request closed with `--answer` is not checked for a real answer. An agent
+  that records a made-up answer bypasses the rule on stale closures.
 - Each write takes `governance/input-queue/.mutation.lock` and waits up to
   five seconds for another writer. In a synced folder each machine has its own
   copy, so two machines can still write at once and the sync tool will keep a

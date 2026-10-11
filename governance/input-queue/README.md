@@ -27,8 +27,8 @@ delete it.
   a request or changes an earlier history entry.
 - Anyone may add a request, update it, and record an answer.
 - Only a person may close a request as `duplicate`, `superseded`, `stale`, or
-  `not_needed`, or change its owner. Those need `--actor-type human
-  --confirm-human`.
+  `not_needed`, change its owner, defer it with no review date, or reopen a
+  request a person closed. Those need `--actor-type human --confirm-human`.
 - `mole review input-queue` suggests stale and duplicate requests. It never
   closes or merges anything.
 
@@ -44,6 +44,7 @@ mole input-queue reopen <input_id> --actor <name> --actor-type <type> --reason <
 mole input-queue show <input_id>
 mole input-queue list [--status <status>] [--all]
 mole input-queue migrate [--apply --actor <name> --actor-type <type>]
+mole input-queue refresh-view
 mole input-queue audit
 mole input-queue unlock
 ```
@@ -54,7 +55,9 @@ Do not edit `requests.json` by hand. Use the commands so each change has an
 actor, a time, and a reason. The actor fields are declarations made by whoever
 runs the command. They are not authenticated.
 
-A row added by hand to `governance/input-queue.md`, outside the generated
-table, is picked up by `mole input-queue migrate --apply`.
+A row added by hand to `governance/input-queue.md` is picked up by
+`mole input-queue migrate --apply`, and the other commands refuse to write
+until it is. Keep the two marker lines around the generated table as they
+are.
 
 The full contract is in the Mole documentation under `docs/input-queue.md`.

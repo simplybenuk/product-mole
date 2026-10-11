@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://product-mole.local/schemas/input-queue-v1.schema.json",
   "title": "Mole human-input queue version 1",
-  "description": "Requests an agent has made for human input, with their ranking fields, links, closure, and history. The ledger is authoritative; the table in governance/input-queue.md is generated from it. The Mole library also checks rules a schema cannot express: input IDs are unique, linked requests exist, history revisions count up from 1, and the record revision equals the number of history entries.",
+  "description": "Requests an agent has made for human input, with their ranking fields, links, closure, and history. The ledger is authoritative; the table in governance/input-queue.md is generated from it. The Mole library also checks rules a schema cannot express: input IDs are unique, linked requests exist, history revisions count up from 1, the first history action is add or migrate and no later one is, the record revision equals the number of history entries, a duplicate closure names duplicate_of, and a superseded closure names superseded_by.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "queue_revision", "updated_at", "requests"],
@@ -83,7 +83,9 @@
         "closed_by_type": { "$ref": "#/$defs/actor_type" },
         "human_confirmed": { "type": "boolean" },
         "closed_at": { "$ref": "#/$defs/timestamp" }
-      }
+      },
+      "if": { "properties": { "human_confirmed": { "const": true } } },
+      "then": { "properties": { "closed_by_type": { "const": "human" } } }
     },
     "legacy": {
       "description": "The Markdown table row a migrated request came from, kept verbatim.",

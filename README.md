@@ -100,7 +100,7 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
 | `mole review input-queue [--limit <n>] [--format json]` | Returns the highest-value human-input requests, why each ranks where it does, and what answering it unblocks. Read-only. |
-| `mole input-queue add\|update\|close\|reopen\|show\|list\|migrate\|audit\|unlock` | Manages human-input requests as records with stable IDs. See [`docs/input-queue.md`](docs/input-queue.md). |
+| `mole input-queue add\|update\|close\|reopen\|show\|list\|migrate\|refresh-view\|audit\|unlock` | Manages human-input requests as records with stable IDs. See [`docs/input-queue.md`](docs/input-queue.md). |
 | `mole inbox claim [options]` | Claims a run with a leased, owned lock and returns its `run_id`; provide each `--claimed-path`. |
 | `mole inbox heartbeat --run-id <id>` | Renews the matching active run lease for a long processing pass. |
 | `mole inbox checkpoint --run-id <id> [--processed <path>]` | Saves partial progress in the matching active run for restart-safe processing. |
