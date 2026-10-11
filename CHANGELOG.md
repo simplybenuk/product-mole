@@ -32,7 +32,9 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   at the existing record. That includes a file that moved without
   `mole lifecycle relocate`, which its record follows by content. When an
   earlier registration left such a duplicate, `mole lifecycle audit` names the
-  duplicate record to withdraw.
+  duplicate record to withdraw. `mole lifecycle relocate` applies the same
+  rule, and a record cannot take a moved file from one with more review
+  standing.
 - Added `mole retrieve`, which returns accepted records only unless
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and
