@@ -34,8 +34,18 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and
   `docs/review-lifecycle.md`.
+- Added a `mole metrics` summary, in text and JSON, of captured inputs,
+  processed inputs, promoted evidence, reviewed outputs, accepted learnings,
+  superseded context, and unresolved questions for the last 7 days, 30 days,
+  and all time. It is derived from the review ledger and inbox receipts, so a
+  retry counts nothing twice. `mole metrics snapshot` writes it to
+  `governance/metrics/outcomes.json`. See `docs/molehill-metrics.md`.
 
 ### Changed
+- `mole metrics` with no subcommand prints the summary. It used to fail.
+- The metrics dashboard has a second panel for the summary and keeps
+  operational counts apart from learning and decision-state counts.
+  `mole metrics backfill` also writes the summary snapshot.
 - `mole upgrade [version]` now installs from an explicit `vX.Y.Z` release tag.
 - `mole create` registers the new file as a source and opens a `draft`
   lifecycle record. It refuses an output path outside the workspace, a path

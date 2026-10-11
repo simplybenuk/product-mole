@@ -50,6 +50,25 @@
       color: var(--muted);
     }
 
+    .group-title {
+      margin: 28px 0 10px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .group-row td {
+      background: var(--bg);
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .notes {
+      margin: 12px 16px 16px;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
     .toolbar,
     .summary,
     .data-panel {
@@ -214,10 +233,11 @@
 <body>
   <header>
     <h1>Molehill Metrics</h1>
-    <p class="subtitle">Processed inbox item counts from local metrics files.</p>
+    <p class="subtitle">Workflow counts from local metrics files. They show activity and review state, not product success or decision quality.</p>
   </header>
 
   <main>
+    <h2 class="group-title">Operational activity: processed inbox items</h2>
     <section class="toolbar" aria-label="Dashboard controls">
       <label>
         View
@@ -262,6 +282,23 @@
         </thead>
         <tbody id="recordsBody"></tbody>
       </table>
+    </section>
+
+    <h2 class="group-title">Workflow summary: activity and review state</h2>
+    <section class="data-panel" aria-label="Workflow summary">
+      <p id="outcomesStatus" class="status">Loading outcomes.json.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Last 7 days</th>
+            <th>Last 30 days</th>
+            <th>All time</th>
+          </tr>
+        </thead>
+        <tbody id="outcomesBody"></tbody>
+      </table>
+      <ul id="outcomesNotes" class="notes"></ul>
     </section>
   </main>
 
@@ -395,8 +432,72 @@
       }
     }
 
+    const outcomesStatus = document.getElementById('outcomesStatus');
+    const outcomesBody = document.getElementById('outcomesBody');
+    const outcomesNotes = document.getElementById('outcomesNotes');
+    const OUTCOME_GROUPS = [
+      ['operational', 'Operational activity: what processing happened'],
+      ['learning', 'Learning and decision state: what context states changed']
+    ];
+
+    function cell(text, span = 1) {
+      const td = document.createElement('td');
+      td.textContent = text;
+      if (span > 1) td.colSpan = span;
+      return td;
+    }
+
+    function renderOutcomes(outcomes) {
+      const categories = Array.isArray(outcomes?.categories) ? outcomes.categories : [];
+      const rows = [];
+      const notes = new Set();
+      for (const [group, title] of OUTCOME_GROUPS) {
+        const members = categories.filter((category) => category.group === group);
+        if (!members.length) continue;
+        const heading = document.createElement('tr');
+        heading.className = 'group-row';
+        heading.append(cell(title, 4));
+        rows.push(heading);
+        for (const category of members) {
+          const row = document.createElement('tr');
+          row.append(cell(category.label));
+          if (category.availability === 'available') {
+            for (const key of ['last_7_days', 'last_30_days', 'all_time']) row.append(cell(String(category.counts[key])));
+          } else if (category.availability === 'current_only') {
+            row.append(cell(`${category.current} open now`, 3));
+          } else {
+            row.append(cell('unavailable', 3));
+          }
+          row.title = category.definition || '';
+          rows.push(row);
+          if (category.reason) notes.add(category.source === 'lifecycle_ledger' ? category.reason : `${category.label}: ${category.reason}`);
+        }
+      }
+      outcomesBody.replaceChildren(...rows);
+      outcomesNotes.replaceChildren(...[...notes].map((text) => {
+        const item = document.createElement('li');
+        item.textContent = text;
+        return item;
+      }));
+      outcomesStatus.classList.toggle('warning', !outcomes?.generated_at);
+      outcomesStatus.textContent = outcomes?.generated_at
+        ? `Snapshot written ${outcomes.generated_at}. Run "mole metrics snapshot" to refresh it. Hover a category for its definition.`
+        : 'No snapshot yet. Run "mole metrics snapshot" in the workspace, then reload.';
+    }
+
+    async function loadOutcomes() {
+      try {
+        renderOutcomes(await loadJsonFile('outcomes.json'));
+      } catch (err) {
+        outcomesStatus.textContent = `Could not load outcomes.json automatically. Run "mole metrics snapshot", or use Load JSON files to select it. ${err.message}`;
+        outcomesStatus.classList.add('warning');
+      }
+    }
+
     async function loadSelectedFiles(files) {
       const byName = new Map([...files].map((file) => [file.name, file]));
+      const outcomesFile = byName.get('outcomes.json');
+      if (outcomesFile) renderOutcomes(JSON.parse(await outcomesFile.text()));
 
       for (const [view, name] of Object.entries(FILES)) {
         const file = byName.get(name);
@@ -411,10 +512,14 @@
     viewSelect.addEventListener('change', render);
     fromDate.addEventListener('change', render);
     toDate.addEventListener('change', render);
-    reloadButton.addEventListener('click', loadMetrics);
+    reloadButton.addEventListener('click', () => {
+      loadMetrics();
+      loadOutcomes();
+    });
     fileInput.addEventListener('change', (event) => loadSelectedFiles(event.target.files));
 
     loadMetrics();
+    loadOutcomes();
   </script>
 </body>
 </html>

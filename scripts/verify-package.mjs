@@ -20,6 +20,7 @@ export const REQUIRED_PACKAGED_FILES = Object.freeze([
   'lib/inbox-audit.mjs',
   'lib/inbox-processing.mjs',
   'lib/metrics.mjs',
+  'lib/metrics-summary.mjs',
   'lib/review-lifecycle.mjs',
   'lib/source-registry.mjs',
   'mole.instance-template.yaml',

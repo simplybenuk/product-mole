@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "ok": true,
+  "generated_at": null,
+  "windows": [],
+  "caveat": "These are counts of workflow activity and review state. They do not measure product success or the quality of a decision.",
+  "groups": {
+    "operational": "What processing happened.",
+    "learning": "What product-context states changed."
+  },
+  "categories": [],
+  "event_count": 0
+}
