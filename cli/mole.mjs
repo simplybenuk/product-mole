@@ -1531,7 +1531,10 @@ function runInputQueueCommand(action, values = []) {
         console.log(`${apply ? 'Migrated' : 'Rows to migrate'}: ${rows.length}`);
         for (const row of rows) console.log(`- line ${row.line}${row.input_id ? `  ${row.input_id}` : ''}  ${row.status}  ${row.priority}  ${row.request}`);
         const withoutRequest = result.skipped.filter((item) => item.reason === 'request_missing');
-        if (result.skipped.length - withoutRequest.length) console.log(`Skipped placeholder rows: ${result.skipped.length - withoutRequest.length}`);
+        const inUserTable = result.skipped.filter((item) => item.reason === 'in_user_table');
+        const placeholders = result.skipped.length - withoutRequest.length - inUserTable.length;
+        if (placeholders) console.log(`Skipped placeholder rows: ${placeholders}`);
+        if (inUserTable.length) console.log(`Not imported (line ${inUserTable.map((item) => item.line).join(', ')}): ${inUserTable.length} ${inUserTable.length === 1 ? 'row' : 'rows'} in a table of your own that lists requests by queue ID. Mole leaves that table alone. Add ${inUserTable.length === 1 ? 'it' : 'them'} with "mole input-queue add".`);
         if (withoutRequest.length) console.log(`Skipped rows with text but no request (line ${withoutRequest.map((item) => item.line).join(', ')}): ${withoutRequest.length}. They cannot be imported.`);
         if (result.legacy_copy) console.log(`The file as it was is kept at ${result.legacy_copy}.`);
         if (!apply && rows.length) console.log('Nothing was changed. Rerun with --apply --actor <name> --actor-type <type>.');
@@ -1541,7 +1544,10 @@ function runInputQueueCommand(action, values = []) {
       format = parsed.format;
       const result = auditInputQueue(cwd);
       emit(result, () => {
-        console.log(result.ok ? 'Input queue audit passed.' : `Input queue audit found ${result.findings.length} ${result.findings.length === 1 ? 'problem' : 'problems'}.`);
+        const problems = result.findings.filter((item) => !item.advisory).length;
+        console.log(result.ok
+          ? (result.findings.length ? 'Input queue audit passed, with notes.' : 'Input queue audit passed.')
+          : `Input queue audit found ${problems} ${problems === 1 ? 'problem' : 'problems'}.`);
         printLifecycleFindings(result.findings);
       });
       if (!result.ok) process.exitCode = 1;

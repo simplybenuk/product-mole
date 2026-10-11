@@ -23,13 +23,16 @@ a `<!-- mole:input-queue:end -->` line. Each marker must be a line of its own,
 and the file must hold exactly one of each, in that order. If it does not, the
 commands that write refuse with `INVALID_QUEUE_VIEW` and change nothing,
 because rewriting the table could delete your text. A file with no markers
-gets the table in place of its first request table, or at the end.
+gets the table in place of the old generated table or the first legacy
+request table, or at the end. If you delete the markers, the old table's
+comment line and count line are left as ordinary text; delete them too.
 
 Text outside the markers is yours and is kept, with one exception: a legacy
 request table is removed once the queue holds its rows, so the file has one
 table. A table outside the markers that lists requests by their queue ID is
 your own. Mole leaves it where it is, does not keep it current, and does not
-import rows added to it. `audit` reports it as `request_table_outside_view`.
+import rows added to it. `migrate` lists such rows as not imported, and
+`audit` notes the table as `request_table_outside_view` without failing.
 
 Everything inside the markers is replaced on each change. If a line there is
 not exactly what Mole generates from the queue, such as a note, an extra
@@ -198,9 +201,11 @@ the queue is treated as a new request, not overwritten.
 
 A row is imported once. If a command saves the queue and then cannot rewrite
 the Markdown file, it reports success with a warning and leaves
-`governance/input-queue/.view-pending` in place. While that file exists, rows
-still in the Markdown file are matched to imported requests by their text, so
-running the migration again imports nothing twice, even if lines have moved.
+`governance/input-queue/.view-pending` in place. That file records the lines
+Mole had generated, so the later rewrite needs no copy for them. While it
+exists, rows still in the Markdown file are matched to imported requests by
+their text, so running the migration again imports nothing twice, even if
+lines have moved.
 Run `mole input-queue refresh-view` when the file can be written. After that,
 a row typed again with the same text is a new request.
 
@@ -215,7 +220,8 @@ copies the file to `governance/input-queue/legacy/` and prints the path.
 | `view_markers_invalid` | Fix the marker lines in `governance/input-queue.md`, or delete them all. |
 | `view_unreadable` | `governance/input-queue.md` is not a readable regular file. |
 | `unmanaged_text_in_view` | Text inside the markers is not part of the table. Move it outside the markers. The next change replaces it after copying the file. |
-| `request_table_outside_view` | A table outside the markers lists requests by queue ID. Mole leaves it alone. Delete it if it is a stale copy. |
+| `request_table_outside_view` | A note, not a failure: a table outside the markers lists requests by queue ID. Mole leaves it alone. Delete it if it is a stale copy. |
+| `view_pending_unusable` | `governance/input-queue/.view-pending` is not a regular file. Remove it. |
 | `legacy_rows_pending` | Run `mole input-queue migrate --apply`. |
 | `legacy_rows_without_request` | Fill in the Request cell or move the text out of the table. |
 | `view_stale` | Run `mole input-queue refresh-view`. |
