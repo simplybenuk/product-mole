@@ -219,7 +219,7 @@ cases this way.
 | A draft was renamed and edited | Cannot match it by hash. `submit` fails and audit reports `source_unresolved`. | `mole lifecycle relocate <record_id> --path <new path>` |
 | The file was deleted or abandoned | Audit reports `source_unresolved`. | `mole lifecycle withdraw <record_id>` |
 | Two unclaimed copies hold a moved file's bytes | Refuses to guess. Audit lists both under `candidate_paths`. | `mole lifecycle relocate <record_id> --path <path>` |
-| A file that already has an open record is registered as a source again | Refuses a second lifecycle record and names the existing one. This holds at the registered path and for a file that moved without `relocate`. The existing record keeps working, and audit stays clean. | Use the existing record. Find it with `mole lifecycle list --path <path>`. |
+| A file that already has an open record is registered as a source again | Refuses a second lifecycle record and names the existing one. This holds at the registered path and for a file that moved without `relocate`. `relocate` refuses to point another record at such a file for the same reason. The existing record keeps working, and audit stays clean. | Use the existing record. Find it with `mole lifecycle list --path <path>`. |
 | A record's file is gone and the only copy of its bytes belongs to another open record | Audit reports `source_unresolved` and lists the copy under `claimed_paths`. Releases before this check allowed a moved file to be registered twice, which leaves this state. | If the copy is the record's moved file, `mole lifecycle withdraw <duplicate record_id>`. Otherwise withdraw the record whose file is gone. |
 | A new file is written at a path an open record still owns | Refuses a lifecycle record for the new file, and `mole create` refuses to write there. | Relocate the existing record to where its file went, or withdraw it if that file is gone. |
 | A new file appears at the old path of a superseded or withdrawn record | Treats the new file as untracked. When it is registered, Mole clears the closed record's stored path. | Register the new file, or run `mole lifecycle migrate --apply`. |
@@ -435,7 +435,7 @@ output. A refusal prints `{ "ok": false, "error": { "code", "message",
 functions that take the workspace root first.
 
 ```js
-registerLifecycleRecord(root, { sourceId, state, actor, actorType, sourceIds, reason, now })
+registerLifecycleRecord(root, { sourceId, state, actor, actorType, sourceIds, reason, newFile, now })
 transitionLifecycleRecord(root, recordId, {
   action, actor, actorType, humanConfirmed, reason,
   sourceIds, removeSourceIds, supersedes, replacementId, expectedRevision, now
@@ -454,6 +454,9 @@ validateLifecycleLedger(ledger)
 ```
 
 A refused operation throws a `LifecycleError` with a `code` and `details`.
+Pass `newFile: true` only for a file the caller has just written, as
+`mole create` does. It skips the moved-file check, which would otherwise
+match a new template copy to a record whose unedited draft was deleted.
 `LIFECYCLE_TRANSITIONS` holds the transition table above and
 `transitionRequiresHuman(action, fromState)` answers the human question, so
 other features such as travel logs and evidence promotion can check a move

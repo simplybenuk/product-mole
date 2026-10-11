@@ -425,7 +425,8 @@ function createArtifact(kind, outputPath) {
       state: 'draft',
       actor: 'mole-cli',
       actorType: 'automation',
-      reason: `Created ${kind} draft from a template.`
+      reason: `Created ${kind} draft from a template.`,
+      newFile: true
     });
     console.log(`Source ID: ${sourceId}`);
     console.log(`Lifecycle record: ${lifecycle.record_id} (draft)`);
