@@ -10,7 +10,8 @@ governance/input-queue.md         # generated table, readable without a command
 governance/input-queue/
 ├── README.md
 ├── requests.json                 # the queue; created by the first request
-├── legacy/                       # the Markdown file as it was before migration
+├── legacy/                       # copies of the Markdown file from before a rewrite that removed text
+├── .view-pending                 # present only while the Markdown table is out of date
 └── .mutation.lock                # present only while a command is writing
 ```
 
@@ -35,11 +36,14 @@ delete it.
 ## Commands
 
 ```text
-mole review input-queue [--limit <n>] [--format json]
+mole review input-queue [--limit <n>] [--stale-after-days <n>] [--duplicate-threshold <0-1>] [--format json]
 mole input-queue add --request <text> --impact <text> --unblocks <text> --actor <name> --actor-type <type>
-mole input-queue update <input_id> [fields] --actor <name> --actor-type <type> --reason <text>
+    [--priority high|medium|low] [--blocking] [--owner <name>] [--due <date>] [--next-review <date>]
+    [--answer-format <text>] [--effort <text>] [--requester <name>] [--source <source_id>] [--ref <text>] [--reason <text>]
+mole input-queue update <input_id> [add options] [--status <status>] [--not-blocking] --actor <name> --actor-type <type> --reason <text>
 mole input-queue close <input_id> --answer <text> --outcome <text> --actor <name> --actor-type <type>
-mole input-queue close <input_id> --closure-reason <reason> --outcome <text> --reason <text> --actor <name> --actor-type human --confirm-human
+mole input-queue close <input_id> --closure-reason duplicate|superseded|stale|not_needed --outcome <text> --reason <text>
+    [--duplicate-of <input_id>] [--superseded-by <input_id>] --actor <name> --actor-type human --confirm-human
 mole input-queue reopen <input_id> --actor <name> --actor-type <type> --reason <text>
 mole input-queue show <input_id>
 mole input-queue list [--status <status>] [--all]

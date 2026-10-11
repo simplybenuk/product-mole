@@ -402,4 +402,4 @@ Ask:
 
 > What inputs do you need from me today?
 
-Then answer the top 3 asks in `governance/input-queue.md`.
+Then run `mole review input-queue` and answer the top 3 asks.

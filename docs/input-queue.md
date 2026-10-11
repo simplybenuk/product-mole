@@ -11,7 +11,8 @@ closed request still says who answered it and what changed.
 | --- | --- |
 | `governance/input-queue/requests.json` | The queue. Mole creates it with the first request. |
 | `governance/input-queue.md` | A table generated from the queue, between two marker comments. Text outside the markers is yours. |
-| `governance/input-queue/legacy/` | The Markdown file as it was before each migration. |
+| `governance/input-queue/legacy/` | The Markdown file as it was before a migration, and before any rewrite that removed text the queue does not hold. |
+| `governance/input-queue/.view-pending` | Present only between saving the queue and rewriting the Markdown file. |
 | `schemas/input-queue-v1.schema.json` | The record schema. |
 
 `requests.json` is the authority. Do not edit it or the generated table by
@@ -23,6 +24,18 @@ and the file must hold exactly one of each, in that order. If it does not, the
 commands that write refuse with `INVALID_QUEUE_VIEW` and change nothing,
 because rewriting the table could delete your text. A file with no markers
 gets the table in place of its first request table, or at the end.
+
+Text outside the markers is yours and is kept, with two exceptions. A request
+table whose rows the queue now holds is removed, so the file has one table.
+A table that lists requests by their queue ID is left where it is, and
+`audit` reports it.
+
+Text typed inside the markers is replaced on the next change. Before that
+happens, Mole copies the whole file to `governance/input-queue/legacy/` and
+prints the path, unless every line it removes is one it generated, a
+placeholder row, or a row the queue holds. `audit` reports such text as
+`unmanaged_text_in_view`. Changing the cells of a row that keeps its ID is not
+detected: the queue's values are written back.
 
 ## The record
 
@@ -69,14 +82,15 @@ mole input-queue close <input_id> --answer "Team tier" \
 | `mole input-queue close <input_id> --closure-reason <reason> --outcome <text> --reason <text>` | Closes a request that was not answered. Reasons: `duplicate` (with `--duplicate-of`), `superseded` (with `--superseded-by`), `stale`, `not_needed`. |
 | `mole input-queue reopen <input_id> --reason <text>` | Reopens a closed request. The closure stays in the history. |
 | `mole input-queue show <input_id>` | Prints a request and its history. |
-| `mole input-queue list [--status <status>] [--all]` | Lists open requests. `--all` includes closed ones. |
+| `mole input-queue list [--status <status>] [--all]` | Lists open requests. `--all` includes closed ones. `--status` may be repeated. |
 | `mole input-queue migrate [--apply]` | Imports rows from the Markdown table. |
 | `mole input-queue refresh-view` | Rewrites the generated table from the queue. Use it when a command warns that the table could not be rewritten, or when `audit` reports `view_stale`. |
 | `mole input-queue audit` | Checks the queue. Read-only. Exits 1 with findings. |
 | `mole input-queue unlock` | Removes a write lock left by a stopped process. |
 
-Every command that writes needs `--actor <name>` and `--actor-type
-human|agent|automation`. Add `--format json` to any command for
+Every command that changes the queue needs `--actor <name>` and `--actor-type
+human|agent|automation`. `refresh-view` and `unlock` take neither. `mole
+input-queue --help` lists the commands. Add `--format json` to any command for
 machine-readable output. A refusal prints `{ "ok": false, "error": { "code",
 "message", "details" } }` and exits 1. Invalid arguments exit 2.
 
@@ -163,7 +177,8 @@ in code fences are ignored. Columns map by name: `Priority`,
 | Priority `High`, `P0`, `P1`, `Critical`, `Urgent` | `high` |
 | Priority `Low`, `P3`, `P4` | `low` |
 | Any other priority | `medium` |
-| Status `Waiting`, `In progress`, `Deferred` | the matching status |
+| Status `Waiting`, `In progress` | the matching status |
+| Status `Deferred` | `deferred`, with `next_review` set to the migration date so it comes up for review |
 | Status `Complete`, `Done`, `Closed` | `closed`, with a closure that says the answer was not recorded |
 | Any other status | `open` |
 | A due date that is not `YYYY-MM-DD` | null. The text stays in `legacy.columns`. |
@@ -179,10 +194,13 @@ Running the migration again imports only rows added by hand since. That
 includes a row typed into the generated table: a row there whose ID is not in
 the queue is treated as a new request, not overwritten.
 
-A row is imported once. If the migration saves the queue and then cannot
-rewrite the Markdown file, it reports success with a warning, and the rows
-left in the file are recognised as already imported. Run
-`mole input-queue refresh-view` when the file can be written.
+A row is imported once. If a command saves the queue and then cannot rewrite
+the Markdown file, it reports success with a warning and leaves
+`governance/input-queue/.view-pending` in place. While that file exists, rows
+still in the Markdown file are matched to imported requests by their text, so
+running the migration again imports nothing twice, even if lines have moved.
+Run `mole input-queue refresh-view` when the file can be written. After that,
+a row typed again with the same text is a new request.
 
 When a command removes a table that holds a `request_missing` row, it first
 copies the file to `governance/input-queue/legacy/` and prints the path.
@@ -193,6 +211,9 @@ copies the file to `governance/input-queue/legacy/` and prints the path.
 | --- | --- |
 | `invalid_queue` | `requests.json` is not valid. Restore it from version control or a backup. |
 | `view_markers_invalid` | Fix the marker lines in `governance/input-queue.md`, or delete them all. |
+| `view_unreadable` | `governance/input-queue.md` is not a readable regular file. |
+| `unmanaged_text_in_view` | Text inside the markers is not part of the table. Move it outside the markers. The next change replaces it after copying the file. |
+| `request_table_outside_view` | A table outside the markers lists requests by queue ID. Mole leaves it alone. Delete it if it is a stale copy. |
 | `legacy_rows_pending` | Run `mole input-queue migrate --apply`. |
 | `legacy_rows_without_request` | Fill in the Request cell or move the text out of the table. |
 | `view_stale` | Run `mole input-queue refresh-view`. |
@@ -235,4 +256,8 @@ A refused operation throws an `InputQueueError` with a `code` and `details`.
 - The generated table is ordered when it is written. Due dates that pass later
   do not reorder it until the next change. `mole review input-queue` always
   ranks against the current date.
-- Duplicate detection compares words. It does not understand meaning.
+- Duplicate detection compares words. It does not understand meaning. Its
+  cost grows with the number of open requests that share words.
+- An agent can set a far-future `--next-review` date on a deferred request.
+  The stale suggestions still list it once it has not been updated for 14
+  days.

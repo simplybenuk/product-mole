@@ -126,17 +126,20 @@ Usage:
   mole refresh top-layers             Print an agent instruction for summary/index refresh.
   mole synthesise <target>             Print an agent instruction for synthesis work.
   mole review <target>                 Print an agent instruction for review work.
-  mole review input-queue [--limit <n>] [--format json]
+  mole review input-queue [--limit <n>] [--stale-after-days <n>] [--duplicate-threshold <0-1>] [--format json]
                                       Show the highest-value human-input requests and why they rank.
   mole input-queue add --request <text> --impact <text> --unblocks <text> --actor <name> --actor-type <type>
                                       Ask a person for input. Options: --priority, --blocking, --owner, --due,
-                                      --next-review, --answer-format, --effort, --requester, --source, --ref.
+                                      --next-review, --answer-format, --effort, --requester, --source, --ref, --reason.
   mole input-queue update <input_id> [fields] --actor <name> --actor-type <type> --reason <text>
-                                      Change a request. Changing its owner needs a human.
+                                      Change a request. Fields are the add options plus --status and --not-blocking.
+                                      Changing an owner needs --actor-type human --confirm-human.
   mole input-queue close <input_id> --answer <text> --outcome <text> --actor <name> --actor-type <type>
                                       Record the answer and what it changed.
-  mole input-queue close <input_id> --closure-reason duplicate|superseded|stale|not_needed [human options]
-                                      Close a request that was not answered. Needs a human.
+  mole input-queue close <input_id> --closure-reason duplicate|superseded|stale|not_needed --outcome <text>
+                                      --reason <text> --actor <name> --actor-type human --confirm-human
+                                      Close a request that was not answered. Add --duplicate-of <input_id>
+                                      or --superseded-by <input_id> for those reasons.
   mole input-queue reopen <input_id> --actor <name> --actor-type <type> --reason <text>
   mole input-queue show <input_id>     Show a request and its history.
   mole input-queue list [--status <status>] [--all]
@@ -1510,7 +1513,9 @@ function runInputQueueCommand(action, values = []) {
         const rows = apply ? result.migrated : result.candidates;
         console.log(`${apply ? 'Migrated' : 'Rows to migrate'}: ${rows.length}`);
         for (const row of rows) console.log(`- line ${row.line}${row.input_id ? `  ${row.input_id}` : ''}  ${row.status}  ${row.priority}  ${row.request}`);
-        if (result.skipped.length) console.log(`Skipped placeholder rows: ${result.skipped.length}`);
+        const withoutRequest = result.skipped.filter((item) => item.reason === 'request_missing');
+        if (result.skipped.length - withoutRequest.length) console.log(`Skipped placeholder rows: ${result.skipped.length - withoutRequest.length}`);
+        if (withoutRequest.length) console.log(`Skipped rows with text but no request (line ${withoutRequest.map((item) => item.line).join(', ')}): ${withoutRequest.length}. They cannot be imported.`);
         if (result.legacy_copy) console.log(`The file as it was is kept at ${result.legacy_copy}.`);
         if (!apply && rows.length) console.log('Nothing was changed. Rerun with --apply --actor <name> --actor-type <type>.');
       });
@@ -1533,6 +1538,13 @@ function runInputQueueCommand(action, values = []) {
       format = parsed.format;
       const result = unlockInputQueue(cwd);
       emit(result, () => console.log(result.message));
+    } else if (action === '--help' || action === '-h' || action === 'help') {
+      console.log(getHelpOutput().split('\n').filter((line, index, lines) => {
+        // The input-queue lines of the usage block, with their indented descriptions.
+        let owner = index;
+        while (owner > 0 && /^\s{10,}/.test(lines[owner])) owner -= 1;
+        return /input-queue/.test(lines[owner]) && /^\s{2}mole /.test(lines[owner]);
+      }).join('\n'));
     } else {
       throw new UsageError(`Unknown input-queue command: ${action ?? '(none)'}. Use add, update, close, reopen, show, list, review, migrate, refresh-view, audit, or unlock.`);
     }

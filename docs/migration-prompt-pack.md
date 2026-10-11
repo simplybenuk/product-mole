@@ -177,8 +177,9 @@ Output target: one `mole input-queue add` command per request (see docs/input-qu
 Context:
 <paste summaries/indexes/context snippets>
 
-Return top 3 requests in a table with columns:
-| Priority | Request | Why this matters | Quick input format | Effort | Due | Status |
+Return the top 3 requests, each as one command:
+mole input-queue add --request "<ask>" --impact "<why this matters>" --unblocks "<output it unblocks>" --priority <high|medium|low> --answer-format "<quick input format>" --effort "<time to answer>" --actor "<agent name>" --actor-type agent
+Add --blocking when work is stopped until the answer, and --due <YYYY-MM-DD> when there is a deadline.
 
 Rules:
 - Ask only for inputs a human must provide.
