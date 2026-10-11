@@ -1348,6 +1348,10 @@ function doctor() {
  * 0 means healthy, 1 findings, 2 invalid arguments, 3 an internal failure.
  */
 function runValidateCommand(values = []) {
+  if (values.includes('--help') || values.includes('-h')) {
+    console.log('Usage: mole validate [path] [--format text|json] [--stale-after-days <n>]\n\nRuns the full read-only workspace check. Exit codes: 0 healthy, 1 findings, 2 invalid arguments, 3 internal failure.\nFinding codes are listed in docs/workspace-validation.md.');
+    return;
+  }
   let format = guessLifecycleFormat(values);
   const failWith = (exitCode, code, message) => {
     if (format === 'json') console.log(JSON.stringify({ ok: false, error: { code, message } }, null, 2));
@@ -1360,8 +1364,9 @@ function runValidateCommand(values = []) {
     parsed = parseLifecycleValues(values, { positionals: 1, scalars: ['--stale-after-days'] });
     format = parsed.format;
     if (parsed.options['--stale-after-days'] !== undefined) {
+      if (!/^\d+$/.test(parsed.options['--stale-after-days'])) throw new UsageError('--stale-after-days must be a whole number of days, at least 1.');
       staleAfterDays = Number(parsed.options['--stale-after-days']);
-      if (!Number.isInteger(staleAfterDays) || staleAfterDays < 1) throw new UsageError('--stale-after-days must be a whole number of days, at least 1.');
+      if (staleAfterDays < 1) throw new UsageError('--stale-after-days must be a whole number of days, at least 1.');
     }
   } catch (error) {
     if (!(error instanceof UsageError)) throw error;

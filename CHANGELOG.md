@@ -43,6 +43,9 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ### Changed
 - `mole doctor` points to `mole validate` for the full check.
+- `mole inbox audit` reads the source registry once, not once per inbox file
+  that does not name its own source.
+- The product-update template ships with a default `summary`.
 - `mole upgrade [version]` now installs from an explicit `vX.Y.Z` release tag.
 - `mole create` registers the new file as a source and opens a `draft`
   lifecycle record. It refuses an output path outside the workspace, a path

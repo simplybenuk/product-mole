@@ -78,12 +78,12 @@ Skipped when the workspace layout is incomplete.
 
 | Code | Severity | Meaning |
 | --- | --- | --- |
-| `INBOX_UNPROCESSED` | warning | An inbox file has no processing receipt. One finding per file, found recursively. |
+| `INBOX_UNPROCESSED` | warning | An inbox file has no processing receipt. One finding per file, found recursively. The message says when an active run has claimed the file. |
 | `INBOX_INVALID_LOCK` | error | The processing lock is malformed. |
 | `INBOX_STALE_LOCK` | warning | The processing lease has expired. |
 | `INBOX_SYNC_CONFLICT` | error | Conflict copies of an inbox file, the lock, or a receipt exist. |
 | `INBOX_UNSAFE_INBOX_ENTRY` | error | The inbox holds a link or a special file. |
-| `INBOX_INVALID_RECEIPT` | error | A receipt is malformed or cannot be tied to a run. |
+| `INBOX_INVALID_RECEIPT` | error | A receipt is malformed or cannot be tied to a run. A receipt no run claimed is reported here. |
 | `INBOX_DUPLICATE_RECEIPT` | error | More than one receipt claims the same run ID. |
 | `INBOX_PROCESSED_PATH_CONFLICT` | error | Two runs claim the same inbox path. |
 | `INBOX_INVALID_OVERRIDE`, `INBOX_OVERRIDE_CONFLICT`, `INBOX_INCOMPLETE_OVERRIDE` | error | A stale-lock or missing-lock override record is malformed, duplicated, or unfinished. |
@@ -98,7 +98,7 @@ Skipped when the workspace has no source registry yet.
 | `SOURCE_ORPHAN_SOURCE` | warning | A file names a `source_id` that has no record. |
 | `SOURCE_REF_BROKEN` | error | A file cites a source under `source_refs` that has no record. Reported by the frontmatter check. |
 | `SOURCE_CONTENT_CONFLICT` | error | A registered file no longer holds its registered bytes. |
-| `SOURCE_DUPLICATE_CONTENT` | warning | Two sources are registered with the same bytes. |
+| `SOURCE_DUPLICATE_CONTENT` | info | Two sources are registered with the same bytes, such as two unedited drafts from one template. `paths` lists the files. |
 | `SOURCE_PATH_CLAIM_CONFLICT` | error | Two sources are registered at one path. |
 | `SOURCE_INVALID_RECORD`, `SOURCE_RECORD_FILENAME_CONFLICT`, `SOURCE_DUPLICATE_RECORD`, `SOURCE_REVISION_CONFLICT` | error | A source record is malformed, misnamed, or exists in conflicting copies. |
 | `SOURCE_SYMLINK_ESCAPE`, `SOURCE_WORKSPACE_ESCAPE` | error | A registered path leaves the workspace. |
@@ -119,7 +119,10 @@ See [`review-lifecycle.md`](review-lifecycle.md) for what each means.
 ### frontmatter
 
 Checks Markdown files under `2-summaries/`, `3-indexes/`, `4-context/`,
-`5-evidence/`, and `6-raw/`. `README.md` files are skipped.
+`5-evidence/`, and `6-raw/`. `README.md` files are skipped. Files in
+`3-indexes/`, `5-evidence/`, and `6-raw/` may be any format: a block that
+opens with `---` is read as frontmatter there only when its first line is
+`key: value`, so a file that starts with a horizontal rule is left alone.
 
 | Code | Severity | Meaning |
 | --- | --- | --- |
@@ -145,10 +148,12 @@ Checks Markdown files under `2-summaries/` and `3-indexes/`. `<KIND>` is
 | `<KIND>_STALE` | warning | `review_after` has arrived, or `last_updated` is more than 90 days old. Change the limit with `--stale-after-days`. |
 
 Blank and placeholder files are `info` while `4-context/` and `5-evidence/`
-hold only their starter files, so a new workspace is healthy. Once either
-folder has other content they become warnings. Staleness uses the dates in
-the frontmatter, not file modification times, and is not reported for blank
-or placeholder files.
+hold nothing to summarise, so a new workspace is healthy. Starter files,
+unedited drafts from `mole create`, `README.md`, and dotfiles do not count.
+Once either folder has other content, or a starter file is edited, they
+become warnings. Staleness uses the dates in the frontmatter, not file
+modification times, and is not reported for blank or placeholder files. Dates
+are compared in UTC. A `last_updated` in the future is not reported.
 
 ### duplicates
 
@@ -176,6 +181,7 @@ Placeholder rows are ignored.
 | Code | Severity | Meaning |
 | --- | --- | --- |
 | `CHECK_FAILED` | error | A check could not finish. The message says why. The other checks still ran. |
+| `FILE_UNREADABLE` | warning | A file or folder could not be read, so it was not checked. |
 
 ## Library
 
@@ -191,6 +197,10 @@ path is not a directory or an option is invalid.
 
 ## Limits
 
+- A file that was moved out of the inbox with no processing receipt is not
+  reported. The inbox check covers files that are still in the inbox.
+- A version with a pre-release suffix, such as `0.2.8-rc.1`, is compared by
+  its release number.
 - Duplicate detection compares bytes. It does not find near duplicates.
 - Links inside the workspace are not followed, so files reached only through
   a link are not checked.
