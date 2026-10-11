@@ -466,7 +466,7 @@
           } else if (category.availability === 'current_only') {
             row.append(cell(`${category.current} open now`, 3));
           } else {
-            row.append(cell('unavailable', 3));
+            row.append(cell(category.availability || 'unavailable', 3));
           }
           row.title = category.definition || '';
           rows.push(row);

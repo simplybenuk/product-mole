@@ -1634,6 +1634,16 @@ function runInboxCommand(action, values = []) {
   process.exit(1);
 }
 
+function printDashboardRefresh(dashboard) {
+  if (dashboard.updated) {
+    console.log(dashboard.replaced_older_page
+      ? `Updated ${dashboard.path}: the page from an earlier Mole had no summary panel.`
+      : `Added ${dashboard.path}.`);
+  } else if (dashboard.reason) {
+    console.error(`Warning: ${dashboard.reason}`);
+  }
+}
+
 function runMetricsCommand(action, values = []) {
   // Bare "mole metrics", or one that starts with an option, is the summary.
   const isSummary = action === undefined || action === 'summary' || String(action).startsWith('--');
@@ -1645,8 +1655,12 @@ function runMetricsCommand(action, values = []) {
       format = parsed.format;
       if (action === 'snapshot') {
         const result = writeMetricsSnapshot(cwd);
-        if (format === 'json') console.log(JSON.stringify({ ok: true, path: result.path, generated_at: result.summary.generated_at }, null, 2));
-        else console.log(`Wrote ${result.path}. Open governance/metrics/dashboard.html to view it.`);
+        if (format === 'json') {
+          console.log(JSON.stringify({ ok: true, path: result.path, generated_at: result.summary.generated_at, dashboard: result.dashboard }, null, 2));
+        } else {
+          console.log(`Wrote ${result.path}. Open ${result.dashboard.path} to view it.`);
+          printDashboardRefresh(result.dashboard);
+        }
         return;
       }
       const summary = summarizeMetrics(cwd, { includeEvents: parsed.options['--events'] === true });
@@ -1662,6 +1676,12 @@ function runMetricsCommand(action, values = []) {
         }
       }
     } catch (error) {
+      if (error.code === 'SNAPSHOT_NOT_WRITTEN') {
+        if (format === 'json') console.log(JSON.stringify({ ok: false, error: { code: error.code, message: error.message } }, null, 2));
+        console.error(`Refused: ${error.message}`);
+        process.exitCode = 1;
+        return;
+      }
       if (!(error instanceof UsageError) && error.code !== 'INVALID_ARGUMENT') throw error;
       if (format === 'json') console.log(JSON.stringify({ ok: false, error: { code: 'INVALID_ARGUMENT', message: error.message } }, null, 2));
       console.error(`Invalid arguments: ${error.message}`);
@@ -1687,7 +1707,14 @@ function runMetricsCommand(action, values = []) {
       return;
     }
     // Keep the dashboard's second panel in step with the rebuilt counts.
-    console.log(`Outcome snapshot: ${writeMetricsSnapshot(cwd).path}`);
+    try {
+      const snapshot = writeMetricsSnapshot(cwd);
+      console.log(`Outcome snapshot: ${snapshot.path}`);
+      printDashboardRefresh(snapshot.dashboard);
+    } catch (error) {
+      if (error.code !== 'SNAPSHOT_NOT_WRITTEN') throw error;
+      console.error(`Warning: ${error.message}`);
+    }
     return;
   }
 

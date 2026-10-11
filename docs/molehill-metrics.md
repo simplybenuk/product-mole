@@ -30,7 +30,7 @@ product. They are not part of these metrics.
 | `reviewed_outputs` | learning | Human review decisions: each approval and each rejection. | When the decision was made. |
 | `accepted_learnings` | learning | Approvals. A record revised and approved again counts once for each approval. | When it was approved. |
 | `superseded_context` | learning | Accepted records replaced by another accepted record. | When the record was superseded. |
-| `unresolved_questions` | learning | Open requests in the human-input queue. | None. See below. |
+| `unresolved_questions` | learning | Open requests in the human-input queue: rows of a table with `Request` and `Status` columns whose status is not `Complete`, `Done`, `Closed`, `Answered`, `Resolved`, `Declined`, `Cancelled`, or `Rejected`, and is not ticked. `Deferred` and `Waiting` count as open. | None. See below. |
 
 ## Time windows
 
@@ -89,19 +89,26 @@ The summary never fills a gap with a guess.
 - **Before the review ledger.** A workspace that predates the ledger has no
   record of what was captured, reviewed, or accepted then. Each ledger
   category carries `available_from`, the time of the ledger's first entry,
-  and a note that earlier activity is unknown, not zero. Old receipts are
-  never counted as accepted learning.
+  and a note that earlier activity is unknown, not zero. When the ledger
+  holds nothing and inbox receipts exist, the ledger categories are
+  `unknown` with `null` counts. Old receipts are never counted as accepted
+  learning.
 - **Receipts without processed items.** A legacy receipt that lists no
   processed paths is counted in `receipts_without_items` and adds nothing to
   `processed_inputs`.
-- **Ambiguous inbox state.** When receipts conflict, such as two runs
-  claiming one path, `processed_inputs` is `unavailable` until
-  `mole inbox audit` is clean.
+- **Ambiguous inbox state.** When a receipt cannot be validated or receipts
+  conflict, such as two runs claiming one path, `processed_inputs` is
+  `unavailable` until `mole inbox audit` is clean. These are the conditions
+  that stop `mole metrics backfill`.
+- **No queue table.** When `governance/input-queue.md` is missing or holds no
+  table with `Request` and `Status` columns, `unresolved_questions` is
+  `unavailable`.
 - **Unreadable ledger.** When the review ledger cannot be validated, every
   ledger category is `unavailable`, with the reason.
 
-A category's `availability` is `available`, `current_only`, or `unavailable`.
-Counts are `null` when they are not known.
+A category's `availability` is `available`, `current_only`, `unknown`, or
+`unavailable`. Counts are `null` when they are not known. An event dated
+after the moment the command runs is in no window.
 
 ## Dashboard
 
@@ -117,6 +124,10 @@ Counts are `null` when they are not known.
 `mole metrics snapshot` writes `outcomes.json`. `mole metrics backfill`
 writes it too. The page shows when the snapshot was written; it does not
 update itself.
+
+A workspace created by an earlier Mole has a dashboard page with no summary
+panel. Both commands replace that page with the current one and say so. A
+page that already has the panel is left alone.
 
 ## Backfill
 
@@ -154,8 +165,13 @@ already the full record of what it covers.
 }
 ```
 
+The summary also carries `ok` and `read_only`; the snapshot file has `ok`
+only. `processed_inputs` adds `receipts_counted`, `receipts_without_items`,
+and `receipts_uncountable`.
+
 `schema_version` changes if a field is removed or changes meaning. New fields
-may be added without a version change.
+may be added without a version change. Events carry no version of their own;
+they follow the summary's.
 
 ## Library
 
@@ -169,6 +185,8 @@ const summary = summarizeMetrics(root, { now, includeEvents: true });
 
 - Unresolved questions have no history, so the summary cannot say how many
   were opened or closed in a period.
+- Accepted learnings count approvals made, not records accepted now. A record
+  later superseded or withdrawn still counts for the approval it had.
 - A capture made while the ledger could not be written has no review record
   until `mole lifecycle migrate --apply` registers it. It is then counted at
   the time of that migration.
