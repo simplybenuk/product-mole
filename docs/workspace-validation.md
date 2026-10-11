@@ -123,8 +123,8 @@ Checks Markdown files under `2-summaries/`, `3-indexes/`, `4-context/`,
 `5-evidence/`, and `6-raw/`. `README.md` files are skipped. Files in
 `3-indexes/`, `5-evidence/`, and `6-raw/` may be any format: a block that
 opens with `---` is read as frontmatter there only when it closes and every
-top-level line is `key: value`, or when it closes and holds `title`,
-`last_updated`, `source_id`, or `source_refs`. A file that starts with a
+top-level line is `key: value`, or when it closes, holds `title`, `last_updated`, `source_id`,
+or `source_refs`, and has at most two lines that are not `key: value`. A file that starts with a
 horizontal rule, or with a pasted email header, is left alone.
 
 | Code | Severity | Meaning |
