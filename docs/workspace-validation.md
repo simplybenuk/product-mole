@@ -97,8 +97,8 @@ Skipped when the workspace has no source registry yet.
 | `SOURCE_ORPHAN_RECORD` | warning | A source record points at a path with no file, such as an archive move that was not reconciled. |
 | `SOURCE_ORPHAN_SOURCE` | warning | A file names a `source_id` that has no record. |
 | `SOURCE_REF_BROKEN` | error | A file cites a source under `source_refs` that has no record. Reported by the frontmatter check. |
-| `SOURCE_CONTENT_CONFLICT` | error | A registered file no longer holds its registered bytes, and it has no review record or one that is not editable. |
-| `SOURCE_CONTENT_CHANGED` | info | A registered file was edited and its review record is `draft`, `unreviewed`, or `rejected`. Expected while a draft is being written. `mole lifecycle submit` records the new content. |
+| `SOURCE_CONTENT_CONFLICT` | error, or warning when the record is `pending_review` | A registered file no longer holds its registered bytes, and it has no review record or one that is not editable. For a pending or accepted record, `mole lifecycle audit` names the recovery. Otherwise restore the file or run `mole source correct <source_id> --reason <text>`. |
+| `SOURCE_CONTENT_CHANGED` | info | A registered file was edited and its review record is `draft`, `unreviewed`, or `rejected`. Expected while a draft is being written. `mole lifecycle submit` records the new content; a rejected record needs `mole lifecycle revise` first. |
 | `SOURCE_DUPLICATE_CONTENT` | info | Two sources are registered with the same bytes, such as two unedited drafts from one template. `paths` lists the files. |
 | `SOURCE_PATH_CLAIM_CONFLICT` | error | Two sources are registered at one path. |
 | `SOURCE_INVALID_RECORD`, `SOURCE_RECORD_FILENAME_CONFLICT`, `SOURCE_DUPLICATE_RECORD`, `SOURCE_REVISION_CONFLICT` | error | A source record is malformed, misnamed, or exists in conflicting copies. |
@@ -123,8 +123,9 @@ Checks Markdown files under `2-summaries/`, `3-indexes/`, `4-context/`,
 `5-evidence/`, and `6-raw/`. `README.md` files are skipped. Files in
 `3-indexes/`, `5-evidence/`, and `6-raw/` may be any format: a block that
 opens with `---` is read as frontmatter there only when it closes and every
-top-level line is `key: value`. A file that starts with a horizontal rule, or
-with a pasted email header, is left alone.
+top-level line is `key: value`, or when it closes and holds `title`,
+`last_updated`, `source_id`, or `source_refs`. A file that starts with a
+horizontal rule, or with a pasted email header, is left alone.
 
 | Code | Severity | Meaning |
 | --- | --- | --- |
