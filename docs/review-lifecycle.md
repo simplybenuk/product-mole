@@ -332,15 +332,37 @@ A registered file that moved without a reconcile keeps its source ID. Migration
 matches it to the registered source whose path is empty and whose hash equals
 the file's bytes. It never gives one file a second identity.
 
-Migration skips, and reports:
+The file at the registered path of an open lifecycle record is not reported
+as a `source_id_mismatch`, whatever `source_id` its frontmatter names. A
+tracked file that moved without a reconcile is matched to its record only
+while its bytes are unchanged and its old path is empty. Otherwise migration
+treats the file at the new path like any other file without a record.
 
-- `README.md` files, symlinks, and sync conflict copies
-- a file whose frontmatter names a `source_id` that the registry does not
-  place at that path and that does not match the file's bytes
-- a file that could belong to more than one moved source, or a moved source
-  that matches more than one file
+A copy can keep the `source_id:` frontmatter of the file it was copied from,
+such as a capture copied into `5-evidence/` and then edited. Migration treats
+the copy as an ordinary untracked file when it can account for the original:
+it matched the original as a moved file, or the file at the registered path
+still holds the source's bytes or names the source in its own frontmatter.
+The dry run names the frontmatter ID next to the copy, and the record's first
+history entry keeps it. Otherwise migration reports the file, because it may
+be the original after a move.
 
-Fix the last two with the `mole source` commands and run the migration again.
+Migration skips `README.md` files, symlinks, and sync conflict copies without
+a finding. It skips these with a finding, and exits 1:
+
+- `source_id_mismatch`: a file that migration cannot match to a source by
+  its path or its bytes, and whose frontmatter names a `source_id` that
+  migration cannot place at another scanned file. The finding prints `mole
+  source register <path>`, which tracks the file as its own source and clears
+  the finding. When the file holds the named source's bytes, it also prints
+  `mole source reconcile`, which keeps the file's identity instead. When the
+  named source has an open record and no file at its registered path, it
+  also points to `mole lifecycle audit`.
+- `ambiguous_source`: a file that could belong to more than one moved source,
+  or a moved source that matches more than one file. Follow the step the
+  finding prints.
+
+Then run the migration again.
 
 Running the migration again is safe. It is also the way to backfill a capture
 that was saved while the ledger could not be written.
