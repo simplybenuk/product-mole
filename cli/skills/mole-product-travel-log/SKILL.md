@@ -22,7 +22,7 @@ Turn intent, release context, analytics, and qualitative evidence into an outcom
 5. Retrieve the analytics evidence and the qualitative signals that cover the period before and after the change, from `5-evidence/` and, when the task calls for it, `6-raw/`. Note the date range and source of each.
 6. Sort every statement into one of four kinds and label it: **fact** (in a source), **observation** (what the evidence shows), **interpretation** (what you think it means), **assumption** (taken as true without evidence).
 7. Fill every section of the template. Where there is no evidence, write `unknown` and say what would be needed. An empty section is not allowed; a section that says "unknown" is.
-8. Choose one decision per change: `continue`, `iterate`, `stop`, `investigate`, or `unknown`. Give the confidence and the reason. In the frontmatter, `decision` holds that value when the report covers one change or every change has the same decision, and `mixed` otherwise.
+8. Choose one decision per change: `continue`, `iterate`, `stop`, `investigate`, or `unknown`. Give the confidence and the reason. In the frontmatter, `decision` holds that value when the report covers one change or every change has the same decision, and `mixed` otherwise. `confidence` holds the lowest confidence of any change.
 9. Record the unresolved questions and the next review date. Add each question that needs a person to the human-input queue, as `0-bootstrap/agents.md` describes.
 10. Submit the report for review with `mole lifecycle submit <record_id> --actor "<agent name>" --actor-type agent --reason "Ready for review"`. Stop there.
 

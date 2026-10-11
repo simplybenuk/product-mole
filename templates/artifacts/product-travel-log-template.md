@@ -67,7 +67,8 @@ until this report is approved.
 
 One per change: `continue`, `iterate`, `stop`, `investigate`, or `unknown`,
 with the reason. Set `decision` in the frontmatter to the same value, or to
-`mixed` when the changes differ.
+`mixed` when the changes differ. Set `confidence` to the lowest confidence
+of any change.
 
 ## Recommended next action
 

@@ -6,7 +6,7 @@ release: 2026.09 (2026-09-14)
 review_period: 2026-08-17 to 2026-10-04
 next_review: 2026-10-12
 decision: mixed
-confidence: medium
+confidence: low
 created_at: 2026-10-05
 summary: Three-week outcome review of release 2026.09. CSV export is on track against its four-week measures; the checklist and pricing copy cannot be judged yet.
 tags: [travel-log, outcome-review]
@@ -105,8 +105,8 @@ source_refs:
   are judged at four weeks, so they are not yet met.
 - **Onboarding checklist. Interpretation, low confidence.** About a third of
   new workspaces complete the checklist. There is no baseline and no stated
-  target, so this cannot be called good or bad. One call suggests some users
-  skip it without harm.
+  target, so this cannot be called good or bad. One founder skipped it and
+  still reached their goal.
 - **Pricing page copy. Interpretation, low confidence.** Upgrades were 12,
   13, and 10 a week against 8 to 11 before. Two of three weeks are above the
   earlier range. Four baseline weeks are too few to tell variation from
@@ -122,9 +122,10 @@ source_refs:
 
 For a person to accept or reject:
 
-1. Export demand was real: usage passed the expected level within two weeks.
-2. Export does not end spreadsheet work. At least one team still rebuilds a
-   pivot afterwards.
+1. Export usage passed the expected level in week two. Interpretation:
+   demand looks real. The measure is judged at four weeks.
+2. One operations lead still rebuilds a pivot in Excel after exporting. That
+   is one call, and worth checking with other teams.
 3. Two tickets asked for scheduled export. That is a small sample and worth
    watching, not yet a pattern.
 4. A change shipped with no stated expected outcome cannot be judged
@@ -146,8 +147,8 @@ For a person to accept or reject:
   requests for another month.
 - Product: write an expected outcome for the onboarding checklist and for the
   pricing copy, so the next review can judge them.
-- For a person to approve: add learning 2 to the reports context. This
-  report does not change that file.
+- For a person to approve: note learning 2 in the reports context as a
+  single-call signal. This report does not change that file.
 
 ## Unresolved questions
 

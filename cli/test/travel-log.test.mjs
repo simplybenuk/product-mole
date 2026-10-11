@@ -159,7 +159,11 @@ describe('product travel log worked example', () => {
     assert.match(sections.get('Interpretation and confidence'), /paid\s+campaign/);
     assert.match(sections.get('Evidence before and after'), /three weeks\. The intent record set its measures\s+at four weeks/);
     // Three weeks against a four-week measure: on track, not met.
-    assert.ok(!/\bmet its\b|\bis meeting its\b/.test(rich));
+    assert.ok(!/\bmet its\b|\bis meeting its\b|\bhave been met\b/.test(rich));
+    assert.match(sections.get('Interpretation and confidence'), /so they are not yet met/);
+    // The frontmatter confidence is the lowest of any change.
+    assert.equal(frontmatterOf(rich).confidence, 'low');
+    assert.match(sections.get('Interpretation and confidence'), /low confidence/);
     assert.match(sections.get('Decision'), /CSV export: iterate\.\*\* It is on track at three weeks; the measures are\s+judged at four/);
     // A change with no stated intent is not given one.
     assert.match(sections.get('Original intent'), /Onboarding checklist\.\*\* No intent record found/);
@@ -179,7 +183,7 @@ describe('product travel log worked example', () => {
     }
     assert.equal(frontmatterOf(notesOnly).decision, 'unknown');
     // It does not borrow numbers, dates, or measures from evidence it was not given.
-    assert.ok(!/\b\d+%|\btickets? fell\b|2026-08-|sign-ups|upgrades/.test(notesOnly));
+    assert.ok(!/\b\d+%|\btickets? fell\b|2026-08-|sign-ups|upgrades|\b\d+ a week\b|\b\d+ of \d+\b/.test(notesOnly));
   });
 
   it('matches the numbers in the analytics input', () => {
