@@ -332,9 +332,10 @@ A registered file that moved without a reconcile keeps its source ID. Migration
 matches it to the registered source whose path is empty and whose hash equals
 the file's bytes. It never gives one file a second identity.
 
-A file that already has an open lifecycle record is never reported as a
+A file that already has an open lifecycle record is not reported as a
 `source_id_mismatch`, whatever `source_id` its frontmatter names. That holds at
-its registered path and after a move without a reconcile.
+its registered path, and after a move without a reconcile while its bytes are
+unchanged. A file that was moved and then edited no longer matches its record.
 
 A copy can keep the `source_id:` frontmatter of the file it was copied from,
 such as a capture copied into `5-evidence/` and then edited. When the original
@@ -349,7 +350,7 @@ a finding. It skips these with a finding, and exits 1:
 
 - `source_id_mismatch`: a file that migration cannot match to a source by
   its path or its bytes, and whose frontmatter names a `source_id` that no
-  other file holds. The finding prints the command that clears it: `mole
+  other scanned file holds. The finding prints the command that clears it: `mole
   source register <path>` to track the file as its own source, or `mole
   source reconcile` when the file is the named source after a move. When the
   named source has an open record, the finding also points to `mole lifecycle

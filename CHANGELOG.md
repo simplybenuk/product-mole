@@ -49,7 +49,8 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   --apply` registers files under `6-raw/` as `raw` and other old files as
   `unreviewed`; nothing is accepted without a human decision. A copy that kept
   another file's `source_id:` frontmatter is registered under its own source,
-  and a file with an open record is never reported as a `source_id_mismatch`.
+  and a file that an open record still matches is not reported as a
+  `source_id_mismatch`.
 - Added release, upgrade, contribution, and development guidance for the
   open-source package lifecycle.
 
