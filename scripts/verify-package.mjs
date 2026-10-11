@@ -15,6 +15,8 @@ export const REQUIRED_PACKAGED_FILES = Object.freeze([
   'package.json',
   'cli/mole.mjs',
   'cli/package.json',
+  'cli/skills/mole-product-travel-log/SKILL.md',
+  'examples/product-travel-log/README.md',
   'governance/lifecycle/README.md',
   'lib/capture.mjs',
   'lib/inbox-audit.mjs',
@@ -24,6 +26,7 @@ export const REQUIRED_PACKAGED_FILES = Object.freeze([
   'lib/source-registry.mjs',
   'mole.instance-template.yaml',
   'schemas/review-lifecycle-v1.schema.json',
+  'templates/artifacts/product-travel-log-template.md',
   'upgrade-ownership.json'
 ]);
 

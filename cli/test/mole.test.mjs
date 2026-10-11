@@ -21,6 +21,7 @@ import { backfillProcessedInboxMetrics, getMetricsPaths, recordProcessedInboxIte
 import {
   buildInsightCaptureContent,
   buildCritiqueInstruction,
+  buildTravelLogInstruction,
   buildProductUpdateInstruction,
   createWorkspaceScaffold,
   getCheckUpdatesOutput,
@@ -390,6 +391,7 @@ describe('skills installer', () => {
         'mole-critique',
         'mole-insight',
         'mole-product-update',
+        'mole-product-travel-log',
         'mole-bootstrap-context',
         'mole-refresh-top-layers',
         'mole-review-input-queue',

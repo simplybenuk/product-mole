@@ -34,6 +34,11 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and
   `docs/review-lifecycle.md`.
+- Added the `mole-product-travel-log` skill, a `product-travel-log` artifact
+  template for `mole create`, and `mole travel-log <change-or-release>`. The
+  report sets out intent, what shipped, evidence before and after, learnings,
+  and a decision for each change, and goes to a person for review. A worked
+  example is in `examples/product-travel-log/`.
 
 ### Changed
 - `mole upgrade [version]` now installs from an explicit `vX.Y.Z` release tag.
