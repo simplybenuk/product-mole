@@ -34,8 +34,15 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and
   `docs/review-lifecycle.md`.
+- Added `mole validate [path]`, a read-only check of the whole workspace with
+  text and JSON output. It reports inbox, receipt, source, review-record,
+  frontmatter, summary, duplicate-file, input-queue, and metadata problems
+  with stable finding codes, and exits 0 when healthy, 1 with findings, 2 for
+  invalid arguments, and 3 for an internal failure. See
+  `docs/workspace-validation.md`.
 
 ### Changed
+- `mole doctor` points to `mole validate` for the full check.
 - `mole upgrade [version]` now installs from an explicit `vX.Y.Z` release tag.
 - `mole create` registers the new file as a source and opens a `draft`
   lifecycle record. It refuses an output path outside the workspace, a path

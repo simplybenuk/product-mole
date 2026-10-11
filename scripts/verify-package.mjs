@@ -22,6 +22,7 @@ export const REQUIRED_PACKAGED_FILES = Object.freeze([
   'lib/metrics.mjs',
   'lib/review-lifecycle.mjs',
   'lib/source-registry.mjs',
+  'lib/workspace-validation.mjs',
   'mole.instance-template.yaml',
   'schemas/review-lifecycle-v1.schema.json',
   'upgrade-ownership.json'
