@@ -78,7 +78,7 @@ Skipped when the workspace layout is incomplete.
 
 | Code | Severity | Meaning |
 | --- | --- | --- |
-| `INBOX_UNPROCESSED` | warning | An inbox file has no processing receipt. One finding per file, found recursively. The message says when an active run has claimed the file. |
+| `INBOX_UNPROCESSED` | warning | An inbox file has no processing receipt. One finding per file, found recursively. The message says when an active run has claimed the file, or is active without naming its paths. |
 | `INBOX_INVALID_LOCK` | error | The processing lock is malformed. |
 | `INBOX_STALE_LOCK` | warning | The processing lease has expired. |
 | `INBOX_SYNC_CONFLICT` | error | Conflict copies of an inbox file, the lock, or a receipt exist. |
@@ -97,7 +97,8 @@ Skipped when the workspace has no source registry yet.
 | `SOURCE_ORPHAN_RECORD` | warning | A source record points at a path with no file, such as an archive move that was not reconciled. |
 | `SOURCE_ORPHAN_SOURCE` | warning | A file names a `source_id` that has no record. |
 | `SOURCE_REF_BROKEN` | error | A file cites a source under `source_refs` that has no record. Reported by the frontmatter check. |
-| `SOURCE_CONTENT_CONFLICT` | error | A registered file no longer holds its registered bytes. |
+| `SOURCE_CONTENT_CONFLICT` | error | A registered file no longer holds its registered bytes, and it has no review record or one that is not editable. |
+| `SOURCE_CONTENT_CHANGED` | info | A registered file was edited and its review record is `draft`, `unreviewed`, or `rejected`. Expected while a draft is being written. `mole lifecycle submit` records the new content. |
 | `SOURCE_DUPLICATE_CONTENT` | info | Two sources are registered with the same bytes, such as two unedited drafts from one template. `paths` lists the files. |
 | `SOURCE_PATH_CLAIM_CONFLICT` | error | Two sources are registered at one path. |
 | `SOURCE_INVALID_RECORD`, `SOURCE_RECORD_FILENAME_CONFLICT`, `SOURCE_DUPLICATE_RECORD`, `SOURCE_REVISION_CONFLICT` | error | A source record is malformed, misnamed, or exists in conflicting copies. |
@@ -121,8 +122,9 @@ See [`review-lifecycle.md`](review-lifecycle.md) for what each means.
 Checks Markdown files under `2-summaries/`, `3-indexes/`, `4-context/`,
 `5-evidence/`, and `6-raw/`. `README.md` files are skipped. Files in
 `3-indexes/`, `5-evidence/`, and `6-raw/` may be any format: a block that
-opens with `---` is read as frontmatter there only when its first line is
-`key: value`, so a file that starts with a horizontal rule is left alone.
+opens with `---` is read as frontmatter there only when it closes and every
+top-level line is `key: value`. A file that starts with a horizontal rule, or
+with a pasted email header, is left alone.
 
 | Code | Severity | Meaning |
 | --- | --- | --- |
@@ -160,7 +162,7 @@ are compared in UTC. A `last_updated` in the future is not reported.
 | Code | Severity | Meaning |
 | --- | --- | --- |
 | `SYNC_CONFLICT_COPY` | error | A file name marks a sync conflict copy, such as `notes (conflicted copy).md`. Checked in the layer folders and `governance/`. The inbox, lifecycle, source, and receipt folders report their own. |
-| `DUPLICATE_FILE` | warning | Two or more files under `4-context/`, `5-evidence/`, or `6-raw/` hold the same bytes. One finding lists them all. Empty files and `README.md` are ignored. |
+| `DUPLICATE_FILE` | warning | Two or more files under `4-context/`, `5-evidence/`, or `6-raw/` hold the same bytes. One finding lists them all. Empty files, `README.md`, and unedited copies of a Mole template are ignored. |
 
 ### input-queue
 
