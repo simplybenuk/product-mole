@@ -338,19 +338,21 @@ its registered path, and after a move without a reconcile while its bytes are
 unchanged. A file that was moved and then edited no longer matches its record.
 
 A copy can keep the `source_id:` frontmatter of the file it was copied from,
-such as a capture copied into `5-evidence/` and then edited. When the original
-is still at its registered path, or migration matched it as a moved file, the
-copy is registered under a new source. The dry run names the frontmatter ID
-next to the copy, and the record's first history entry keeps it. A file that
-holds the named source's bytes while a different file sits at the registered
-path is the original, not a copy, and is reported instead.
+such as a capture copied into `5-evidence/` and then edited. The copy is
+registered under a new source when migration can account for the original:
+it matched the original as a moved file, or the file at the registered path
+still holds the source's bytes or names the source in its own frontmatter.
+The dry run names the frontmatter ID next to the copy, and the record's first
+history entry keeps it. When some other file sits at the registered path, the
+file may be the original after a move, so migration reports it instead.
 
 Migration skips `README.md` files, symlinks, and sync conflict copies without
 a finding. It skips these with a finding, and exits 1:
 
 - `source_id_mismatch`: a file that migration cannot match to a source by
-  its path or its bytes, and whose frontmatter names a `source_id` that no
-  other scanned file holds. The finding prints the command that clears it: `mole
+  its path or its bytes, and whose frontmatter names a `source_id` that
+  migration cannot place at another scanned file. The finding prints the
+  command that clears it: `mole
   source register <path>` to track the file as its own source, or `mole
   source reconcile` when the file is the named source after a move. When the
   named source has an open record, the finding also points to `mole lifecycle
