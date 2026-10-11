@@ -133,7 +133,8 @@ Usage:
                                       --next-review, --answer-format, --effort, --requester, --source, --ref, --reason.
   mole input-queue update <input_id> [fields] --actor <name> --actor-type <type> --reason <text>
                                       Change a request. Fields are the add options plus --status and --not-blocking.
-                                      Changing an owner needs --actor-type human --confirm-human.
+                                      Changing an owner, or deferring with no --next-review, needs
+                                      --actor-type human --confirm-human.
   mole input-queue close <input_id> --answer <text> --outcome <text> --actor <name> --actor-type <type>
                                       Record the answer and what it changed.
   mole input-queue close <input_id> --closure-reason duplicate|superseded|stale|not_needed --outcome <text>
@@ -141,6 +142,7 @@ Usage:
                                       Close a request that was not answered. Add --duplicate-of <input_id>
                                       or --superseded-by <input_id> for those reasons.
   mole input-queue reopen <input_id> --actor <name> --actor-type <type> --reason <text>
+                                      Reopen a request. One a person closed needs --actor-type human --confirm-human.
   mole input-queue show <input_id>     Show a request and its history.
   mole input-queue list [--status <status>] [--all]
                                       List open requests; --all includes closed ones.
@@ -1398,7 +1400,22 @@ function runInputQueueReview(values = []) {
   return parsed.format;
 }
 
+function printInputQueueHelp() {
+  const lines = getHelpOutput().split('\n');
+  // The input-queue lines of the usage block, with their indented descriptions.
+  console.log(lines.filter((line, index) => {
+    let owner = index;
+    while (owner > 0 && /^\s{10,}/.test(lines[owner])) owner -= 1;
+    return /input-queue/.test(lines[owner]) && /^\s{2}mole /.test(lines[owner]);
+  }).join('\n'));
+  console.log('\nEvery command accepts --format json. See docs/input-queue.md.');
+}
+
 function runInputQueueCommand(action, values = []) {
+  if ([action, ...values].some((value) => value === '--help' || value === '-h') || action === 'help') {
+    printInputQueueHelp();
+    return;
+  }
   let format = guessLifecycleFormat(values);
   const emit = (result, printText) => {
     if (format === 'json') console.log(JSON.stringify(result, null, 2));
@@ -1538,13 +1555,6 @@ function runInputQueueCommand(action, values = []) {
       format = parsed.format;
       const result = unlockInputQueue(cwd);
       emit(result, () => console.log(result.message));
-    } else if (action === '--help' || action === '-h' || action === 'help') {
-      console.log(getHelpOutput().split('\n').filter((line, index, lines) => {
-        // The input-queue lines of the usage block, with their indented descriptions.
-        let owner = index;
-        while (owner > 0 && /^\s{10,}/.test(lines[owner])) owner -= 1;
-        return /input-queue/.test(lines[owner]) && /^\s{2}mole /.test(lines[owner]);
-      }).join('\n'));
     } else {
       throw new UsageError(`Unknown input-queue command: ${action ?? '(none)'}. Use add, update, close, reopen, show, list, review, migrate, refresh-view, audit, or unlock.`);
     }

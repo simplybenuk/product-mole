@@ -25,17 +25,18 @@ commands that write refuse with `INVALID_QUEUE_VIEW` and change nothing,
 because rewriting the table could delete your text. A file with no markers
 gets the table in place of its first request table, or at the end.
 
-Text outside the markers is yours and is kept, with two exceptions. A request
-table whose rows the queue now holds is removed, so the file has one table.
-A table that lists requests by their queue ID is left where it is, and
-`audit` reports it.
+Text outside the markers is yours and is kept, with one exception: a legacy
+request table is removed once the queue holds its rows, so the file has one
+table. A table outside the markers that lists requests by their queue ID is
+your own. Mole leaves it where it is, does not keep it current, and does not
+import rows added to it. `audit` reports it as `request_table_outside_view`.
 
-Text typed inside the markers is replaced on the next change. Before that
-happens, Mole copies the whole file to `governance/input-queue/legacy/` and
-prints the path, unless every line it removes is one it generated, a
-placeholder row, or a row the queue holds. `audit` reports such text as
-`unmanaged_text_in_view`. Changing the cells of a row that keeps its ID is not
-detected: the queue's values are written back.
+Everything inside the markers is replaced on each change. If a line there is
+not exactly what Mole generates from the queue, such as a note, an extra
+column, or a row edited by hand, Mole first copies the whole file to
+`governance/input-queue/legacy/` and prints the path. `audit` reports such
+lines as `unmanaged_text_in_view`. The queue's values are then written back,
+so change a request with `mole input-queue update`, not by editing its row.
 
 ## The record
 
@@ -90,7 +91,8 @@ mole input-queue close <input_id> --answer "Team tier" \
 
 Every command that changes the queue needs `--actor <name>` and `--actor-type
 human|agent|automation`. `refresh-view` and `unlock` take neither. `mole
-input-queue --help` lists the commands. Add `--format json` to any command for
+input-queue --help` lists the commands. `--confirm-human` is accepted by
+`update`, `close`, `reopen`, and `migrate`, and only with `--actor-type human`. Add `--format json` to any command for
 machine-readable output. A refusal prints `{ "ok": false, "error": { "code",
 "message", "details" } }` and exits 1. Invalid arguments exit 2.
 
@@ -182,7 +184,7 @@ in code fences are ignored. Columns map by name: `Priority`,
 | Status `Complete`, `Done`, `Closed` | `closed`, with a closure that says the answer was not recorded |
 | Any other status | `open` |
 | A due date that is not `YYYY-MM-DD` | null. The text stays in `legacy.columns`. |
-| A row whose cells are all empty or `_TBD_` | skipped and reported as `placeholder_row` |
+| A row whose cells are all empty or `_TBD_`, apart from a starter default such as `High`, `2–5 min`, or `Open` | skipped and reported as `placeholder_row` |
 | A row with text but an empty or `_TBD_` request | skipped and reported as `request_missing`. It cannot be imported. It stays in the copy under `legacy/`. |
 
 Until the rows are migrated, `mole review input-queue` still ranks them under
@@ -219,6 +221,7 @@ copies the file to `governance/input-queue/legacy/` and prints the path.
 | `view_stale` | Run `mole input-queue refresh-view`. |
 | `stale_lock` | Run `mole input-queue unlock`. |
 | `foreign_lock` | The lock came from another host. Delete it by hand once no command is running there. |
+| `stale_temp_file` | An interrupted write left a `.tmp` file. Delete it once no queue command is running. |
 
 ## Library
 
@@ -230,7 +233,7 @@ addInputRequest(root, { request, impact, unblocks, priority, blocking, owner, du
   answerFormat, effort, requester, sourceIds, references, actor, actorType, reason, now })
 updateInputRequest(root, inputId, { ...fields, status, addSourceIds, addReferences, actor, actorType, humanConfirmed, reason, now })
 closeInputRequest(root, inputId, { closureReason, answer, outcome, duplicateOf, supersededBy, actor, actorType, humanConfirmed, reason, now })
-reopenInputRequest(root, inputId, { actor, actorType, reason, now })
+reopenInputRequest(root, inputId, { actor, actorType, humanConfirmed, reason, now })
 readInputRequest(root, inputId)
 listInputRequests(root, { statuses, all })
 reviewInputQueue(root, { limit, staleAfterDays, duplicateThreshold, now })

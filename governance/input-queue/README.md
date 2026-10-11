@@ -59,9 +59,11 @@ Do not edit `requests.json` by hand. Use the commands so each change has an
 actor, a time, and a reason. The actor fields are declarations made by whoever
 runs the command. They are not authenticated.
 
-A row added by hand to `governance/input-queue.md` is picked up by
-`mole input-queue migrate --apply`, and the other commands refuse to write
-until it is. Keep the two marker lines around the generated table as they
-are.
+A row added by hand to the generated table or to a legacy table in
+`governance/input-queue.md` is picked up by `mole input-queue migrate
+--apply`, and the other commands refuse to write until it is. Keep the two
+marker lines around the generated table as they are. Anything else typed
+between them is replaced on the next change, after Mole keeps a copy of the
+file under `legacy/`. Every command accepts `--format json`.
 
 The full contract is in the Mole documentation under `docs/input-queue.md`.
