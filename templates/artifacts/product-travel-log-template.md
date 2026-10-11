@@ -66,7 +66,8 @@ until this report is approved.
 ## Decision
 
 One per change: `continue`, `iterate`, `stop`, `investigate`, or `unknown`,
-with the reason.
+with the reason. Set `decision` in the frontmatter to the same value, or to
+`mixed` when the changes differ.
 
 ## Recommended next action
 

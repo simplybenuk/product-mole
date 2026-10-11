@@ -89,13 +89,14 @@ intended outcome nor any evidence was recorded.
 ## Recommended next action
 
 - Ask the product owner for the intended outcome of each change.
-- Capture analytics and support evidence for 2026-08-17 to 2026-10-04 in
-  `5-evidence/`, then run this review again.
+- Capture analytics and support evidence for the weeks either side of
+  2026-09-14 in `5-evidence/`, then run this review again.
 
 ## Unresolved questions
 
 - What was each change meant to achieve, and how would that be measured?
-- What happened to usage, tickets, sign-ups, and upgrades after 2026-09-14?
+- What happened after 2026-09-14 to the measures each change was meant to
+  move?
 - Next review: 2026-10-19, or when evidence is captured.
 
 ## Sources and evidence gaps

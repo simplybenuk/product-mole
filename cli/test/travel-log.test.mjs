@@ -76,6 +76,9 @@ describe('product travel log template and skill', () => {
       /write `unknown`/,
       /No intent record found/,
       /Say when the review is too early/,
+      /do not say the measure was met/,
+      /--actor "<agent name>" --actor-type agent --reason "Ready for review"/,
+      /`mixed` otherwise/,
       /Say when attribution is weak/,
       /one decision per change/i,
       /Never overwrite existing context/,
@@ -94,6 +97,7 @@ describe('product travel log template and skill', () => {
     assert.match(output, /Do not invent an intent, a metric, a result, or a cause/);
     assert.match(output, /continue, iterate, stop, investigate, or unknown/);
     assert.match(output, /a learning is durable only after a person approves the report/);
+    assert.match(output, /mole lifecycle submit <record_id> --actor "<agent name>" --actor-type agent --reason "Ready for review"/);
     for (const section of SECTIONS.slice(0, 8)) assert.ok(output.includes(`- ${section}`), section);
     assert.throws(() => buildTravelLogInstruction('  '), /Name the change or release to review/);
   });
@@ -113,14 +117,20 @@ describe('product travel log worked example', () => {
   });
 
   for (const [label, report] of [['rich inputs', rich], ['release notes alone', notesOnly]]) {
-    it(`produces a complete report from ${label}`, () => {
+    it(`holds a complete report written from ${label}`, () => {
       const sections = sectionsOf(report);
       assert.deepEqual([...sections.keys()], SECTIONS);
       for (const [heading, body] of sections) assert.ok(body.length > 20, `${heading} is empty`);
-      // No template instruction text or placeholder is left behind.
-      assert.ok(!/_TBD_|<[a-z ]+>/.test(report));
+      // None of the template's guidance sentences is left behind.
+      const guidance = [...sectionsOf(read(repoRoot, 'templates', 'artifacts', 'product-travel-log-template.md')).values()]
+        .flatMap((body) => body.split(/\n\n/))
+        .map((paragraph) => paragraph.replace(/\s+/g, ' ').trim())
+        .filter((paragraph) => paragraph.length > 40 && !paragraph.startsWith('|') && !paragraph.startsWith('```'));
+      assert.ok(guidance.length >= 10);
+      const flat = report.replace(/\s+/g, ' ');
+      for (const paragraph of guidance) assert.ok(!flat.includes(paragraph), `template text left in the report: ${paragraph}`);
       const frontmatter = frontmatterOf(report);
-      assert.ok(DECISIONS.includes(frontmatter.decision), frontmatter.decision);
+      assert.ok([...DECISIONS, 'mixed'].includes(frontmatter.decision), frontmatter.decision);
       assert.match(frontmatter.next_review, /^\d{4}-\d{2}-\d{2}$/);
 
       // A release with several changes: each has what shipped and a decision.
@@ -130,6 +140,9 @@ describe('product travel log worked example', () => {
         assert.ok(decision && DECISIONS.includes(decision[1]), `${change} needs a decision`);
       }
       assert.match(sections.get('Unresolved questions'), /Next review: \d{4}-\d{2}-\d{2}/);
+      // The frontmatter decision is the shared decision, or "mixed".
+      const made = new Set(changes.map((change) => sections.get('Decision').match(new RegExp(`\\*\\*${change}: ([a-z]+)\\.`, 'i'))[1]));
+      assert.equal(frontmatter.decision, made.size === 1 ? [...made][0] : 'mixed');
       // Every source the body cites is declared in the frontmatter.
       const declared = report.match(/^---\n[\s\S]*?\n---\n/)[0].match(/src_[0-9a-f-]{36}/g);
       const cited = sections.get('Sources and evidence gaps').match(/src_[0-9a-f-]{36}/g);
@@ -145,6 +158,9 @@ describe('product travel log worked example', () => {
     assert.match(sections.get('Interpretation and confidence'), /Attribution is weak/);
     assert.match(sections.get('Interpretation and confidence'), /paid\s+campaign/);
     assert.match(sections.get('Evidence before and after'), /three weeks\. The intent record set its measures\s+at four weeks/);
+    // Three weeks against a four-week measure: on track, not met.
+    assert.ok(!/\bmet its\b|\bis meeting its\b/.test(rich));
+    assert.match(sections.get('Decision'), /CSV export: iterate\.\*\* It is on track at three weeks; the measures are\s+judged at four/);
     // A change with no stated intent is not given one.
     assert.match(sections.get('Original intent'), /Onboarding checklist\.\*\* No intent record found/);
     assert.match(sections.get('Expected outcome'), /Onboarding checklist\.\*\* unknown/);
@@ -162,8 +178,8 @@ describe('product travel log worked example', () => {
       assert.ok(sections.get('Sources and evidence gaps').includes(gap), gap);
     }
     assert.equal(frontmatterOf(notesOnly).decision, 'unknown');
-    // It does not borrow numbers from evidence it was not given.
-    assert.ok(!/\b\d+%|\btickets? fell\b/.test(notesOnly));
+    // It does not borrow numbers, dates, or measures from evidence it was not given.
+    assert.ok(!/\b\d+%|\btickets? fell\b|2026-08-|sign-ups|upgrades/.test(notesOnly));
   });
 
   it('matches the numbers in the analytics input', () => {

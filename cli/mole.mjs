@@ -720,7 +720,7 @@ export function buildTravelLogInstruction(subject = '') {
 
   return `Suggested agent instruction:
 
-Write a product travel log for: ${detail}. Use the mole-product-travel-log skill. Create the draft with \`mole create product-travel-log\` and fill it in place. Find the original intent in an intent record, spec, decision, or roadmap entry; if none exists, write "No intent record found" and do not reconstruct one. Read the full release artefact for what shipped. Retrieve analytics evidence and qualitative signals for the period before and after, top-down from \`3-indexes/\` and \`2-summaries/\` into \`4-context/\` and \`5-evidence/\`. If the release holds several changes, review each one.
+Write a product travel log for: ${detail}. Use the mole-product-travel-log skill. Create the draft with \`mole create product-travel-log 4-context/travel-log/<release-or-change>.md\` and fill it in place. Find the original intent in an intent record, spec, decision, or roadmap entry; if none exists, write "No intent record found" and do not reconstruct one. Read the full release artefact for what shipped. Retrieve analytics evidence and qualitative signals for the period before and after, top-down from \`3-indexes/\` and \`2-summaries/\` into \`4-context/\` and \`5-evidence/\`. If the release holds several changes, review each one.
 
 Label every statement as a fact, an observation, an interpretation, or an assumption. Write "unknown" wherever evidence is missing and say what is needed. Do not invent an intent, a metric, a result, or a cause. Say when the review is too early and when attribution is weak.
 
@@ -739,7 +739,7 @@ Return:
 - Sources and evidence gaps
 - Retrieval receipt
 
-Do not change existing context. Submit the report with \`mole lifecycle submit <record_id>\` and stop: a learning is durable only after a person approves the report. ${LIFECYCLE_AGENT_GUIDANCE}`;
+Do not change existing context. Submit the report with \`mole lifecycle submit <record_id> --actor "<agent name>" --actor-type agent --reason "Ready for review"\` and stop: a learning is durable only after a person approves the report. ${LIFECYCLE_AGENT_GUIDANCE}`;
 }
 
 function travelLog(values) {

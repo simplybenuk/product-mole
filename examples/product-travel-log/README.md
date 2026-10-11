@@ -25,8 +25,11 @@ workspace.
 
 ## Try it
 
-In a Mole workspace, copy the inputs into `5-evidence/source-docs/`, register
-them with `mole source register <path>`, and run:
+In a Mole workspace, copy `inputs/intent-csv-export.md` into
+`4-context/intents/` and the other inputs into `5-evidence/source-docs/`.
+Register each with `mole source register <path>`. Registration gives each
+file a new source ID, so the IDs in your report will differ from the ones
+here. Then run:
 
 ```bash
 mole travel-log "release 2026.09"
