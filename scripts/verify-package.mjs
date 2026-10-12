@@ -15,6 +15,8 @@ export const REQUIRED_PACKAGED_FILES = Object.freeze([
   'package.json',
   'cli/mole.mjs',
   'cli/package.json',
+  'cli/skills/mole-product-travel-log/SKILL.md',
+  'examples/product-travel-log/README.md',
   'governance/input-queue.md',
   'governance/input-queue/README.md',
   'governance/lifecycle/README.md',
@@ -29,6 +31,7 @@ export const REQUIRED_PACKAGED_FILES = Object.freeze([
   'mole.instance-template.yaml',
   'schemas/input-queue-v1.schema.json',
   'schemas/review-lifecycle-v1.schema.json',
+  'templates/artifacts/product-travel-log-template.md',
   'upgrade-ownership.json'
 ]);
 

@@ -123,6 +123,7 @@ Usage:
                                       Print an agent instruction for a stakeholder update.
   mole critique <target> [claim-or-path]
                                       Print a context-grounded critique instruction.
+  mole travel-log <change-or-release>  Print an agent instruction for an outcome review of a change or release.
   mole bootstrap-context              Print an agent instruction for first-time top-layer setup.
   mole refresh top-layers             Print an agent instruction for summary/index refresh.
   mole synthesise <target>             Print an agent instruction for synthesis work.
@@ -199,7 +200,8 @@ Usage:
                                       Run the full read-only workspace check. Exit 0 healthy, 1 findings.
 
 Artifacts:
-  roadmap, spec, decision-brief, strategy-memo, prioritisation-draft, product-update
+  roadmap, spec, decision-brief, strategy-memo, prioritisation-draft, product-update,
+  product-travel-log
 
 Examples:
   mole new my-mole
@@ -405,7 +407,8 @@ function createArtifact(kind, outputPath) {
     'decision-brief': 'decision-brief-template.md',
     'strategy-memo': 'strategy-memo-template.md',
     'prioritisation-draft': 'prioritisation-draft-template.md',
-    'product-update': 'product-update-template.md'
+    'product-update': 'product-update-template.md',
+    'product-travel-log': 'product-travel-log-template.md'
   };
 
   const file = templateMap[kind];
@@ -421,7 +424,8 @@ function createArtifact(kind, outputPath) {
     'decision-brief': '4-context/decisions/decision-brief-draft.md',
     'strategy-memo': '4-context/strategy/strategy-memo-draft.md',
     'prioritisation-draft': '4-context/product/prioritisation-draft.md',
-    'product-update': '4-context/product/product-update-draft.md'
+    'product-update': '4-context/product/product-update-draft.md',
+    'product-travel-log': '4-context/travel-log/product-travel-log-draft.md'
   }[kind];
 
   let relativeTarget;
@@ -683,7 +687,8 @@ function outputDraftInstruction(kind) {
     'strategy-memo': 'Create a strategy memo using the highest-signal relevant context first, descending only as needed.',
     'decision-brief': 'Create a decision brief with recommendation, options, trade-offs, and missing inputs.',
     'prioritisation-draft': 'Create a prioritisation draft with criteria, ranked items, and uncertainties.',
-    'product-update': 'Create a stakeholder-specific product update using stakeholder memory, relevant summaries, product context, and evidence. Tailor the format and include a retrieval receipt.'
+    'product-update': 'Create a stakeholder-specific product update using stakeholder memory, relevant summaries, product context, and evidence. Tailor the format and include a retrieval receipt.',
+    'product-travel-log': 'Fill in the travel log draft for one change or release using the mole-product-travel-log skill: original intent, what shipped, evidence before and after, interpretation, learnings, and a decision of continue, iterate, stop, investigate, or unknown for each change. Write "unknown" where evidence is missing, do not invent an intent or a result, and submit the report for human review.'
   };
   const instruction = map[kind] || `Create a ${kind} draft from Mole using progressive retrieval.`;
   console.log(`${instruction} ${LIFECYCLE_AGENT_GUIDANCE}`);
@@ -751,6 +756,45 @@ Return:
 - Retrieval receipt with files read, deepest layer reached, why descent stopped, and uncertainties
 
 Use \`templates/artifacts/critique-template.md\` when creating or updating a critique file. Keep pending or rejected context out of normal evidence unless the task explicitly asks to inspect it.`;
+}
+
+export function buildTravelLogInstruction(subject = '') {
+  const detail = String(subject || '').trim();
+  if (!detail) {
+    throw new Error('Name the change or release to review, such as: mole travel-log "release 2026.09".');
+  }
+
+  return `Suggested agent instruction:
+
+Write a product travel log for: ${detail}. Use the mole-product-travel-log skill. Create the draft with \`mole create product-travel-log 4-context/travel-log/<release-or-change>.md\` and fill it in place. Find the original intent in an intent record, spec, decision, or roadmap entry; if none exists, write "No intent record found" and do not reconstruct one. Read the full release artefact for what shipped. Retrieve analytics evidence and qualitative signals for the period before and after, top-down from \`3-indexes/\` and \`2-summaries/\` into \`4-context/\` and \`5-evidence/\`. If the release holds several changes, review each one.
+
+Label every statement as a fact, an observation, an interpretation, or an assumption. Write "unknown" wherever evidence is missing and say what is needed. Do not invent an intent, a metric, a result, or a cause. Say when the review is too early and when attribution is weak.
+
+Return:
+- Change and release
+- Original intent
+- What shipped
+- Expected outcome
+- Evidence before and after
+- Unexpected effects
+- Interpretation and confidence
+- What we learned
+- Decision for each change: continue, iterate, stop, investigate, or unknown
+- Recommended next action
+- Unresolved questions and the next review date
+- Sources and evidence gaps
+- Retrieval receipt
+
+Do not change existing context. Submit the report with \`mole lifecycle submit <record_id> --actor "<agent name>" --actor-type agent --reason "Ready for review"\` and stop: a learning is durable only after a person approves the report. ${LIFECYCLE_AGENT_GUIDANCE}`;
+}
+
+function travelLog(values) {
+  try {
+    console.log(buildTravelLogInstruction(values.join(' ')));
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
 }
 
 function critique(values) {
@@ -2173,6 +2217,9 @@ if (isDirectRun) {
       break;
     case 'critique':
       critique([subcommand, ...rest].filter(Boolean));
+      break;
+    case 'travel-log':
+      travelLog([subcommand, ...rest].filter(Boolean));
       break;
     case 'bootstrap-context':
       console.log(buildBootstrapContextInstruction());

@@ -98,6 +98,8 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole create strategy-memo [output-path]` | Creates a strategy memo draft. |
 | `mole create prioritisation-draft [output-path]` | Creates a prioritisation draft. |
 | `mole create product-update [output-path]` | Creates a product update draft from the product update template. |
+| `mole create product-travel-log [output-path]` | Creates a travel log report draft: intent, what shipped, evidence, learnings, and a decision for one change or release. |
+| `mole travel-log <change-or-release>` | Prints an agent instruction for an outcome review of a change or release. See [`docs/product-travel-log.md`](docs/product-travel-log.md). |
 | `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
 | `mole review input-queue [--limit <n>] [--format json]` | Returns the highest-value human-input requests, why each ranks where it does, and what answering it unblocks. Read-only. |

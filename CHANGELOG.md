@@ -39,6 +39,11 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and
   `docs/review-lifecycle.md`.
+- Added the `mole-product-travel-log` skill, a `product-travel-log` artifact
+  template for `mole create`, and `mole travel-log <change-or-release>`. The
+  report sets out intent, what shipped, evidence before and after, learnings,
+  and a decision for each change, and goes to a person for review. A worked
+  example is in `examples/product-travel-log/`.
 - Added `mole validate [path]`, a read-only check of the whole workspace with
   text and JSON output. It reports inbox, receipt, source, review-record,
   frontmatter, summary, duplicate-file, input-queue, and metadata problems
