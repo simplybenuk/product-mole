@@ -44,6 +44,21 @@ import {
   unlockLifecycle
 } from '../lib/review-lifecycle.mjs';
 import { VALIDATION_EXIT_CODES, formatValidationReport, validateWorkspace } from '../lib/workspace-validation.mjs';
+import {
+  INPUT_QUEUE_USAGE_ERROR_CODES,
+  InputQueueError,
+  addInputRequest,
+  auditInputQueue,
+  closeInputRequest,
+  listInputRequests,
+  migrateInputQueue,
+  readInputRequest,
+  refreshInputQueueView,
+  reopenInputRequest,
+  reviewInputQueue,
+  unlockInputQueue,
+  updateInputRequest
+} from '../lib/input-queue.mjs';
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
@@ -76,6 +91,7 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
   ['agents.md', 'agents.md'],
   ['governance/change-log.md', 'governance/change-log.md'],
   ['governance/input-queue.md', 'governance/input-queue.md'],
+  ['governance/input-queue/README.md', 'governance/input-queue/README.md'],
   ['governance/metrics/daily.json', 'governance/metrics/daily.json'],
   ['governance/metrics/weekly.json', 'governance/metrics/weekly.json'],
   ['governance/metrics/monthly.json', 'governance/metrics/monthly.json'],
@@ -87,6 +103,7 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
   ['governance/lifecycle/README.md', 'governance/lifecycle/README.md'],
   ['schemas/source-record-v1.schema.json', 'schemas/source-record-v1.schema.json'],
   ['schemas/review-lifecycle-v1.schema.json', 'schemas/review-lifecycle-v1.schema.json'],
+  ['schemas/input-queue-v1.schema.json', 'schemas/input-queue-v1.schema.json'],
   ['mole.instance-template.yaml', 'mole.instance.yaml']
 ]);
 
@@ -110,6 +127,31 @@ Usage:
   mole refresh top-layers             Print an agent instruction for summary/index refresh.
   mole synthesise <target>             Print an agent instruction for synthesis work.
   mole review <target>                 Print an agent instruction for review work.
+  mole review input-queue [--limit <n>] [--stale-after-days <n>] [--duplicate-threshold <0-1>] [--format json]
+                                      Show the highest-value human-input requests and why they rank.
+  mole input-queue add --request <text> --impact <text> --unblocks <text> --actor <name> --actor-type <type>
+                                      Ask a person for input. Options: --priority, --blocking, --owner, --due,
+                                      --next-review, --answer-format, --effort, --requester, --source, --ref, --reason.
+  mole input-queue update <input_id> [fields] --actor <name> --actor-type <type> --reason <text>
+                                      Change a request. Fields are the add options plus --status and --not-blocking.
+                                      Changing an owner, or deferring with no --next-review, needs
+                                      --actor-type human --confirm-human.
+  mole input-queue close <input_id> --answer <text> --outcome <text> --actor <name> --actor-type <type>
+                                      Record the answer and what it changed.
+  mole input-queue close <input_id> --closure-reason duplicate|superseded|stale|not_needed --outcome <text>
+                                      --reason <text> --actor <name> --actor-type human --confirm-human
+                                      Close a request that was not answered. Add --duplicate-of <input_id>
+                                      or --superseded-by <input_id> for those reasons.
+  mole input-queue reopen <input_id> --actor <name> --actor-type <type> --reason <text>
+                                      Reopen a request. One a person closed needs --actor-type human --confirm-human.
+  mole input-queue show <input_id>     Show a request and its history.
+  mole input-queue list [--status <status>] [--all]
+                                      List open requests; --all includes closed ones.
+  mole input-queue migrate [--apply --actor <name> --actor-type <type>]
+                                      Give rows in governance/input-queue.md stable IDs.
+  mole input-queue refresh-view       Rewrite the generated table from the queue.
+  mole input-queue audit              Check the input queue (read-only).
+  mole input-queue unlock             Remove a queue lock left by a stopped process.
   mole inbox claim [processor]         Claim a run with a leased, owned lock.
   mole inbox heartbeat --run-id id     Renew the matching active run lease.
   mole inbox checkpoint --run-id id [--processed path]
@@ -428,7 +470,8 @@ function createArtifact(kind, outputPath) {
       state: 'draft',
       actor: 'mole-cli',
       actorType: 'automation',
-      reason: `Created ${kind} draft from a template.`
+      reason: `Created ${kind} draft from a template.`,
+      newFile: true
     });
     console.log(`Source ID: ${sourceId}`);
     console.log(`Lifecycle record: ${lifecycle.record_id} (draft)`);
@@ -724,13 +767,13 @@ function critique(values) {
 export function buildBootstrapContextInstruction() {
   return `Suggested agent instruction:
 
-Bootstrap this Mole workspace context. Treat blank, placeholder, or starter-template files in \`2-summaries/\` and \`3-indexes/\` as missing top-layer context. Read \`0-bootstrap/\`, \`1-routing/\`, all existing \`4-context/\` modules, useful \`5-evidence/\` material, and current unprocessed inbox material in \`6-raw/inbox/\`. Populate the initial domain summaries and indexes with concise, evidence-backed context, preserving uncertainty and adding missing human questions to \`governance/input-queue.md\`. Do not invent product facts; mark low-confidence conclusions as hypotheses and link to supporting files. ${LIFECYCLE_AGENT_GUIDANCE}`;
+Bootstrap this Mole workspace context. Treat blank, placeholder, or starter-template files in \`2-summaries/\` and \`3-indexes/\` as missing top-layer context. Read \`0-bootstrap/\`, \`1-routing/\`, all existing \`4-context/\` modules, useful \`5-evidence/\` material, and current unprocessed inbox material in \`6-raw/inbox/\`. Populate the initial domain summaries and indexes with concise, evidence-backed context, preserving uncertainty and adding missing human questions with \`mole input-queue add\`. Do not invent product facts; mark low-confidence conclusions as hypotheses and link to supporting files. ${LIFECYCLE_AGENT_GUIDANCE}`;
 }
 
 export function buildRefreshTopLayersInstruction() {
   return `Suggested agent instruction:
 
-Refresh the Mole top layers. Compare \`2-summaries/\` and \`3-indexes/\` with lower-layer context in \`4-context/\`, evidence in \`5-evidence/\`, recent processed inbox outputs, and any relevant unprocessed \`6-raw/inbox/\` material. Update blank, placeholder, stale, or incomplete summaries and indexes so they accurately route future retrieval. Keep changes compact and evidence-backed, avoid copying raw detail upward, and add missing human questions to \`governance/input-queue.md\` when the lower layers do not justify a confident summary. ${LIFECYCLE_AGENT_GUIDANCE}`;
+Refresh the Mole top layers. Compare \`2-summaries/\` and \`3-indexes/\` with lower-layer context in \`4-context/\`, evidence in \`5-evidence/\`, recent processed inbox outputs, and any relevant unprocessed \`6-raw/inbox/\` material. Update blank, placeholder, stale, or incomplete summaries and indexes so they accurately route future retrieval. Keep changes compact and evidence-backed, avoid copying raw detail upward, and add missing human questions with \`mole input-queue add\` when the lower layers do not justify a confident summary. ${LIFECYCLE_AGENT_GUIDANCE}`;
 }
 
 function productUpdate(values) {
@@ -1219,7 +1262,8 @@ function runLifecycleCommand(action, values = []) {
         if (!apply) {
           for (const candidate of result.candidates) {
             const status = candidate.legacy_status ? ` (frontmatter status: ${candidate.legacy_status})` : '';
-            console.log(`- ${candidate.path} -> ${candidate.proposed_state}${status}`);
+            const named = candidate.named_source_id ? ` (frontmatter names ${candidate.named_source_id}, which is not this file's source)` : '';
+            console.log(`- ${candidate.path} -> ${candidate.proposed_state}${status}${named}`);
           }
           if (result.candidates.length) console.log('Nothing was changed. Rerun with --apply --actor <name> --actor-type <type> to register these files. Files under 6-raw/ become raw and the rest become unreviewed. A frontmatter status is not a review decision.');
         }
@@ -1251,6 +1295,295 @@ function runLifecycleCommand(action, values = []) {
     if (!(error instanceof UsageError) && !error.code) throw error;
     reportLifecycleFailure(error, format);
   }
+}
+
+const INPUT_QUEUE_ACTOR_SCALARS = ['--actor', '--actor-type', '--reason'];
+const INPUT_QUEUE_FIELD_SCALARS = ['--request', '--impact', '--unblocks', '--answer-format', '--effort', '--priority', '--requester', '--owner', '--due', '--next-review'];
+
+function inputQueueActor(options) {
+  return {
+    actor: requireLifecycleOption(options, '--actor'),
+    actorType: requireLifecycleOption(options, '--actor-type'),
+    humanConfirmed: options['--confirm-human'] === true,
+    reason: options['--reason']
+  };
+}
+
+function inputQueueFields(options) {
+  if (options['--blocking'] && options['--not-blocking']) throw new UsageError('--blocking conflicts with --not-blocking.');
+  const fields = {
+    request: options['--request'],
+    impact: options['--impact'],
+    unblocks: options['--unblocks'],
+    answer_format: options['--answer-format'],
+    effort: options['--effort'],
+    priority: options['--priority'],
+    requester: options['--requester'],
+    owner: options['--owner'],
+    due: options['--due'],
+    next_review: options['--next-review'],
+    status: options['--status']
+  };
+  if (options['--blocking']) fields.blocking = true;
+  if (options['--not-blocking']) fields.blocking = false;
+  return fields;
+}
+
+function parseInputQueueNumber(value, option, { integer = true } = {}) {
+  if (value === undefined) return undefined;
+  const number = Number(value);
+  if (!Number.isFinite(number) || (integer && !Number.isInteger(number))) throw new UsageError(`${option} must be a ${integer ? 'whole ' : ''}number.`);
+  return number;
+}
+
+function printInputRequest(request) {
+  console.log(`Input ID: ${request.input_id}`);
+  console.log(`Status: ${request.status}${request.blocking ? ' (blocks work)' : ''}`);
+  console.log(`Priority: ${request.priority}`);
+  console.log(`Request: ${request.request}`);
+  console.log(`Why it matters: ${request.impact}`);
+  if (request.unblocks) console.log(`Unblocks: ${request.unblocks}`);
+  if (request.answer_format) console.log(`Quick input format: ${request.answer_format}`);
+  if (request.effort) console.log(`Effort: ${request.effort}`);
+  console.log(`Requester: ${request.requester}`);
+  if (request.owner) console.log(`Owner: ${request.owner}`);
+  if (request.due) console.log(`Due: ${request.due}`);
+  if (request.next_review) console.log(`Next review: ${request.next_review}`);
+  if (request.source_ids.length) console.log(`Sources: ${request.source_ids.join(', ')}`);
+  if (request.references.length) console.log(`References: ${request.references.join(', ')}`);
+  if (request.duplicate_of) console.log(`Duplicate of: ${request.duplicate_of}`);
+  if (request.superseded_by) console.log(`Superseded by: ${request.superseded_by}`);
+  if (request.closure) {
+    console.log(`Closed: ${request.closure.reason} by ${request.closure.closed_by} at ${request.closure.closed_at}`);
+    if (request.closure.answer) console.log(`Answer: ${request.closure.answer}`);
+    console.log(`What changed: ${request.closure.outcome}`);
+  }
+}
+
+function printInputQueueReview(result) {
+  if (!result.top.length) console.log('No open input requests.');
+  else console.log(`Top ${result.top.length} of ${result.reviewable_count} open input ${result.reviewable_count === 1 ? 'request' : 'requests'}:`);
+  for (const item of result.top) {
+    console.log('');
+    console.log(`${item.rank}. ${item.request}`);
+    console.log(`   ID: ${item.input_id}`);
+    console.log(`   Ranked here because: ${item.reasons.join(', ')} (score ${item.score})`);
+    console.log(`   Why it matters: ${item.impact}`);
+    console.log(`   Answering it unblocks: ${item.unblocks ?? 'not recorded'}`);
+    if (item.answer_format) console.log(`   Fastest way to answer: ${item.answer_format}`);
+    if (item.owner) console.log(`   Owner: ${item.owner}`);
+    if (item.due) console.log(`   Due: ${item.due}`);
+  }
+  if (result.not_shown) console.log(`\n${result.not_shown} more not shown. Raise --limit or run "mole input-queue list".`);
+  if (result.stale_candidate_count) {
+    console.log(`\nPossibly stale (${result.stale_candidate_count}); nothing was closed:`);
+    for (const item of result.stale_candidates) console.log(`- ${item.input_id}  ${item.request} (${item.reasons.join('; ')})`);
+    if (result.stale_candidate_count > result.stale_candidates.length) console.log(`- and ${result.stale_candidate_count - result.stale_candidates.length} more`);
+  }
+  if (result.duplicate_candidate_count) {
+    console.log(`\nPossible duplicates (${result.duplicate_candidate_count}); nothing was merged:`);
+    for (const item of result.duplicate_candidates) {
+      console.log(`- ${item.input_ids.join(' and ')}: ${Math.round(item.similarity * 100)}% of terms shared (${item.shared_terms.join(', ')})`);
+    }
+    if (result.duplicate_candidate_count > result.duplicate_candidates.length) console.log(`- and ${result.duplicate_candidate_count - result.duplicate_candidates.length} more`);
+  }
+  if (result.stale_candidate_count || result.duplicate_candidate_count) {
+    console.log('Closing a stale or duplicate request, or changing its owner, is a decision for a person.');
+  }
+  if (result.notice) console.log(`\n${result.notice}`);
+}
+
+function runInputQueueReview(values = []) {
+  const parsed = parseLifecycleValues(values, { scalars: ['--limit', '--stale-after-days', '--duplicate-threshold'] });
+  const result = reviewInputQueue(cwd, {
+    limit: parseInputQueueNumber(parsed.options['--limit'], '--limit'),
+    staleAfterDays: parseInputQueueNumber(parsed.options['--stale-after-days'], '--stale-after-days'),
+    duplicateThreshold: parseInputQueueNumber(parsed.options['--duplicate-threshold'], '--duplicate-threshold', { integer: false })
+  });
+  if (parsed.format === 'json') console.log(JSON.stringify(result, null, 2));
+  else printInputQueueReview(result);
+  return parsed.format;
+}
+
+function printInputQueueHelp() {
+  const lines = getHelpOutput().split('\n');
+  // The input-queue lines of the usage block, with their indented descriptions.
+  console.log(lines.filter((line, index) => {
+    let owner = index;
+    while (owner > 0 && /^\s{10,}/.test(lines[owner])) owner -= 1;
+    return /input-queue/.test(lines[owner]) && /^\s{2}mole /.test(lines[owner]);
+  }).join('\n'));
+  console.log('\nEvery command accepts --format json. See docs/input-queue.md.');
+}
+
+function runInputQueueCommand(action, values = []) {
+  if ([action, ...values].some((value) => value === '--help' || value === '-h') || action === 'help') {
+    printInputQueueHelp();
+    return;
+  }
+  let format = guessLifecycleFormat(values);
+  const emit = (result, printText) => {
+    if (format === 'json') console.log(JSON.stringify(result, null, 2));
+    else printText();
+    if (format !== 'json' && result.legacy_copy && !result.applied) console.log(`The queue file as it was is kept at ${result.legacy_copy}.`);
+    // The change is saved even when the Markdown table could not be rewritten.
+    if (result.view?.warning) console.error(`Warning: ${result.view.warning}`);
+  };
+
+  try {
+    if (action === 'add') {
+      const parsed = parseLifecycleValues(values, {
+        scalars: [...INPUT_QUEUE_ACTOR_SCALARS, ...INPUT_QUEUE_FIELD_SCALARS],
+        lists: ['--source', '--ref'],
+        booleans: ['--blocking', '--confirm-human']
+      });
+      format = parsed.format;
+      for (const required of ['--request', '--impact', '--unblocks']) requireLifecycleOption(parsed.options, required);
+      const result = addInputRequest(cwd, {
+        ...inputQueueFields(parsed.options),
+        ...inputQueueActor(parsed.options),
+        sourceIds: parsed.options['--source'],
+        references: parsed.options['--ref']
+      });
+      emit(result, () => {
+        console.log('Added input request.');
+        printInputRequest(result.request);
+      });
+    } else if (action === 'update') {
+      const parsed = parseLifecycleValues(values, {
+        positionals: 1,
+        scalars: [...INPUT_QUEUE_ACTOR_SCALARS, ...INPUT_QUEUE_FIELD_SCALARS, '--status'],
+        lists: ['--source', '--ref'],
+        booleans: ['--blocking', '--not-blocking', '--confirm-human']
+      });
+      format = parsed.format;
+      const inputId = requireLifecyclePositional(parsed.positionals, 'input request ID');
+      requireLifecycleOption(parsed.options, '--reason');
+      const result = updateInputRequest(cwd, inputId, {
+        ...inputQueueFields(parsed.options),
+        ...inputQueueActor(parsed.options),
+        addSourceIds: parsed.options['--source'],
+        addReferences: parsed.options['--ref']
+      });
+      emit(result, () => {
+        console.log(`Updated ${result.changed_fields.join(', ')}.`);
+        printInputRequest(result.request);
+      });
+    } else if (action === 'close') {
+      const parsed = parseLifecycleValues(values, {
+        positionals: 1,
+        scalars: [...INPUT_QUEUE_ACTOR_SCALARS, '--closure-reason', '--answer', '--outcome', '--duplicate-of', '--superseded-by'],
+        booleans: ['--confirm-human']
+      });
+      format = parsed.format;
+      const inputId = requireLifecyclePositional(parsed.positionals, 'input request ID');
+      const result = closeInputRequest(cwd, inputId, {
+        ...inputQueueActor(parsed.options),
+        closureReason: parsed.options['--closure-reason'],
+        answer: parsed.options['--answer'],
+        outcome: parsed.options['--outcome'],
+        duplicateOf: parsed.options['--duplicate-of'],
+        supersededBy: parsed.options['--superseded-by']
+      });
+      emit(result, () => {
+        console.log('Closed input request.');
+        printInputRequest(result.request);
+      });
+    } else if (action === 'reopen') {
+      const parsed = parseLifecycleValues(values, { positionals: 1, scalars: INPUT_QUEUE_ACTOR_SCALARS, booleans: ['--confirm-human'] });
+      format = parsed.format;
+      const inputId = requireLifecyclePositional(parsed.positionals, 'input request ID');
+      requireLifecycleOption(parsed.options, '--reason');
+      const result = reopenInputRequest(cwd, inputId, inputQueueActor(parsed.options));
+      emit(result, () => {
+        console.log('Reopened input request.');
+        printInputRequest(result.request);
+      });
+    } else if (action === 'show') {
+      const parsed = parseLifecycleValues(values, { positionals: 1 });
+      format = parsed.format;
+      const request = readInputRequest(cwd, requireLifecyclePositional(parsed.positionals, 'input request ID'));
+      emit({ ok: true, request }, () => {
+        printInputRequest(request);
+        if (request.legacy) console.log(`Legacy row (${request.legacy.path} line ${request.legacy.line}): ${request.legacy.row}`);
+        console.log('History:');
+        for (const entry of request.history) {
+          const confirmed = entry.human_confirmed ? ', confirmed' : '';
+          const changed = Object.keys(entry.changes);
+          console.log(`- ${entry.revision}. ${entry.at} ${entry.action}${changed.length ? ` (${changed.join(', ')})` : ''} by ${entry.actor} [${entry.actor_type}${confirmed}]: ${entry.reason}`);
+        }
+      });
+    } else if (action === 'list') {
+      const parsed = parseLifecycleValues(values, { lists: ['--status'], booleans: ['--all'] });
+      format = parsed.format;
+      const requests = listInputRequests(cwd, { statuses: parsed.options['--status'], all: parsed.options['--all'] === true });
+      emit({ ok: true, count: requests.length, requests }, () => {
+        if (!requests.length) console.log('No input requests.');
+        for (const request of requests) {
+          console.log(`${request.input_id}  ${request.status}  ${request.priority}${request.blocking ? '  blocking' : ''}${request.due ? `  due ${request.due}` : ''}  ${request.request}`);
+        }
+      });
+    } else if (action === 'review') {
+      format = runInputQueueReview(values);
+    } else if (action === 'migrate') {
+      const parsed = parseLifecycleValues(values, { scalars: ['--actor', '--actor-type'], booleans: ['--apply', '--confirm-human'] });
+      format = parsed.format;
+      const apply = parsed.options['--apply'] === true;
+      if (!apply && (parsed.options['--actor'] || parsed.options['--actor-type'])) throw new UsageError('--actor and --actor-type go with --apply.');
+      const result = migrateInputQueue(cwd, apply ? { apply, ...inputQueueActor(parsed.options) } : {});
+      emit(result, () => {
+        const rows = apply ? result.migrated : result.candidates;
+        console.log(`${apply ? 'Migrated' : 'Rows to migrate'}: ${rows.length}`);
+        for (const row of rows) console.log(`- line ${row.line}${row.input_id ? `  ${row.input_id}` : ''}  ${row.status}  ${row.priority}  ${row.request}`);
+        const withoutRequest = result.skipped.filter((item) => item.reason === 'request_missing');
+        const inUserTable = result.skipped.filter((item) => item.reason === 'in_user_table');
+        const placeholders = result.skipped.length - withoutRequest.length - inUserTable.length;
+        if (placeholders) console.log(`Skipped placeholder rows: ${placeholders}`);
+        if (inUserTable.length) console.log(`Not imported (line ${inUserTable.map((item) => item.line).join(', ')}): ${inUserTable.length} ${inUserTable.length === 1 ? 'row' : 'rows'} in a table of your own that lists requests by queue ID. Mole leaves that table alone. Add ${inUserTable.length === 1 ? 'it' : 'them'} with "mole input-queue add".`);
+        if (withoutRequest.length) console.log(`Skipped rows with text but no request (line ${withoutRequest.map((item) => item.line).join(', ')}): ${withoutRequest.length}. They cannot be imported.`);
+        if (result.legacy_copy) console.log(`The file as it was is kept at ${result.legacy_copy}.`);
+        if (!apply && rows.length) console.log('Nothing was changed. Rerun with --apply --actor <name> --actor-type <type>.');
+      });
+    } else if (action === 'audit') {
+      const parsed = parseLifecycleValues(values);
+      format = parsed.format;
+      const result = auditInputQueue(cwd);
+      emit(result, () => {
+        const problems = result.findings.filter((item) => !item.advisory).length;
+        console.log(result.ok
+          ? (result.findings.length ? 'Input queue audit passed, with notes.' : 'Input queue audit passed.')
+          : `Input queue audit found ${problems} ${problems === 1 ? 'problem' : 'problems'}.`);
+        printLifecycleFindings(result.findings);
+      });
+      if (!result.ok) process.exitCode = 1;
+    } else if (action === 'refresh-view') {
+      const parsed = parseLifecycleValues(values);
+      format = parsed.format;
+      const result = refreshInputQueueView(cwd);
+      emit(result, () => console.log(result.view.changed ? `Rewrote the generated table in ${result.view.path}.` : `The generated table in ${result.view.path} is already current.`));
+    } else if (action === 'unlock') {
+      const parsed = parseLifecycleValues(values);
+      format = parsed.format;
+      const result = unlockInputQueue(cwd);
+      emit(result, () => console.log(result.message));
+    } else {
+      throw new UsageError(`Unknown input-queue command: ${action ?? '(none)'}. Use add, update, close, reopen, show, list, review, migrate, refresh-view, audit, or unlock.`);
+    }
+  } catch (error) {
+    if (!(error instanceof UsageError) && !error.code) throw error;
+    reportInputQueueFailure(error, format);
+  }
+}
+
+function reportInputQueueFailure(error, format) {
+  const usage = error instanceof UsageError
+    || (error instanceof InputQueueError && INPUT_QUEUE_USAGE_ERROR_CODES.has(error.code));
+  const code = error.code || (usage ? 'INVALID_ARGUMENT' : 'ERROR');
+  if (format === 'json') {
+    console.log(JSON.stringify({ ok: false, error: { code, message: error.message, details: error.details || {} } }, null, 2));
+  }
+  console.error(`${usage ? 'Invalid arguments' : 'Refused'}: ${error.message}`);
+  process.exitCode = usage ? 2 : 1;
 }
 
 function runRetrieveCommand(values = []) {
@@ -1858,7 +2191,14 @@ if (isDirectRun) {
       console.log(`Suggested agent instruction:\n\nBefore synthesis, validate the workspace root with \`mole doctor\` and run \`mole inbox audit\`. Treat every recursively discovered non-README file outside \`6-raw/inbox/archive/\` as a candidate. Reconcile the audit's candidate list against the paths you actually process, explicitly report skipped paths, and rerun \`mole inbox audit\` before finishing; do not declare a no-op while unexplained unprocessed files remain. Then synthesise ${target} using the Mole operating model: capture low, distil up, retrieve top-down.${personaInstruction} ${LIFECYCLE_AGENT_GUIDANCE}`);
       break;
     }
+    case 'input-queue':
+      runInputQueueCommand(subcommand, rest);
+      break;
     case 'review':
+      if (subcommand === 'input-queue') {
+        runInputQueueCommand('review', rest);
+        break;
+      }
       console.log(`Suggested agent instruction:\n\nReview ${subcommand || 'the requested target'} and return the highest-value next actions or missing human inputs.`);
       break;
     case 'inbox':

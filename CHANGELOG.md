@@ -29,7 +29,12 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   support it and the `revise --remove-source` command that clears them.
 - `mole lifecycle list --path <path>` finds the record for a file. One file
   backs one open record; a second registration of a tracked file is pointed
-  at the existing record.
+  at the existing record. That includes a file that moved without
+  `mole lifecycle relocate`, which its record follows by content. When an
+  earlier registration left such a duplicate, `mole lifecycle audit` names the
+  duplicate record to withdraw. `mole lifecycle relocate` applies the same
+  rule, and a record cannot take a moved file from one with more review
+  standing.
 - Added `mole retrieve`, which returns accepted records only unless
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and
@@ -40,12 +45,24 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   with stable finding codes, and exits 0 when healthy, 1 with findings, 2 for
   invalid arguments, and 3 for an internal failure. See
   `docs/workspace-validation.md`.
+- Added a structured human-input queue at
+  `governance/input-queue/requests.json`. Each request has a stable ID,
+  priority, blocking state, owner, due date, source links, and an append-only
+  history. `mole input-queue` adds, updates, closes, reopens, lists, migrates,
+  and audits requests. See `docs/input-queue.md`.
 
 ### Changed
 - `mole doctor` points to `mole validate` for the full check.
 - `mole inbox audit` reads the source registry once, not once per inbox file
   that does not name its own source.
 - The product-update template ships with a default `summary`.
+- `mole review input-queue` now returns the top human-input requests with the
+  reason for each rank, in text or JSON. It suggests stale and likely duplicate
+  requests and never closes them. It used to print an agent instruction.
+- The table in `governance/input-queue.md` is generated from the queue.
+  Existing rows are imported with `mole input-queue migrate --apply`, which
+  keeps each row's text and a copy of the file. Until then the review ranks
+  the rows as they are.
 - `mole upgrade [version]` now installs from an explicit `vX.Y.Z` release tag.
 - `mole create` registers the new file as a source and opens a `draft`
   lifecycle record. It refuses an output path outside the workspace, a path
@@ -53,11 +70,20 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   cannot be written. In each case it writes nothing.
 - CLI and UI captures open a `raw` lifecycle record and return its ID. A
   capture is still saved, with a warning, when the ledger cannot be written.
+  A UI capture waits 1.5 seconds for a busy ledger before it does so.
+- A reviewed file replaced by a link that leaves the workspace is reported as
+  `unsafe_path` in audit findings, retrieval exclusions, and error details. It
+  was `source_record_invalid`.
+- `mole lifecycle list --path` hashes only files that moved away from their
+  registered path.
 - Agent guidance and generated instructions tell agents to rely on accepted
   context, submit drafts for review, and leave decisions to a person.
 - Existing workspaces start with no lifecycle records. `mole lifecycle migrate
   --apply` registers files under `6-raw/` as `raw` and other old files as
-  `unreviewed`; nothing is accepted without a human decision.
+  `unreviewed`; nothing is accepted without a human decision. The file at the
+  registered path of an open record is not reported as a `source_id_mismatch`.
+  A copy that kept another file's `source_id:` frontmatter is treated as an
+  untracked file when migration can account for the original.
 - Added release, upgrade, contribution, and development guidance for the
   open-source package lifecycle.
 

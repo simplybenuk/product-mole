@@ -219,7 +219,7 @@ describe('synthesise guidance', () => {
     assert.equal(result.status, 0);
     assert.match(result.stdout, /Bootstrap this Mole workspace context/);
     assert.match(result.stdout, /starter-template files in `2-summaries\/` and `3-indexes\/`/);
-    assert.match(result.stdout, /governance\/input-queue\.md/);
+    assert.match(result.stdout, /mole input-queue add/);
   });
 
   it('prints top-layer refresh guidance', () => {

@@ -40,14 +40,17 @@ does not seed it, and an upgrade must never replace or delete it.
 
 ```text
 mole lifecycle register <source_id> --state <state> --actor <name> --actor-type <type>
+mole lifecycle evidence <record_id> --actor <name> --actor-type <type> --reason <text>
+mole lifecycle draft <record_id> --actor <name> --actor-type <type> --reason <text>
 mole lifecycle submit <record_id> --actor <name> --actor-type <type> --reason <text>
+mole lifecycle revise <record_id> --actor <name> --actor-type <type> --reason <text>
 mole lifecycle approve <record_id> --actor <name> --actor-type human --confirm-human --reason <text> --source <source_id> --expect-revision <n>
 mole lifecycle reject <record_id> --actor <name> --actor-type human --confirm-human --reason <text>
 mole lifecycle supersede <record_id> --replacement <record_id> --actor <name> --actor-type human --confirm-human --reason <text>
 mole lifecycle relocate <record_id> --path <path> --actor <name> --actor-type <type> --reason <text>
 mole lifecycle withdraw <record_id> --actor <name> --actor-type <type> --reason <text>
 mole lifecycle show <record_id>
-mole lifecycle list [--state <state>]
+mole lifecycle list [--state <state>] [--path <path>]
 mole lifecycle audit
 mole lifecycle migrate [--apply --actor <name> --actor-type <type>]
 mole lifecycle unlock
