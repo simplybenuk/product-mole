@@ -127,7 +127,8 @@ update itself.
 
 A workspace created by an earlier Mole has a dashboard page with no summary
 panel. Both commands replace that page with the current one, keep the old
-page as `governance/metrics/dashboard.previous.html`, and say so. Delete the
+page as `governance/metrics/dashboard.previous.html` (or
+`dashboard.previous-1.html` and so on when that name is taken), and say so. Delete the
 kept copy if you had not edited the page. A page that already has the panel
 is left alone.
 
