@@ -18,7 +18,7 @@ Keep the top retrieval layers accurate enough that future work can start top-dow
 3. Update blank, placeholder, stale, or incomplete summary files so they reflect the current reusable product context.
 4. Update indexes so they route to the right decisions, artefacts, problems, experiments, context modules, source docs, and evidence files.
 5. Keep top-layer content compressed. Do not copy raw detail upward when a link and short summary are enough.
-6. Add missing human questions to `governance/input-queue.md` where evidence conflicts or important facts are absent.
+6. Add missing human questions with `mole input-queue add` (do not edit the generated table in `governance/input-queue.md`) where evidence conflicts or important facts are absent.
 7. Report which files changed, which lower-layer sources justified the refresh, and which top-layer gaps remain.
 
 Use this after first-time bootstrap, after a large inbox synthesis pass, or as a weekly maintenance check.

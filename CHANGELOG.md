@@ -39,8 +39,20 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and
   `docs/review-lifecycle.md`.
+- Added a structured human-input queue at
+  `governance/input-queue/requests.json`. Each request has a stable ID,
+  priority, blocking state, owner, due date, source links, and an append-only
+  history. `mole input-queue` adds, updates, closes, reopens, lists, migrates,
+  and audits requests. See `docs/input-queue.md`.
 
 ### Changed
+- `mole review input-queue` now returns the top human-input requests with the
+  reason for each rank, in text or JSON. It suggests stale and likely duplicate
+  requests and never closes them. It used to print an agent instruction.
+- The table in `governance/input-queue.md` is generated from the queue.
+  Existing rows are imported with `mole input-queue migrate --apply`, which
+  keeps each row's text and a copy of the file. Until then the review ranks
+  the rows as they are.
 - `mole upgrade [version]` now installs from an explicit `vX.Y.Z` release tag.
 - `mole create` registers the new file as a source and opens a `draft`
   lifecycle record. It refuses an output path outside the workspace, a path
