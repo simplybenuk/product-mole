@@ -39,6 +39,12 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and
   `docs/review-lifecycle.md`.
+- Added `mole validate [path]`, a read-only check of the whole workspace with
+  text and JSON output. It reports inbox, receipt, source, review-record,
+  frontmatter, summary, duplicate-file, input-queue, and metadata problems
+  with stable finding codes, and exits 0 when healthy, 1 with findings, 2 for
+  invalid arguments, and 3 for an internal failure. See
+  `docs/workspace-validation.md`.
 - Added a structured human-input queue at
   `governance/input-queue/requests.json`. Each request has a stable ID,
   priority, blocking state, owner, due date, source links, and an append-only
@@ -46,6 +52,10 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   and audits requests. See `docs/input-queue.md`.
 
 ### Changed
+- `mole doctor` points to `mole validate` for the full check.
+- `mole inbox audit` reads the source registry once, not once per inbox file
+  that does not name its own source.
+- The product-update template ships with a default `summary`.
 - `mole review input-queue` now returns the top human-input requests with the
   reason for each rank, in text or JSON. It suggests stale and likely duplicate
   requests and never closes them. It used to print an agent instruction.

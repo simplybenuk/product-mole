@@ -43,6 +43,7 @@ import {
   transitionLifecycleRecord,
   unlockLifecycle
 } from '../lib/review-lifecycle.mjs';
+import { VALIDATION_EXIT_CODES, formatValidationReport, validateWorkspace } from '../lib/workspace-validation.mjs';
 import {
   INPUT_QUEUE_USAGE_ERROR_CODES,
   InputQueueError,
@@ -194,6 +195,8 @@ Usage:
   mole check-updates                   Compare this CLI version with the workspace.
   mole upgrade [version]               Update the globally installed Mole CLI from a stable tag.
   mole doctor                          Check workspace metadata and required folders.
+  mole validate [path] [--format text|json] [--stale-after-days <n>]
+                                      Run the full read-only workspace check. Exit 0 healthy, 1 findings.
 
 Artifacts:
   roadmap, spec, decision-brief, strategy-memo, prioritisation-draft, product-update
@@ -1664,11 +1667,55 @@ export function getDoctorOutput(instanceRoot = cwd) {
     lines.push(`${ok ? '✓' : '✗'} ${label}`);
   }
 
+  lines.push('', 'Doctor checks versions and folders only. Run `mole validate` for the full workspace check.');
+
   return `${lines.join('\n')}\n`;
 }
 
 function doctor() {
   process.stdout.write(getDoctorOutput());
+}
+
+/**
+ * `mole validate [path]`: the complete read-only workspace check.  Exit code
+ * 0 means healthy, 1 findings, 2 invalid arguments, 3 an internal failure.
+ */
+function runValidateCommand(values = []) {
+  if (values.includes('--help') || values.includes('-h')) {
+    console.log('Usage: mole validate [path] [--format text|json] [--stale-after-days <n>]\n\nRuns the full read-only workspace check. Exit codes: 0 healthy, 1 findings, 2 invalid arguments, 3 internal failure.\nFinding codes are listed in docs/workspace-validation.md.');
+    return;
+  }
+  let format = guessLifecycleFormat(values);
+  const failWith = (exitCode, code, message) => {
+    if (format === 'json') console.log(JSON.stringify({ ok: false, error: { code, message } }, null, 2));
+    console.error(`${exitCode === VALIDATION_EXIT_CODES.invalid_arguments ? 'Invalid arguments' : 'Validation failed to run'}: ${message}`);
+    process.exitCode = exitCode;
+  };
+  let parsed;
+  let staleAfterDays;
+  try {
+    parsed = parseLifecycleValues(values, { positionals: 1, scalars: ['--stale-after-days'] });
+    format = parsed.format;
+    if (parsed.options['--stale-after-days'] !== undefined) {
+      if (!/^\d+$/.test(parsed.options['--stale-after-days'])) throw new UsageError('--stale-after-days must be a whole number of days, at least 1.');
+      staleAfterDays = Number(parsed.options['--stale-after-days']);
+      if (staleAfterDays < 1) throw new UsageError('--stale-after-days must be a whole number of days, at least 1.');
+    }
+  } catch (error) {
+    if (!(error instanceof UsageError)) throw error;
+    failWith(VALIDATION_EXIT_CODES.invalid_arguments, 'INVALID_ARGUMENT', error.message);
+    return;
+  }
+  try {
+    const target = path.resolve(cwd, parsed.positionals[0] || '.');
+    const result = validateWorkspace(target, { cliVersion: getSourceVersion(), ...(staleAfterDays ? { staleAfterDays } : {}) });
+    if (format === 'json') console.log(JSON.stringify(result, null, 2));
+    else process.stdout.write(formatValidationReport(result));
+    process.exitCode = result.ok ? VALIDATION_EXIT_CODES.healthy : VALIDATION_EXIT_CODES.findings;
+  } catch (error) {
+    if (error.code === 'INVALID_ARGUMENT') failWith(VALIDATION_EXIT_CODES.invalid_arguments, error.code, error.message);
+    else failWith(VALIDATION_EXIT_CODES.internal_failure, 'INTERNAL_ERROR', error.message);
+  }
 }
 
 export function getCheckUpdatesOutput(instanceRoot = cwd) {
@@ -2195,6 +2242,9 @@ if (isDirectRun) {
       break;
     case 'doctor':
       doctor();
+      break;
+    case 'validate':
+      runValidateCommand([subcommand, ...rest].filter((value) => value !== undefined));
       break;
     default:
       console.error(`Unknown command: ${command}`);

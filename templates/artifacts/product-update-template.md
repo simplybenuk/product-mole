@@ -5,7 +5,7 @@ audience:
 timescale:
 format: brief
 created_at:
-summary:
+summary: A stakeholder product update drafted from mole context.
 tags: [product-update, stakeholders]
 source_refs: []
 ---

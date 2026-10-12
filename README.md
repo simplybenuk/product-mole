@@ -82,6 +82,7 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole init [target-dir]` | Backwards-compatible alias for `mole new`. |
 | `mole install skills` | Installs Mole agent skills into `~/.agents/skills/` or `$AGENTS_HOME/skills/`. |
 | `mole doctor` | Checks source and instance versions plus required instance folders. |
+| `mole validate [path] [--format text\|json]` | Runs the full read-only workspace check: inbox, receipts, sources, review records, frontmatter, summaries, duplicates, and the input queue. Exits 0 when healthy and 1 with findings. See [`docs/workspace-validation.md`](docs/workspace-validation.md). |
 | `mole check-updates` | Reports whether the installed Mole source is newer than the current workspace. |
 | `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/`. |
 | `mole note "<text>"` | Alias for `mole insight`. |
@@ -323,6 +324,8 @@ mole check-updates
 - instance version from `mole.instance.yaml`
 - core folder checks
 - a warning when instance metadata is missing
+
+`doctor` is a quick check. For the full health report, run `mole validate`. It is read-only and covers the inbox, receipts, sources, review records, frontmatter, summaries, duplicates, and the input queue. See [`docs/workspace-validation.md`](docs/workspace-validation.md).
 
 `check-updates` is currently a read-only report. It compares source and instance versions, then lists:
 - safe additions from `upgrade-ownership.json`
