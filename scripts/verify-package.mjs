@@ -25,6 +25,7 @@ export const REQUIRED_PACKAGED_FILES = Object.freeze([
   'lib/inbox-processing.mjs',
   'lib/input-queue.mjs',
   'lib/metrics.mjs',
+  'lib/metrics-summary.mjs',
   'lib/review-lifecycle.mjs',
   'lib/source-registry.mjs',
   'lib/workspace-validation.mjs',

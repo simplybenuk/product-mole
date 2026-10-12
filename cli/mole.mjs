@@ -15,6 +15,7 @@ import {
 } from '../lib/inbox-processing.mjs';
 import { auditInbox } from '../lib/inbox-audit.mjs';
 import { backfillProcessedInboxMetrics } from '../lib/metrics.mjs';
+import { formatMetricsSummary, summarizeMetrics, writeMetricsSnapshot } from '../lib/metrics-summary.mjs';
 import { formatUtcTimestamp } from '../lib/capture.mjs';
 import {
   correctSource,
@@ -97,6 +98,7 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
   ['governance/metrics/monthly.json', 'governance/metrics/monthly.json'],
   ['governance/metrics/seen-today.json', 'governance/metrics/seen-today.json'],
   ['governance/metrics/dashboard.html', 'governance/metrics/dashboard.html'],
+  ['governance/metrics/outcomes.json', 'governance/metrics/outcomes.json'],
   ['governance/quality-checklist.md', 'governance/quality-checklist.md'],
   ['governance/run-receipts/README.md', 'governance/run-receipts/README.md'],
   ['governance/sources/README.md', 'governance/sources/README.md'],
@@ -161,6 +163,9 @@ Usage:
   mole inbox complete [options] [summary]
                                       Write an idempotent receipt and release the lock.
   mole inbox override-stale [options] Replace an expired lock with an audited override.
+  mole metrics [--format json] [--events]
+                                      Summarise processing activity and review-state changes (read-only).
+  mole metrics snapshot               Write the summary to governance/metrics/outcomes.json for the dashboard.
   mole metrics backfill               Rebuild metrics from inbox processing receipts.
   mole source register <path> [options]
                                       Register an existing file without changing its bytes.
@@ -225,6 +230,7 @@ Examples:
   mole inbox checkpoint --run-id <run-id> --processor "Your Name" --processed 6-raw/inbox/a.md
   mole inbox complete --run-id <run-id> --processor "Your Name" --processed 6-raw/inbox/a.md "Promoted one note"
   mole inbox override-stale --run-id <new-run-id> --processor "Your Name" --reason "Confirmed prior run stopped"
+  mole metrics
   mole metrics backfill
   mole source register 6-raw/inbox/export.csv --source-type export
   mole source resolve src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --json
@@ -2051,7 +2057,62 @@ function runInboxCommand(action, values = []) {
   process.exit(1);
 }
 
-function runMetricsCommand(action) {
+function printDashboardRefresh(dashboard) {
+  if (dashboard.updated) {
+    console.log(dashboard.replaced_older_page
+      ? `Updated ${dashboard.path}: the page from an earlier Mole had no summary panel. The old page is kept at ${dashboard.previous_page}; delete it if you had not edited it.`
+      : `Added ${dashboard.path}.`);
+  } else if (dashboard.reason) {
+    console.error(`Warning: ${dashboard.reason}`);
+  }
+}
+
+function runMetricsCommand(action, values = []) {
+  // Bare "mole metrics", or one that starts with an option, is the summary.
+  const isSummary = action === undefined || action === 'summary' || String(action).startsWith('--');
+  if (isSummary || action === 'snapshot') {
+    const rest = action === undefined || action === 'summary' || action === 'snapshot' ? values : [action, ...values];
+    let format = guessLifecycleFormat(rest);
+    try {
+      const parsed = parseLifecycleValues(rest, { booleans: action === 'snapshot' ? [] : ['--events'] });
+      format = parsed.format;
+      if (action === 'snapshot') {
+        const result = writeMetricsSnapshot(cwd);
+        if (format === 'json') {
+          console.log(JSON.stringify({ ok: true, path: result.path, generated_at: result.summary.generated_at, dashboard: result.dashboard }, null, 2));
+        } else {
+          console.log(`Wrote ${result.path}. Open ${result.dashboard.path} to view it.`);
+          printDashboardRefresh(result.dashboard);
+        }
+        return;
+      }
+      const summary = summarizeMetrics(cwd, { includeEvents: parsed.options['--events'] === true });
+      if (format === 'json') {
+        console.log(JSON.stringify(summary, null, 2));
+      } else {
+        process.stdout.write(formatMetricsSummary(summary));
+        if (parsed.options['--events']) {
+          console.log(`\nEvents (${summary.events.length})`);
+          for (const event of summary.events) {
+            console.log(`${event.at}  ${event.category}  ${event.record_id || event.source_id || event.path}${event.run_id ? `  run ${event.run_id}` : ''}`);
+          }
+        }
+      }
+    } catch (error) {
+      if (error.code === 'SNAPSHOT_NOT_WRITTEN') {
+        if (format === 'json') console.log(JSON.stringify({ ok: false, error: { code: error.code, message: error.message } }, null, 2));
+        console.error(`Refused: ${error.message}`);
+        process.exitCode = 1;
+        return;
+      }
+      if (!(error instanceof UsageError) && error.code !== 'INVALID_ARGUMENT') throw error;
+      if (format === 'json') console.log(JSON.stringify({ ok: false, error: { code: 'INVALID_ARGUMENT', message: error.message } }, null, 2));
+      console.error(`Invalid arguments: ${error.message}`);
+      process.exitCode = 2;
+    }
+    return;
+  }
+
   if (action === 'backfill') {
     const result = backfillProcessedInboxMetrics(cwd);
     const output = result.blocked ? console.error : console.log;
@@ -2064,11 +2125,23 @@ function runMetricsCommand(action) {
     console.log(`Processed paths counted: ${result.processed_paths_counted}`);
     console.log(`Conflict receipts skipped: ${result.conflict_receipts_skipped}`);
     console.log(`Processed paths conflicted: ${result.processed_paths_conflicted}`);
-    if (result.blocked) process.exitCode = 1;
+    if (result.blocked) {
+      process.exitCode = 1;
+      return;
+    }
+    // Keep the dashboard's second panel in step with the rebuilt counts.
+    try {
+      const snapshot = writeMetricsSnapshot(cwd);
+      console.log(`Outcome snapshot: ${snapshot.path}`);
+      printDashboardRefresh(snapshot.dashboard);
+    } catch (error) {
+      if (error.code !== 'SNAPSHOT_NOT_WRITTEN') throw error;
+      console.error(`Warning: ${error.message}`);
+    }
     return;
   }
 
-  console.error('Supported metrics commands: backfill');
+  console.error('Supported metrics commands: summary (the default), snapshot, backfill');
   process.exit(1);
 }
 
@@ -2252,7 +2325,7 @@ if (isDirectRun) {
       runInboxCommand(subcommand, rest);
       break;
     case 'metrics':
-      runMetricsCommand(subcommand);
+      runMetricsCommand(subcommand, rest);
       break;
     case 'source':
       runSourceCommand(subcommand, rest);

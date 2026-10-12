@@ -39,6 +39,12 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and
   `docs/review-lifecycle.md`.
+- Added a `mole metrics` summary, in text and JSON, of captured inputs,
+  processed inputs, promoted evidence, reviewed outputs, accepted learnings,
+  superseded context, and unresolved questions for the last 7 days, 30 days,
+  and all time. It is derived from the review ledger and inbox receipts, so a
+  retry counts nothing twice. `mole metrics snapshot` writes it to
+  `governance/metrics/outcomes.json`. See `docs/molehill-metrics.md`.
 - Added the `mole-product-travel-log` skill, a `product-travel-log` artifact
   template for `mole create`, and `mole travel-log <change-or-release>`. The
   report sets out intent, what shipped, evidence before and after, learnings,
@@ -57,6 +63,12 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   and audits requests. See `docs/input-queue.md`.
 
 ### Changed
+- `mole metrics` with no subcommand prints the summary. It used to fail.
+- The metrics dashboard has a second panel for the summary and keeps
+  operational counts apart from learning and decision-state counts.
+  `mole metrics backfill` also writes the summary snapshot. Both commands
+  replace a dashboard page from an earlier Mole, which has no second panel,
+  and keep the old page as `governance/metrics/dashboard.previous.html`.
 - `mole doctor` points to `mole validate` for the full check.
 - `mole inbox audit` reads the source registry once, not once per inbox file
   that does not name its own source.

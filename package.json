@@ -51,7 +51,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test cli/test/mole.test.mjs cli/test/lifecycle.test.mjs lib/test/source-registry.test.mjs lib/test/source-migration.test.mjs lib/test/review-lifecycle.test.mjs lib/test/input-queue.test.mjs lib/test/workspace-validation.test.mjs cli/test/travel-log.test.mjs",
+    "test": "node --test cli/test/mole.test.mjs cli/test/lifecycle.test.mjs lib/test/source-registry.test.mjs lib/test/source-migration.test.mjs lib/test/review-lifecycle.test.mjs lib/test/input-queue.test.mjs lib/test/workspace-validation.test.mjs cli/test/travel-log.test.mjs lib/test/metrics-summary.test.mjs",
     "check:versions": "node scripts/check-release-consistency.mjs",
     "check:package": "node scripts/verify-package.mjs",
     "check:release": "node scripts/check-release-consistency.mjs --release && npm run check:package",

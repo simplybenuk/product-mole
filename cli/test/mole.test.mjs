@@ -313,6 +313,7 @@ describe('workspace scaffold', () => {
         path.join('governance', 'metrics', 'monthly.json'),
         path.join('governance', 'metrics', 'seen-today.json'),
         path.join('governance', 'metrics', 'dashboard.html'),
+        path.join('governance', 'metrics', 'outcomes.json'),
         path.join('governance', 'sources', 'README.md'),
         path.join('governance', 'lifecycle', 'README.md'),
         path.join('schemas', 'source-record-v1.schema.json'),

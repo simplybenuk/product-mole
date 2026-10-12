@@ -110,6 +110,8 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole inbox audit` | Recursively audits live files, leases, sync conflicts, overrides, and receipts. |
 | `mole inbox complete [options] [summary]` | Writes one idempotent receipt for the owned run, records metrics, and releases its lock. |
 | `mole inbox override-stale [options]` | Replaces an expired lock only after an explicit, auditable recovery decision. |
+| `mole metrics [--format json] [--events]` | Summarises processing activity and review-state changes for the last 7 days, 30 days, and all time. Read-only. See [`docs/molehill-metrics.md`](docs/molehill-metrics.md). |
+| `mole metrics snapshot` | Writes that summary to `governance/metrics/outcomes.json` for the local dashboard. Replaces a dashboard page from an earlier Mole and keeps the old one beside it. |
 | `mole metrics backfill` | Rebuilds local metrics from inbox processing receipts that already contain processed paths. |
 | `mole lifecycle register <source_id> --state <state> --actor <name> --actor-type <type>` | Opens a review record for a registered file as `raw`, `evidence`, `draft`, or `unreviewed`. |
 | `mole lifecycle evidence\|draft\|submit\|revise <record_id> [options]` | Moves a record toward review. Agents may run these. `revise` also sends an accepted file that was edited in place back to review. |
@@ -177,6 +179,8 @@ Daily `mole synthesise inbox` remains focused on promoting new material, but bla
 
 Mole tracks lightweight local processing metrics under `governance/metrics/`. Metrics count processed inbox item paths, not raw insight content and not individual users.
 
+`mole metrics` prints a summary in two groups. Operational activity covers captured and processed inputs. Learning and decision state covers promoted evidence, reviewed outputs, accepted learnings, superseded context, and unresolved questions. The counts are derived from the review ledger and inbox receipts each time, so nothing is counted twice. They show workflow activity, not product success or decision quality. Definitions are in [`docs/molehill-metrics.md`](docs/molehill-metrics.md).
+
 When finishing inbox work, include each inbox item that was actually processed:
 
 ```bash
@@ -187,7 +191,7 @@ mole inbox complete --run-id <run-id> --processor "Your Name" --processed 6-raw/
 
 Before and after synthesis, run `mole inbox audit`. It validates the workspace root, recursively scans the live inbox, excludes only the instructional root README and retained archive content, and reports files not explained by processing receipts. Do not declare a no-op while the final audit reports unexplained files.
 
-Use repeated `--processed` flags for multiple items. Do not include items that were only inspected, skipped, or left for later. The local dashboard is available at `governance/metrics/dashboard.html`.
+Use repeated `--processed` flags for multiple items. Do not include items that were only inspected, skipped, or left for later. The local dashboard is available at `governance/metrics/dashboard.html`. Its second panel shows the `mole metrics` summary; run `mole metrics snapshot` to refresh it.
 
 For existing workspaces, run `mole metrics backfill` after upgrading to rebuild metrics from historical `governance/run-receipts/inbox-processing/` receipts. Backfill counts only receipt `processed` paths with valid completion dates; it does not infer from raw inbox folders or read raw insight content. If receipt or recovery state is ambiguous, backfill exits without rewriting existing metric history until the state is reconciled.
 
