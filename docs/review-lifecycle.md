@@ -415,7 +415,10 @@ the whole ledger, checks that the write keeps every earlier history entry, and
 replaces `records.json` with one atomic rename. The lock sits beside the ledger
 so every process that can write the ledger sees it, whatever its temporary
 folder or user account. A second command waits up to ten seconds for the
-first, then fails with `LIFECYCLE_BUSY`.
+first, then fails with `LIFECYCLE_BUSY`. A UI capture waits 1.5 seconds, because
+the wait blocks the local UI server. After that the capture is saved with the
+"no lifecycle record yet" warning and `mole lifecycle migrate --apply`
+backfills its record.
 
 If a command is killed during a write, its lock stays behind. Mole never
 removes another process's lock on its own. Run `mole lifecycle unlock`. It
@@ -464,7 +467,7 @@ transitionLifecycleRecord(root, recordId, {
 })
 relocateLifecycleRecord(root, recordId, { path, actor, actorType, reason, expectedRevision, now })
 readLifecycleRecord(root, recordId)
-listLifecycleRecords(root, { states })
+listLifecycleRecords(root, { states, path })
 retrieveLifecycleRecords(root, { includeStates })
 retrieveLifecycleRecord(root, recordId, { includeStates })
 auditLifecycle(root)
@@ -476,6 +479,8 @@ validateLifecycleLedger(ledger)
 ```
 
 A refused operation throws a `LifecycleError` with a `code` and `details`.
+Every call that writes also accepts `lockWaitMs`, the time to wait for another
+writer. The default is 10,000.
 Pass `newFile: true` only for a file the caller has just written, as
 `mole create` does. It skips the moved-file check, which would otherwise
 match a new template copy to a record whose unedited draft was deleted.
@@ -502,5 +507,5 @@ before they try it.
   measured about 0.5 s per capture and 1.4 to 2.0 s per audit at 3,000
   records, and about 1 s and 3.6 to 6.4 s at 10,000. Under heavy parallel
   capture at that size, a capture that waits longer than ten seconds for the
-  lock is saved with a warning and backfilled by `mole lifecycle migrate
-  --apply`.
+  lock, or 1.5 seconds from the UI, is saved with a warning and backfilled by
+  `mole lifecycle migrate --apply`.

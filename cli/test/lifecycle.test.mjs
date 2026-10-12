@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { getInboxMutationProcessIdentity } from '../../lib/inbox-processing.mjs';
 import { readSourceRecord } from '../../lib/source-registry.mjs';
 import { captureNote } from '../../ui/server.mjs';
 import { createWorkspaceScaffold, parseLifecycleValues } from '../mole.mjs';
@@ -556,6 +557,38 @@ describe('renamed, removed, and untrackable files', () => {
 });
 
 describe('UI capture', () => {
+  it('saves a capture with a warning soon after finding the ledger locked', async () => {
+    const workspace = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mole-lifecycle-ui-')));
+    const lockPath = path.join(workspace, 'governance', 'lifecycle', '.mutation.lock');
+    try {
+      createWorkspaceScaffold(workspace);
+      fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+      fs.writeFileSync(lockPath, `${JSON.stringify({
+        token: 'other-operation',
+        pid: process.pid,
+        process_identity: getInboxMutationProcessIdentity(process.pid),
+        acquired_at: new Date().toISOString()
+      })}\n`);
+
+      const started = Date.now();
+      const kept = await captureNote(workspace, { note: 'Heard while another writer held the lock' });
+      const elapsed = Date.now() - started;
+      // The UI waits 1.5 seconds, not the ten a command waits.
+      assert.ok(elapsed >= 1000 && elapsed < 8000, `capture returned after ${elapsed} ms`);
+      assert.equal(kept.status, 200);
+      assert.equal(kept.payload.record_id, null);
+      assert.match(kept.payload.warning, /The capture is saved but has no lifecycle record yet: .*in progress/);
+      assert.ok(fs.existsSync(path.join(workspace, kept.payload.path)));
+
+      fs.rmSync(lockPath);
+      const backfill = JSON.parse(runCli(['lifecycle', 'migrate', '--apply', ...agentFlags, '--format', 'json'], workspace).stdout);
+      assert.equal(backfill.registered.find((item) => item.source_id === kept.payload.source_id)?.state, 'raw');
+    } finally {
+      fs.rmSync(lockPath, { force: true });
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
   it('opens a raw record and keeps the capture when the ledger is in conflict', async () => {
     const workspace = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mole-lifecycle-ui-')));
     try {
