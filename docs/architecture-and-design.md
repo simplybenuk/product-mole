@@ -86,6 +86,10 @@ The agent should explicitly request missing human-only inputs.
 Use a standing queue at:
 - [`governance/input-queue.md`](governance/input-queue.md)
 
+Requests are structured records in `governance/input-queue/requests.json`, and
+the table in that file is generated from them. See
+[`docs/input-queue.md`](docs/input-queue.md).
+
 Use this daily opener:
 - "What inputs do you need from me today?"
 

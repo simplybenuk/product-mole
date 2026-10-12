@@ -105,10 +105,27 @@ Used to inspect what needs human input or validation.
 
 Examples:
 ```bash
-mole review input-queue
+mole review input-queue            # ranked human-input requests; see docs/input-queue.md
 mole review stale-summaries
 mole review conflicts
 ```
+
+### Validate
+Used to check the health of a whole workspace without changing it.
+
+```bash
+mole validate
+mole validate path/to/workspace --format json
+```
+
+`mole validate` is the complete check. It covers the inbox and its receipts,
+the source registry, the review ledger, frontmatter, summaries and indexes,
+duplicate files and sync conflict copies, the human-input queue, and workspace
+metadata. Every finding has a stable code, a severity, a location, and a
+remedy. It exits 0 when healthy, 1 with findings, 2 for invalid arguments, and
+3 when it cannot run. `mole doctor` stays a quick check of versions and
+folders, and `mole inbox audit` stays the focused inbox check. Finding codes
+are listed in `docs/workspace-validation.md`.
 
 ### Init / upgrade
 Used to scaffold an instance, compare it with the installed source, or refresh

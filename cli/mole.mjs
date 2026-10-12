@@ -44,6 +44,22 @@ import {
   transitionLifecycleRecord,
   unlockLifecycle
 } from '../lib/review-lifecycle.mjs';
+import { VALIDATION_EXIT_CODES, formatValidationReport, validateWorkspace } from '../lib/workspace-validation.mjs';
+import {
+  INPUT_QUEUE_USAGE_ERROR_CODES,
+  InputQueueError,
+  addInputRequest,
+  auditInputQueue,
+  closeInputRequest,
+  listInputRequests,
+  migrateInputQueue,
+  readInputRequest,
+  refreshInputQueueView,
+  reopenInputRequest,
+  reviewInputQueue,
+  unlockInputQueue,
+  updateInputRequest
+} from '../lib/input-queue.mjs';
 
 const args = process.argv.slice(2);
 const [command, subcommand, ...rest] = args;
@@ -76,6 +92,7 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
   ['agents.md', 'agents.md'],
   ['governance/change-log.md', 'governance/change-log.md'],
   ['governance/input-queue.md', 'governance/input-queue.md'],
+  ['governance/input-queue/README.md', 'governance/input-queue/README.md'],
   ['governance/metrics/daily.json', 'governance/metrics/daily.json'],
   ['governance/metrics/weekly.json', 'governance/metrics/weekly.json'],
   ['governance/metrics/monthly.json', 'governance/metrics/monthly.json'],
@@ -88,6 +105,7 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
   ['governance/lifecycle/README.md', 'governance/lifecycle/README.md'],
   ['schemas/source-record-v1.schema.json', 'schemas/source-record-v1.schema.json'],
   ['schemas/review-lifecycle-v1.schema.json', 'schemas/review-lifecycle-v1.schema.json'],
+  ['schemas/input-queue-v1.schema.json', 'schemas/input-queue-v1.schema.json'],
   ['mole.instance-template.yaml', 'mole.instance.yaml']
 ]);
 
@@ -107,10 +125,36 @@ Usage:
                                       Print an agent instruction for a stakeholder update.
   mole critique <target> [claim-or-path]
                                       Print a context-grounded critique instruction.
+  mole travel-log <change-or-release>  Print an agent instruction for an outcome review of a change or release.
   mole bootstrap-context              Print an agent instruction for first-time top-layer setup.
   mole refresh top-layers             Print an agent instruction for summary/index refresh.
   mole synthesise <target>             Print an agent instruction for synthesis work.
   mole review <target>                 Print an agent instruction for review work.
+  mole review input-queue [--limit <n>] [--stale-after-days <n>] [--duplicate-threshold <0-1>] [--format json]
+                                      Show the highest-value human-input requests and why they rank.
+  mole input-queue add --request <text> --impact <text> --unblocks <text> --actor <name> --actor-type <type>
+                                      Ask a person for input. Options: --priority, --blocking, --owner, --due,
+                                      --next-review, --answer-format, --effort, --requester, --source, --ref, --reason.
+  mole input-queue update <input_id> [fields] --actor <name> --actor-type <type> --reason <text>
+                                      Change a request. Fields are the add options plus --status and --not-blocking.
+                                      Changing an owner, or deferring with no --next-review, needs
+                                      --actor-type human --confirm-human.
+  mole input-queue close <input_id> --answer <text> --outcome <text> --actor <name> --actor-type <type>
+                                      Record the answer and what it changed.
+  mole input-queue close <input_id> --closure-reason duplicate|superseded|stale|not_needed --outcome <text>
+                                      --reason <text> --actor <name> --actor-type human --confirm-human
+                                      Close a request that was not answered. Add --duplicate-of <input_id>
+                                      or --superseded-by <input_id> for those reasons.
+  mole input-queue reopen <input_id> --actor <name> --actor-type <type> --reason <text>
+                                      Reopen a request. One a person closed needs --actor-type human --confirm-human.
+  mole input-queue show <input_id>     Show a request and its history.
+  mole input-queue list [--status <status>] [--all]
+                                      List open requests; --all includes closed ones.
+  mole input-queue migrate [--apply --actor <name> --actor-type <type>]
+                                      Give rows in governance/input-queue.md stable IDs.
+  mole input-queue refresh-view       Rewrite the generated table from the queue.
+  mole input-queue audit              Check the input queue (read-only).
+  mole input-queue unlock             Remove a queue lock left by a stopped process.
   mole inbox claim [processor]         Claim a run with a leased, owned lock.
   mole inbox heartbeat --run-id id     Renew the matching active run lease.
   mole inbox checkpoint --run-id id [--processed path]
@@ -157,9 +201,12 @@ Usage:
   mole check-updates                   Compare this CLI version with the workspace.
   mole upgrade [version]               Update the globally installed Mole CLI from a stable tag.
   mole doctor                          Check workspace metadata and required folders.
+  mole validate [path] [--format text|json] [--stale-after-days <n>]
+                                      Run the full read-only workspace check. Exit 0 healthy, 1 findings.
 
 Artifacts:
-  roadmap, spec, decision-brief, strategy-memo, prioritisation-draft, product-update
+  roadmap, spec, decision-brief, strategy-memo, prioritisation-draft, product-update,
+  product-travel-log
 
 Examples:
   mole new my-mole
@@ -366,7 +413,8 @@ function createArtifact(kind, outputPath) {
     'decision-brief': 'decision-brief-template.md',
     'strategy-memo': 'strategy-memo-template.md',
     'prioritisation-draft': 'prioritisation-draft-template.md',
-    'product-update': 'product-update-template.md'
+    'product-update': 'product-update-template.md',
+    'product-travel-log': 'product-travel-log-template.md'
   };
 
   const file = templateMap[kind];
@@ -382,7 +430,8 @@ function createArtifact(kind, outputPath) {
     'decision-brief': '4-context/decisions/decision-brief-draft.md',
     'strategy-memo': '4-context/strategy/strategy-memo-draft.md',
     'prioritisation-draft': '4-context/product/prioritisation-draft.md',
-    'product-update': '4-context/product/product-update-draft.md'
+    'product-update': '4-context/product/product-update-draft.md',
+    'product-travel-log': '4-context/travel-log/product-travel-log-draft.md'
   }[kind];
 
   let relativeTarget;
@@ -431,7 +480,8 @@ function createArtifact(kind, outputPath) {
       state: 'draft',
       actor: 'mole-cli',
       actorType: 'automation',
-      reason: `Created ${kind} draft from a template.`
+      reason: `Created ${kind} draft from a template.`,
+      newFile: true
     });
     console.log(`Source ID: ${sourceId}`);
     console.log(`Lifecycle record: ${lifecycle.record_id} (draft)`);
@@ -643,7 +693,8 @@ function outputDraftInstruction(kind) {
     'strategy-memo': 'Create a strategy memo using the highest-signal relevant context first, descending only as needed.',
     'decision-brief': 'Create a decision brief with recommendation, options, trade-offs, and missing inputs.',
     'prioritisation-draft': 'Create a prioritisation draft with criteria, ranked items, and uncertainties.',
-    'product-update': 'Create a stakeholder-specific product update using stakeholder memory, relevant summaries, product context, and evidence. Tailor the format and include a retrieval receipt.'
+    'product-update': 'Create a stakeholder-specific product update using stakeholder memory, relevant summaries, product context, and evidence. Tailor the format and include a retrieval receipt.',
+    'product-travel-log': 'Fill in the travel log draft for one change or release using the mole-product-travel-log skill: original intent, what shipped, evidence before and after, interpretation, learnings, and a decision of continue, iterate, stop, investigate, or unknown for each change. Write "unknown" where evidence is missing, do not invent an intent or a result, and submit the report for human review.'
   };
   const instruction = map[kind] || `Create a ${kind} draft from Mole using progressive retrieval.`;
   console.log(`${instruction} ${LIFECYCLE_AGENT_GUIDANCE}`);
@@ -713,6 +764,45 @@ Return:
 Use \`templates/artifacts/critique-template.md\` when creating or updating a critique file. Keep pending or rejected context out of normal evidence unless the task explicitly asks to inspect it.`;
 }
 
+export function buildTravelLogInstruction(subject = '') {
+  const detail = String(subject || '').trim();
+  if (!detail) {
+    throw new Error('Name the change or release to review, such as: mole travel-log "release 2026.09".');
+  }
+
+  return `Suggested agent instruction:
+
+Write a product travel log for: ${detail}. Use the mole-product-travel-log skill. Create the draft with \`mole create product-travel-log 4-context/travel-log/<release-or-change>.md\` and fill it in place. Find the original intent in an intent record, spec, decision, or roadmap entry; if none exists, write "No intent record found" and do not reconstruct one. Read the full release artefact for what shipped. Retrieve analytics evidence and qualitative signals for the period before and after, top-down from \`3-indexes/\` and \`2-summaries/\` into \`4-context/\` and \`5-evidence/\`. If the release holds several changes, review each one.
+
+Label every statement as a fact, an observation, an interpretation, or an assumption. Write "unknown" wherever evidence is missing and say what is needed. Do not invent an intent, a metric, a result, or a cause. Say when the review is too early and when attribution is weak.
+
+Return:
+- Change and release
+- Original intent
+- What shipped
+- Expected outcome
+- Evidence before and after
+- Unexpected effects
+- Interpretation and confidence
+- What we learned
+- Decision for each change: continue, iterate, stop, investigate, or unknown
+- Recommended next action
+- Unresolved questions and the next review date
+- Sources and evidence gaps
+- Retrieval receipt
+
+Do not change existing context. Submit the report with \`mole lifecycle submit <record_id> --actor "<agent name>" --actor-type agent --reason "Ready for review"\` and stop: a learning is durable only after a person approves the report. ${LIFECYCLE_AGENT_GUIDANCE}`;
+}
+
+function travelLog(values) {
+  try {
+    console.log(buildTravelLogInstruction(values.join(' ')));
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+}
+
 function critique(values) {
   const [target, ...subjectParts] = values;
 
@@ -727,13 +817,13 @@ function critique(values) {
 export function buildBootstrapContextInstruction() {
   return `Suggested agent instruction:
 
-Bootstrap this Mole workspace context. Treat blank, placeholder, or starter-template files in \`2-summaries/\` and \`3-indexes/\` as missing top-layer context. Read \`0-bootstrap/\`, \`1-routing/\`, all existing \`4-context/\` modules, useful \`5-evidence/\` material, and current unprocessed inbox material in \`6-raw/inbox/\`. Populate the initial domain summaries and indexes with concise, evidence-backed context, preserving uncertainty and adding missing human questions to \`governance/input-queue.md\`. Do not invent product facts; mark low-confidence conclusions as hypotheses and link to supporting files. ${LIFECYCLE_AGENT_GUIDANCE}`;
+Bootstrap this Mole workspace context. Treat blank, placeholder, or starter-template files in \`2-summaries/\` and \`3-indexes/\` as missing top-layer context. Read \`0-bootstrap/\`, \`1-routing/\`, all existing \`4-context/\` modules, useful \`5-evidence/\` material, and current unprocessed inbox material in \`6-raw/inbox/\`. Populate the initial domain summaries and indexes with concise, evidence-backed context, preserving uncertainty and adding missing human questions with \`mole input-queue add\`. Do not invent product facts; mark low-confidence conclusions as hypotheses and link to supporting files. ${LIFECYCLE_AGENT_GUIDANCE}`;
 }
 
 export function buildRefreshTopLayersInstruction() {
   return `Suggested agent instruction:
 
-Refresh the Mole top layers. Compare \`2-summaries/\` and \`3-indexes/\` with lower-layer context in \`4-context/\`, evidence in \`5-evidence/\`, recent processed inbox outputs, and any relevant unprocessed \`6-raw/inbox/\` material. Update blank, placeholder, stale, or incomplete summaries and indexes so they accurately route future retrieval. Keep changes compact and evidence-backed, avoid copying raw detail upward, and add missing human questions to \`governance/input-queue.md\` when the lower layers do not justify a confident summary. ${LIFECYCLE_AGENT_GUIDANCE}`;
+Refresh the Mole top layers. Compare \`2-summaries/\` and \`3-indexes/\` with lower-layer context in \`4-context/\`, evidence in \`5-evidence/\`, recent processed inbox outputs, and any relevant unprocessed \`6-raw/inbox/\` material. Update blank, placeholder, stale, or incomplete summaries and indexes so they accurately route future retrieval. Keep changes compact and evidence-backed, avoid copying raw detail upward, and add missing human questions with \`mole input-queue add\` when the lower layers do not justify a confident summary. ${LIFECYCLE_AGENT_GUIDANCE}`;
 }
 
 function productUpdate(values) {
@@ -1257,6 +1347,295 @@ function runLifecycleCommand(action, values = []) {
   }
 }
 
+const INPUT_QUEUE_ACTOR_SCALARS = ['--actor', '--actor-type', '--reason'];
+const INPUT_QUEUE_FIELD_SCALARS = ['--request', '--impact', '--unblocks', '--answer-format', '--effort', '--priority', '--requester', '--owner', '--due', '--next-review'];
+
+function inputQueueActor(options) {
+  return {
+    actor: requireLifecycleOption(options, '--actor'),
+    actorType: requireLifecycleOption(options, '--actor-type'),
+    humanConfirmed: options['--confirm-human'] === true,
+    reason: options['--reason']
+  };
+}
+
+function inputQueueFields(options) {
+  if (options['--blocking'] && options['--not-blocking']) throw new UsageError('--blocking conflicts with --not-blocking.');
+  const fields = {
+    request: options['--request'],
+    impact: options['--impact'],
+    unblocks: options['--unblocks'],
+    answer_format: options['--answer-format'],
+    effort: options['--effort'],
+    priority: options['--priority'],
+    requester: options['--requester'],
+    owner: options['--owner'],
+    due: options['--due'],
+    next_review: options['--next-review'],
+    status: options['--status']
+  };
+  if (options['--blocking']) fields.blocking = true;
+  if (options['--not-blocking']) fields.blocking = false;
+  return fields;
+}
+
+function parseInputQueueNumber(value, option, { integer = true } = {}) {
+  if (value === undefined) return undefined;
+  const number = Number(value);
+  if (!Number.isFinite(number) || (integer && !Number.isInteger(number))) throw new UsageError(`${option} must be a ${integer ? 'whole ' : ''}number.`);
+  return number;
+}
+
+function printInputRequest(request) {
+  console.log(`Input ID: ${request.input_id}`);
+  console.log(`Status: ${request.status}${request.blocking ? ' (blocks work)' : ''}`);
+  console.log(`Priority: ${request.priority}`);
+  console.log(`Request: ${request.request}`);
+  console.log(`Why it matters: ${request.impact}`);
+  if (request.unblocks) console.log(`Unblocks: ${request.unblocks}`);
+  if (request.answer_format) console.log(`Quick input format: ${request.answer_format}`);
+  if (request.effort) console.log(`Effort: ${request.effort}`);
+  console.log(`Requester: ${request.requester}`);
+  if (request.owner) console.log(`Owner: ${request.owner}`);
+  if (request.due) console.log(`Due: ${request.due}`);
+  if (request.next_review) console.log(`Next review: ${request.next_review}`);
+  if (request.source_ids.length) console.log(`Sources: ${request.source_ids.join(', ')}`);
+  if (request.references.length) console.log(`References: ${request.references.join(', ')}`);
+  if (request.duplicate_of) console.log(`Duplicate of: ${request.duplicate_of}`);
+  if (request.superseded_by) console.log(`Superseded by: ${request.superseded_by}`);
+  if (request.closure) {
+    console.log(`Closed: ${request.closure.reason} by ${request.closure.closed_by} at ${request.closure.closed_at}`);
+    if (request.closure.answer) console.log(`Answer: ${request.closure.answer}`);
+    console.log(`What changed: ${request.closure.outcome}`);
+  }
+}
+
+function printInputQueueReview(result) {
+  if (!result.top.length) console.log('No open input requests.');
+  else console.log(`Top ${result.top.length} of ${result.reviewable_count} open input ${result.reviewable_count === 1 ? 'request' : 'requests'}:`);
+  for (const item of result.top) {
+    console.log('');
+    console.log(`${item.rank}. ${item.request}`);
+    console.log(`   ID: ${item.input_id}`);
+    console.log(`   Ranked here because: ${item.reasons.join(', ')} (score ${item.score})`);
+    console.log(`   Why it matters: ${item.impact}`);
+    console.log(`   Answering it unblocks: ${item.unblocks ?? 'not recorded'}`);
+    if (item.answer_format) console.log(`   Fastest way to answer: ${item.answer_format}`);
+    if (item.owner) console.log(`   Owner: ${item.owner}`);
+    if (item.due) console.log(`   Due: ${item.due}`);
+  }
+  if (result.not_shown) console.log(`\n${result.not_shown} more not shown. Raise --limit or run "mole input-queue list".`);
+  if (result.stale_candidate_count) {
+    console.log(`\nPossibly stale (${result.stale_candidate_count}); nothing was closed:`);
+    for (const item of result.stale_candidates) console.log(`- ${item.input_id}  ${item.request} (${item.reasons.join('; ')})`);
+    if (result.stale_candidate_count > result.stale_candidates.length) console.log(`- and ${result.stale_candidate_count - result.stale_candidates.length} more`);
+  }
+  if (result.duplicate_candidate_count) {
+    console.log(`\nPossible duplicates (${result.duplicate_candidate_count}); nothing was merged:`);
+    for (const item of result.duplicate_candidates) {
+      console.log(`- ${item.input_ids.join(' and ')}: ${Math.round(item.similarity * 100)}% of terms shared (${item.shared_terms.join(', ')})`);
+    }
+    if (result.duplicate_candidate_count > result.duplicate_candidates.length) console.log(`- and ${result.duplicate_candidate_count - result.duplicate_candidates.length} more`);
+  }
+  if (result.stale_candidate_count || result.duplicate_candidate_count) {
+    console.log('Closing a stale or duplicate request, or changing its owner, is a decision for a person.');
+  }
+  if (result.notice) console.log(`\n${result.notice}`);
+}
+
+function runInputQueueReview(values = []) {
+  const parsed = parseLifecycleValues(values, { scalars: ['--limit', '--stale-after-days', '--duplicate-threshold'] });
+  const result = reviewInputQueue(cwd, {
+    limit: parseInputQueueNumber(parsed.options['--limit'], '--limit'),
+    staleAfterDays: parseInputQueueNumber(parsed.options['--stale-after-days'], '--stale-after-days'),
+    duplicateThreshold: parseInputQueueNumber(parsed.options['--duplicate-threshold'], '--duplicate-threshold', { integer: false })
+  });
+  if (parsed.format === 'json') console.log(JSON.stringify(result, null, 2));
+  else printInputQueueReview(result);
+  return parsed.format;
+}
+
+function printInputQueueHelp() {
+  const lines = getHelpOutput().split('\n');
+  // The input-queue lines of the usage block, with their indented descriptions.
+  console.log(lines.filter((line, index) => {
+    let owner = index;
+    while (owner > 0 && /^\s{10,}/.test(lines[owner])) owner -= 1;
+    return /input-queue/.test(lines[owner]) && /^\s{2}mole /.test(lines[owner]);
+  }).join('\n'));
+  console.log('\nEvery command accepts --format json. See docs/input-queue.md.');
+}
+
+function runInputQueueCommand(action, values = []) {
+  if ([action, ...values].some((value) => value === '--help' || value === '-h') || action === 'help') {
+    printInputQueueHelp();
+    return;
+  }
+  let format = guessLifecycleFormat(values);
+  const emit = (result, printText) => {
+    if (format === 'json') console.log(JSON.stringify(result, null, 2));
+    else printText();
+    if (format !== 'json' && result.legacy_copy && !result.applied) console.log(`The queue file as it was is kept at ${result.legacy_copy}.`);
+    // The change is saved even when the Markdown table could not be rewritten.
+    if (result.view?.warning) console.error(`Warning: ${result.view.warning}`);
+  };
+
+  try {
+    if (action === 'add') {
+      const parsed = parseLifecycleValues(values, {
+        scalars: [...INPUT_QUEUE_ACTOR_SCALARS, ...INPUT_QUEUE_FIELD_SCALARS],
+        lists: ['--source', '--ref'],
+        booleans: ['--blocking', '--confirm-human']
+      });
+      format = parsed.format;
+      for (const required of ['--request', '--impact', '--unblocks']) requireLifecycleOption(parsed.options, required);
+      const result = addInputRequest(cwd, {
+        ...inputQueueFields(parsed.options),
+        ...inputQueueActor(parsed.options),
+        sourceIds: parsed.options['--source'],
+        references: parsed.options['--ref']
+      });
+      emit(result, () => {
+        console.log('Added input request.');
+        printInputRequest(result.request);
+      });
+    } else if (action === 'update') {
+      const parsed = parseLifecycleValues(values, {
+        positionals: 1,
+        scalars: [...INPUT_QUEUE_ACTOR_SCALARS, ...INPUT_QUEUE_FIELD_SCALARS, '--status'],
+        lists: ['--source', '--ref'],
+        booleans: ['--blocking', '--not-blocking', '--confirm-human']
+      });
+      format = parsed.format;
+      const inputId = requireLifecyclePositional(parsed.positionals, 'input request ID');
+      requireLifecycleOption(parsed.options, '--reason');
+      const result = updateInputRequest(cwd, inputId, {
+        ...inputQueueFields(parsed.options),
+        ...inputQueueActor(parsed.options),
+        addSourceIds: parsed.options['--source'],
+        addReferences: parsed.options['--ref']
+      });
+      emit(result, () => {
+        console.log(`Updated ${result.changed_fields.join(', ')}.`);
+        printInputRequest(result.request);
+      });
+    } else if (action === 'close') {
+      const parsed = parseLifecycleValues(values, {
+        positionals: 1,
+        scalars: [...INPUT_QUEUE_ACTOR_SCALARS, '--closure-reason', '--answer', '--outcome', '--duplicate-of', '--superseded-by'],
+        booleans: ['--confirm-human']
+      });
+      format = parsed.format;
+      const inputId = requireLifecyclePositional(parsed.positionals, 'input request ID');
+      const result = closeInputRequest(cwd, inputId, {
+        ...inputQueueActor(parsed.options),
+        closureReason: parsed.options['--closure-reason'],
+        answer: parsed.options['--answer'],
+        outcome: parsed.options['--outcome'],
+        duplicateOf: parsed.options['--duplicate-of'],
+        supersededBy: parsed.options['--superseded-by']
+      });
+      emit(result, () => {
+        console.log('Closed input request.');
+        printInputRequest(result.request);
+      });
+    } else if (action === 'reopen') {
+      const parsed = parseLifecycleValues(values, { positionals: 1, scalars: INPUT_QUEUE_ACTOR_SCALARS, booleans: ['--confirm-human'] });
+      format = parsed.format;
+      const inputId = requireLifecyclePositional(parsed.positionals, 'input request ID');
+      requireLifecycleOption(parsed.options, '--reason');
+      const result = reopenInputRequest(cwd, inputId, inputQueueActor(parsed.options));
+      emit(result, () => {
+        console.log('Reopened input request.');
+        printInputRequest(result.request);
+      });
+    } else if (action === 'show') {
+      const parsed = parseLifecycleValues(values, { positionals: 1 });
+      format = parsed.format;
+      const request = readInputRequest(cwd, requireLifecyclePositional(parsed.positionals, 'input request ID'));
+      emit({ ok: true, request }, () => {
+        printInputRequest(request);
+        if (request.legacy) console.log(`Legacy row (${request.legacy.path} line ${request.legacy.line}): ${request.legacy.row}`);
+        console.log('History:');
+        for (const entry of request.history) {
+          const confirmed = entry.human_confirmed ? ', confirmed' : '';
+          const changed = Object.keys(entry.changes);
+          console.log(`- ${entry.revision}. ${entry.at} ${entry.action}${changed.length ? ` (${changed.join(', ')})` : ''} by ${entry.actor} [${entry.actor_type}${confirmed}]: ${entry.reason}`);
+        }
+      });
+    } else if (action === 'list') {
+      const parsed = parseLifecycleValues(values, { lists: ['--status'], booleans: ['--all'] });
+      format = parsed.format;
+      const requests = listInputRequests(cwd, { statuses: parsed.options['--status'], all: parsed.options['--all'] === true });
+      emit({ ok: true, count: requests.length, requests }, () => {
+        if (!requests.length) console.log('No input requests.');
+        for (const request of requests) {
+          console.log(`${request.input_id}  ${request.status}  ${request.priority}${request.blocking ? '  blocking' : ''}${request.due ? `  due ${request.due}` : ''}  ${request.request}`);
+        }
+      });
+    } else if (action === 'review') {
+      format = runInputQueueReview(values);
+    } else if (action === 'migrate') {
+      const parsed = parseLifecycleValues(values, { scalars: ['--actor', '--actor-type'], booleans: ['--apply', '--confirm-human'] });
+      format = parsed.format;
+      const apply = parsed.options['--apply'] === true;
+      if (!apply && (parsed.options['--actor'] || parsed.options['--actor-type'])) throw new UsageError('--actor and --actor-type go with --apply.');
+      const result = migrateInputQueue(cwd, apply ? { apply, ...inputQueueActor(parsed.options) } : {});
+      emit(result, () => {
+        const rows = apply ? result.migrated : result.candidates;
+        console.log(`${apply ? 'Migrated' : 'Rows to migrate'}: ${rows.length}`);
+        for (const row of rows) console.log(`- line ${row.line}${row.input_id ? `  ${row.input_id}` : ''}  ${row.status}  ${row.priority}  ${row.request}`);
+        const withoutRequest = result.skipped.filter((item) => item.reason === 'request_missing');
+        const inUserTable = result.skipped.filter((item) => item.reason === 'in_user_table');
+        const placeholders = result.skipped.length - withoutRequest.length - inUserTable.length;
+        if (placeholders) console.log(`Skipped placeholder rows: ${placeholders}`);
+        if (inUserTable.length) console.log(`Not imported (line ${inUserTable.map((item) => item.line).join(', ')}): ${inUserTable.length} ${inUserTable.length === 1 ? 'row' : 'rows'} in a table of your own that lists requests by queue ID. Mole leaves that table alone. Add ${inUserTable.length === 1 ? 'it' : 'them'} with "mole input-queue add".`);
+        if (withoutRequest.length) console.log(`Skipped rows with text but no request (line ${withoutRequest.map((item) => item.line).join(', ')}): ${withoutRequest.length}. They cannot be imported.`);
+        if (result.legacy_copy) console.log(`The file as it was is kept at ${result.legacy_copy}.`);
+        if (!apply && rows.length) console.log('Nothing was changed. Rerun with --apply --actor <name> --actor-type <type>.');
+      });
+    } else if (action === 'audit') {
+      const parsed = parseLifecycleValues(values);
+      format = parsed.format;
+      const result = auditInputQueue(cwd);
+      emit(result, () => {
+        const problems = result.findings.filter((item) => !item.advisory).length;
+        console.log(result.ok
+          ? (result.findings.length ? 'Input queue audit passed, with notes.' : 'Input queue audit passed.')
+          : `Input queue audit found ${problems} ${problems === 1 ? 'problem' : 'problems'}.`);
+        printLifecycleFindings(result.findings);
+      });
+      if (!result.ok) process.exitCode = 1;
+    } else if (action === 'refresh-view') {
+      const parsed = parseLifecycleValues(values);
+      format = parsed.format;
+      const result = refreshInputQueueView(cwd);
+      emit(result, () => console.log(result.view.changed ? `Rewrote the generated table in ${result.view.path}.` : `The generated table in ${result.view.path} is already current.`));
+    } else if (action === 'unlock') {
+      const parsed = parseLifecycleValues(values);
+      format = parsed.format;
+      const result = unlockInputQueue(cwd);
+      emit(result, () => console.log(result.message));
+    } else {
+      throw new UsageError(`Unknown input-queue command: ${action ?? '(none)'}. Use add, update, close, reopen, show, list, review, migrate, refresh-view, audit, or unlock.`);
+    }
+  } catch (error) {
+    if (!(error instanceof UsageError) && !error.code) throw error;
+    reportInputQueueFailure(error, format);
+  }
+}
+
+function reportInputQueueFailure(error, format) {
+  const usage = error instanceof UsageError
+    || (error instanceof InputQueueError && INPUT_QUEUE_USAGE_ERROR_CODES.has(error.code));
+  const code = error.code || (usage ? 'INVALID_ARGUMENT' : 'ERROR');
+  if (format === 'json') {
+    console.log(JSON.stringify({ ok: false, error: { code, message: error.message, details: error.details || {} } }, null, 2));
+  }
+  console.error(`${usage ? 'Invalid arguments' : 'Refused'}: ${error.message}`);
+  process.exitCode = usage ? 2 : 1;
+}
+
 function runRetrieveCommand(values = []) {
   let format = guessLifecycleFormat(values);
   try {
@@ -1338,11 +1717,55 @@ export function getDoctorOutput(instanceRoot = cwd) {
     lines.push(`${ok ? '✓' : '✗'} ${label}`);
   }
 
+  lines.push('', 'Doctor checks versions and folders only. Run `mole validate` for the full workspace check.');
+
   return `${lines.join('\n')}\n`;
 }
 
 function doctor() {
   process.stdout.write(getDoctorOutput());
+}
+
+/**
+ * `mole validate [path]`: the complete read-only workspace check.  Exit code
+ * 0 means healthy, 1 findings, 2 invalid arguments, 3 an internal failure.
+ */
+function runValidateCommand(values = []) {
+  if (values.includes('--help') || values.includes('-h')) {
+    console.log('Usage: mole validate [path] [--format text|json] [--stale-after-days <n>]\n\nRuns the full read-only workspace check. Exit codes: 0 healthy, 1 findings, 2 invalid arguments, 3 internal failure.\nFinding codes are listed in docs/workspace-validation.md.');
+    return;
+  }
+  let format = guessLifecycleFormat(values);
+  const failWith = (exitCode, code, message) => {
+    if (format === 'json') console.log(JSON.stringify({ ok: false, error: { code, message } }, null, 2));
+    console.error(`${exitCode === VALIDATION_EXIT_CODES.invalid_arguments ? 'Invalid arguments' : 'Validation failed to run'}: ${message}`);
+    process.exitCode = exitCode;
+  };
+  let parsed;
+  let staleAfterDays;
+  try {
+    parsed = parseLifecycleValues(values, { positionals: 1, scalars: ['--stale-after-days'] });
+    format = parsed.format;
+    if (parsed.options['--stale-after-days'] !== undefined) {
+      if (!/^\d+$/.test(parsed.options['--stale-after-days'])) throw new UsageError('--stale-after-days must be a whole number of days, at least 1.');
+      staleAfterDays = Number(parsed.options['--stale-after-days']);
+      if (staleAfterDays < 1) throw new UsageError('--stale-after-days must be a whole number of days, at least 1.');
+    }
+  } catch (error) {
+    if (!(error instanceof UsageError)) throw error;
+    failWith(VALIDATION_EXIT_CODES.invalid_arguments, 'INVALID_ARGUMENT', error.message);
+    return;
+  }
+  try {
+    const target = path.resolve(cwd, parsed.positionals[0] || '.');
+    const result = validateWorkspace(target, { cliVersion: getSourceVersion(), ...(staleAfterDays ? { staleAfterDays } : {}) });
+    if (format === 'json') console.log(JSON.stringify(result, null, 2));
+    else process.stdout.write(formatValidationReport(result));
+    process.exitCode = result.ok ? VALIDATION_EXIT_CODES.healthy : VALIDATION_EXIT_CODES.findings;
+  } catch (error) {
+    if (error.code === 'INVALID_ARGUMENT') failWith(VALIDATION_EXIT_CODES.invalid_arguments, error.code, error.message);
+    else failWith(VALIDATION_EXIT_CODES.internal_failure, 'INTERNAL_ERROR', error.message);
+  }
 }
 
 export function getCheckUpdatesOutput(instanceRoot = cwd) {
@@ -1868,6 +2291,9 @@ if (isDirectRun) {
     case 'critique':
       critique([subcommand, ...rest].filter(Boolean));
       break;
+    case 'travel-log':
+      travelLog([subcommand, ...rest].filter(Boolean));
+      break;
     case 'bootstrap-context':
       console.log(buildBootstrapContextInstruction());
       break;
@@ -1885,7 +2311,14 @@ if (isDirectRun) {
       console.log(`Suggested agent instruction:\n\nBefore synthesis, validate the workspace root with \`mole doctor\` and run \`mole inbox audit\`. Treat every recursively discovered non-README file outside \`6-raw/inbox/archive/\` as a candidate. Reconcile the audit's candidate list against the paths you actually process, explicitly report skipped paths, and rerun \`mole inbox audit\` before finishing; do not declare a no-op while unexplained unprocessed files remain. Then synthesise ${target} using the Mole operating model: capture low, distil up, retrieve top-down.${personaInstruction} ${LIFECYCLE_AGENT_GUIDANCE}`);
       break;
     }
+    case 'input-queue':
+      runInputQueueCommand(subcommand, rest);
+      break;
     case 'review':
+      if (subcommand === 'input-queue') {
+        runInputQueueCommand('review', rest);
+        break;
+      }
       console.log(`Suggested agent instruction:\n\nReview ${subcommand || 'the requested target'} and return the highest-value next actions or missing human inputs.`);
       break;
     case 'inbox':
@@ -1929,6 +2362,9 @@ if (isDirectRun) {
       break;
     case 'doctor':
       doctor();
+      break;
+    case 'validate':
+      runValidateCommand([subcommand, ...rest].filter((value) => value !== undefined));
       break;
     default:
       console.error(`Unknown command: ${command}`);

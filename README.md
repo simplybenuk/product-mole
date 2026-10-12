@@ -82,6 +82,7 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole init [target-dir]` | Backwards-compatible alias for `mole new`. |
 | `mole install skills` | Installs Mole agent skills into `~/.agents/skills/` or `$AGENTS_HOME/skills/`. |
 | `mole doctor` | Checks source and instance versions plus required instance folders. |
+| `mole validate [path] [--format text\|json]` | Runs the full read-only workspace check: inbox, receipts, sources, review records, frontmatter, summaries, duplicates, and the input queue. Exits 0 when healthy and 1 with findings. See [`docs/workspace-validation.md`](docs/workspace-validation.md). |
 | `mole check-updates` | Reports whether the installed Mole source is newer than the current workspace. |
 | `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/`. |
 | `mole note "<text>"` | Alias for `mole insight`. |
@@ -97,8 +98,12 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole create strategy-memo [output-path]` | Creates a strategy memo draft. |
 | `mole create prioritisation-draft [output-path]` | Creates a prioritisation draft. |
 | `mole create product-update [output-path]` | Creates a product update draft from the product update template. |
+| `mole create product-travel-log [output-path]` | Creates a travel log report draft: intent, what shipped, evidence, learnings, and a decision for one change or release. |
+| `mole travel-log <change-or-release>` | Prints an agent instruction for an outcome review of a change or release. See [`docs/product-travel-log.md`](docs/product-travel-log.md). |
 | `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
+| `mole review input-queue [--limit <n>] [--format json]` | Returns the highest-value human-input requests, why each ranks where it does, and what answering it unblocks. Read-only. |
+| `mole input-queue add\|update\|close\|reopen\|show\|list\|migrate\|refresh-view\|audit\|unlock` | Manages human-input requests as records with stable IDs. See [`docs/input-queue.md`](docs/input-queue.md). |
 | `mole inbox claim [options]` | Claims a run with a leased, owned lock and returns its `run_id`; provide each `--claimed-path`. |
 | `mole inbox heartbeat --run-id <id>` | Renews the matching active run lease for a long processing pass. |
 | `mole inbox checkpoint --run-id <id> [--processed <path>]` | Saves partial progress in the matching active run for restart-safe processing. |
@@ -210,6 +215,27 @@ The audit also fails closed when receipts from different run IDs claim the same 
 
 Expired locks from older Mole versions cannot be completed normally. An explicit stale override can migrate a structurally recognizable legacy lock into the current lease format while preserving the original lock in the audit record; incomplete receipts with processed paths are never used as processing evidence.
 
+## Human-input queue
+
+When an agent needs something only a person can give, it adds a request. Each
+request has a stable ID, a priority, what it blocks, and a history.
+
+```bash
+mole input-queue add --request "Which pricing tier is the default?" \
+  --impact "The onboarding spec assumes Team" --unblocks "Onboarding spec v2" \
+  --priority high --blocking --actor "Agent" --actor-type agent
+mole review input-queue
+mole input-queue close <input_id> --answer "Team tier" --outcome "Spec updated" \
+  --actor "Agent" --actor-type agent
+```
+
+`mole review input-queue` returns the top three asks with the reason for each
+rank, and suggests stale and duplicate requests without closing them. Only a
+person can close a request that was not answered or change its owner. A
+workspace with rows in `governance/input-queue.md` imports them with
+`mole input-queue migrate --apply`. See
+[`docs/input-queue.md`](docs/input-queue.md).
+
 ## Review lifecycle
 
 Agents draft. People decide. Mole records the difference in
@@ -305,6 +331,8 @@ mole check-updates
 - core folder checks
 - a warning when instance metadata is missing
 
+`doctor` is a quick check. For the full health report, run `mole validate`. It is read-only and covers the inbox, receipts, sources, review records, frontmatter, summaries, duplicates, and the input queue. See [`docs/workspace-validation.md`](docs/workspace-validation.md).
+
 `check-updates` is currently a read-only report. It compares source and instance versions, then lists:
 - safe additions from `upgrade-ownership.json`
 - manual review paths that may contain local customisation
@@ -383,4 +411,4 @@ Ask:
 
 > What inputs do you need from me today?
 
-Then answer the top 3 asks in `governance/input-queue.md`.
+Then run `mole review input-queue` and answer the top 3 asks.

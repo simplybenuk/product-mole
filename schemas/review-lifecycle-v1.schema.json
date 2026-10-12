@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://product-mole.local/schemas/review-lifecycle-v1.schema.json",
   "title": "Mole review lifecycle ledger version 1",
-  "description": "A local-first ledger of review state for registered source files. The ledger is authoritative; frontmatter status fields are descriptive. The Mole library also checks rules a schema cannot express: each history entry continues from the previous one, the record state equals the latest entry, a decision matches its history entry, and supersession links are reciprocal.",
+  "description": "A local-first ledger of review state for registered source files. The ledger is authoritative; frontmatter status fields are descriptive. The Mole library also checks rules a schema cannot express: each history entry continues from the previous one, the record state equals the latest entry, a decision matches its history entry, and supersession links are reciprocal. The schema requires a confirmed human only for a withdrawal from accepted; the library also requires one to withdraw a record that was accepted at any earlier point.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "ledger_revision", "updated_at", "records"],

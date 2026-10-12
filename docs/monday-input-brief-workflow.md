@@ -21,9 +21,9 @@ Create a reliable morning ritual where the PM asks:
 
 1. Review current mission/goals and active tasks.
 2. Check blocked work where human-only input is required.
-3. Rank asks by impact × urgency × effort.
-4. Return top 3 (max 5) asks.
-5. Update `governance/input-queue.md`.
+3. Add each missing ask with `mole input-queue add`.
+4. Run `mole review input-queue` and return its top 3 (max 5, with `--limit 5`) asks. The ranking rule is in `docs/input-queue.md`.
+5. Record each answer with `mole input-queue close <input_id> --answer "..." --outcome "..."`.
 
 ---
 

@@ -85,6 +85,7 @@ mole critique spec drafts/spec.md
 | `mole init [target-dir]` | Backwards-compatible alias for `mole new`. |
 | `mole install skills` | Installs Mole agent skills. |
 | `mole doctor` | Checks source and instance versions plus required instance folders. |
+| `mole validate [path] [--format text\|json]` | Runs the full read-only workspace check: inbox, receipts, sources, review records, frontmatter, summaries, duplicates, and the input queue. Exits 0 when healthy and 1 with findings. See [`docs/workspace-validation.md`](docs/workspace-validation.md). |
 | `mole check-updates` | Reports whether the installed Mole source is newer than the current workspace. |
 | `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/`. |
 | `mole note "<text>"` | Alias for `mole insight`. |
@@ -100,6 +101,8 @@ mole critique spec drafts/spec.md
 | `mole create strategy-memo [output-path]` | Creates a strategy memo draft. |
 | `mole create prioritisation-draft [output-path]` | Creates a prioritisation draft. |
 | `mole create product-update [output-path]` | Creates a product update draft from the product update template. |
+| `mole create product-travel-log [output-path]` | Creates a travel log report draft: intent, what shipped, evidence, learnings, and a decision for one change or release. |
+| `mole travel-log <change-or-release>` | Prints an agent instruction for an outcome review of a change or release. See [`docs/product-travel-log.md`](../docs/product-travel-log.md). |
 | `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
 | `mole inbox claim [options]` | Claims a run with a leased, owned lock and returns its `run_id`; provide each `--claimed-path`. |
