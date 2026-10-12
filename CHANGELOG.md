@@ -45,7 +45,9 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 - `mole metrics` with no subcommand prints the summary. It used to fail.
 - The metrics dashboard has a second panel for the summary and keeps
   operational counts apart from learning and decision-state counts.
-  `mole metrics backfill` also writes the summary snapshot.
+  `mole metrics backfill` also writes the summary snapshot. Both commands
+  replace a dashboard page from an earlier Mole, which has no second panel,
+  and keep the old page as `governance/metrics/dashboard.previous.html`.
 - `mole upgrade [version]` now installs from an explicit `vX.Y.Z` release tag.
 - `mole create` registers the new file as a source and opens a `draft`
   lifecycle record. It refuses an output path outside the workspace, a path

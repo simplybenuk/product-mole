@@ -106,7 +106,7 @@ After installing skills, ask your agent for Mole-specific work such as:
 | `mole inbox complete [options] [summary]` | Writes one idempotent receipt for the owned run, records metrics, and releases its lock. |
 | `mole inbox override-stale [options]` | Replaces an expired lock only after an explicit, auditable recovery decision. |
 | `mole metrics [--format json] [--events]` | Summarises processing activity and review-state changes for the last 7 days, 30 days, and all time. Read-only. See [`docs/molehill-metrics.md`](docs/molehill-metrics.md). |
-| `mole metrics snapshot` | Writes that summary to `governance/metrics/outcomes.json` for the local dashboard. |
+| `mole metrics snapshot` | Writes that summary to `governance/metrics/outcomes.json` for the local dashboard. Replaces a dashboard page from an earlier Mole and keeps the old one beside it. |
 | `mole metrics backfill` | Rebuilds local metrics from inbox processing receipts that already contain processed paths. |
 | `mole lifecycle register <source_id> --state <state> --actor <name> --actor-type <type>` | Opens a review record for a registered file as `raw`, `evidence`, `draft`, or `unreviewed`. |
 | `mole lifecycle evidence\|draft\|submit\|revise <record_id> [options]` | Moves a record toward review. Agents may run these. `revise` also sends an accepted file that was edited in place back to review. |

@@ -109,7 +109,7 @@ mole critique spec drafts/spec.md
 | `mole inbox complete [options] [summary]` | Writes one idempotent receipt for the owned run, records metrics, and releases its lock. |
 | `mole inbox override-stale [options]` | Replaces an expired lock only through an audited override. |
 | `mole metrics [--format json] [--events]` | Summarises processing activity and review-state changes for the last 7 days, 30 days, and all time. Read-only. See [`docs/molehill-metrics.md`](../docs/molehill-metrics.md). |
-| `mole metrics snapshot` | Writes that summary to `governance/metrics/outcomes.json` for the local dashboard. |
+| `mole metrics snapshot` | Writes that summary to `governance/metrics/outcomes.json` for the local dashboard. Replaces a dashboard page from an earlier Mole and keeps the old one beside it. |
 | `mole metrics backfill` | Rebuilds local metrics from inbox processing receipts that already contain processed paths. |
 | `mole source register <path> [options]` | Registers an existing file or attachment without changing its bytes. |
 | `mole source resolve <source-id> [--json]` | Resolves a source by stable ID without changing its record. |

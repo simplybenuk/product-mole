@@ -1637,7 +1637,7 @@ function runInboxCommand(action, values = []) {
 function printDashboardRefresh(dashboard) {
   if (dashboard.updated) {
     console.log(dashboard.replaced_older_page
-      ? `Updated ${dashboard.path}: the page from an earlier Mole had no summary panel.`
+      ? `Updated ${dashboard.path}: the page from an earlier Mole had no summary panel. The old page is kept at ${dashboard.previous_page}; delete it if you had not edited it.`
       : `Added ${dashboard.path}.`);
   } else if (dashboard.reason) {
     console.error(`Warning: ${dashboard.reason}`);

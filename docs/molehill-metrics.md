@@ -126,8 +126,10 @@ writes it too. The page shows when the snapshot was written; it does not
 update itself.
 
 A workspace created by an earlier Mole has a dashboard page with no summary
-panel. Both commands replace that page with the current one and say so. A
-page that already has the panel is left alone.
+panel. Both commands replace that page with the current one, keep the old
+page as `governance/metrics/dashboard.previous.html`, and say so. Delete the
+kept copy if you had not edited the page. A page that already has the panel
+is left alone.
 
 ## Backfill
 
@@ -166,8 +168,8 @@ already the full record of what it covers.
 ```
 
 The summary also carries `ok` and `read_only`; the snapshot file has `ok`
-only. `processed_inputs` adds `receipts_counted`, `receipts_without_items`,
-and `receipts_uncountable`.
+only. `processed_inputs` adds `receipts_counted` and
+`receipts_without_items`.
 
 `schema_version` changes if a field is removed or changes meaning. New fields
 may be added without a version change. Events carry no version of their own;
