@@ -495,6 +495,52 @@ describe('renamed, removed, and untrackable files', () => {
     });
   });
 
+  it('refuses a second record for an accepted file that moved, and takes the advised relocate', () => {
+    withWorkspace((workspace, mole) => {
+      const evidenceId = printedId(mole('insight', 'Customers ask for CSV export').stdout, 'Source ID');
+      const draft = createDraft(mole, 'spec', '4-context/product/export.md');
+      assert.equal(mole('lifecycle', 'submit', draft.recordId, ...agentFlags, '--reason', 'Ready').status, 0);
+      assert.equal(mole('lifecycle', 'approve', draft.recordId, ...humanFlags, '--reason', 'Agreed', '--source', evidenceId, '--expect-revision', '2').status, 0);
+
+      fs.mkdirSync(path.join(workspace, '4-context', 'archive'));
+      fs.renameSync(path.join(workspace, '4-context', 'product', 'export.md'), path.join(workspace, '4-context', 'archive', 'export.md'));
+      const strayId = printedId(mole('source', 'register', '4-context/archive/export.md').stdout, 'Source ID');
+
+      const refused = mole('lifecycle', 'register', strayId, '--state', 'draft', ...agentFlags, '--format', 'json');
+      assert.equal(refused.status, 1);
+      const error = JSON.parse(refused.stdout).error;
+      assert.equal(error.code, 'PATH_CLAIM_CONFLICT');
+      assert.deepEqual(error.details.conflicting_record_ids, [draft.recordId]);
+      assert.equal(error.details.moved_from, '4-context/product/export.md');
+      assert.match(refused.stderr, new RegExp(`mole lifecycle relocate ${draft.recordId} --path 4-context/archive/export.md`));
+
+      assert.equal(mole('lifecycle', 'audit').status, 0);
+      assert.match(mole('retrieve').stdout, new RegExp(`${draft.recordId}  accepted  r3  4-context/archive/export.md`));
+      const relocated = mole('lifecycle', 'relocate', draft.recordId, '--path', '4-context/archive/export.md', ...agentFlags, '--reason', 'Archived');
+      assert.equal(relocated.status, 0, relocated.stderr);
+      assert.equal(mole('lifecycle', 'audit').status, 0);
+    });
+  });
+
+  it('tracks a new draft created after an unedited draft was deleted', () => {
+    withWorkspace((workspace, mole) => {
+      const first = createDraft(mole, 'spec', '4-context/product/b.md');
+      fs.rmSync(path.join(workspace, '4-context', 'product', 'b.md'));
+
+      // The template gives both files the same bytes.  The new file is not
+      // the deleted draft's file, and it must not be left untracked.
+      const second = createDraft(mole, 'spec', '4-context/product/c.md');
+      assert.notEqual(second.recordId, first.recordId);
+      assert.match(mole('lifecycle', 'list', '--path', '4-context/product/c.md').stdout, new RegExp(second.recordId));
+
+      const audit = mole('lifecycle', 'audit');
+      assert.equal(audit.status, 1);
+      assert.match(audit.stdout, new RegExp(`source_unresolved: ${first.recordId}`));
+      assert.equal(mole('lifecycle', 'withdraw', first.recordId, ...agentFlags, '--reason', 'Deleted').status, 0);
+      assert.equal(mole('lifecycle', 'audit').status, 0);
+    });
+  });
+
   it('lists the recovery commands in help', () => {
     withWorkspace((workspace, mole) => {
       const help = mole('--help').stdout;

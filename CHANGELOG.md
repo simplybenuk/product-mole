@@ -29,7 +29,12 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   support it and the `revise --remove-source` command that clears them.
 - `mole lifecycle list --path <path>` finds the record for a file. One file
   backs one open record; a second registration of a tracked file is pointed
-  at the existing record.
+  at the existing record. That includes a file that moved without
+  `mole lifecycle relocate`, which its record follows by content. When an
+  earlier registration left such a duplicate, `mole lifecycle audit` names the
+  duplicate record to withdraw. `mole lifecycle relocate` applies the same
+  rule, and a record cannot take a moved file from one with more review
+  standing.
 - Added `mole retrieve`, which returns accepted records only unless
   `--include-state` names another state.
 - Added `schemas/review-lifecycle-v1.schema.json` and
@@ -53,7 +58,10 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   context, submit drafts for review, and leave decisions to a person.
 - Existing workspaces start with no lifecycle records. `mole lifecycle migrate
   --apply` registers files under `6-raw/` as `raw` and other old files as
-  `unreviewed`; nothing is accepted without a human decision.
+  `unreviewed`; nothing is accepted without a human decision. The file at the
+  registered path of an open record is not reported as a `source_id_mismatch`.
+  A copy that kept another file's `source_id:` frontmatter is treated as an
+  untracked file when migration can account for the original.
 - Added release, upgrade, contribution, and development guidance for the
   open-source package lifecycle.
 
