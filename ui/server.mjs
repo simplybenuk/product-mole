@@ -13,6 +13,10 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const PORT = process.env.PORT || 4173;
 const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === __filename;
 
+// The lock wait is synchronous and would stall every other request, so a
+// capture gives up early and is saved with a warning instead.
+const UI_LOCK_WAIT_MS = 1500;
+
 const allowedRoots = new Set([
   '0-bootstrap',
   '1-routing',
@@ -178,7 +182,8 @@ export async function captureNote(root, body = {}) {
       actor: 'mole-ui',
       actorType: 'automation',
       reason: 'Captured from the UI.',
-      now: capturedAt
+      now: capturedAt,
+      lockWaitMs: UI_LOCK_WAIT_MS
     }).record_id;
   } catch (err) {
     warning = `The capture is saved but has no lifecycle record yet: ${err.message}`;

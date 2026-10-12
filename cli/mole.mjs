@@ -467,7 +467,8 @@ function createArtifact(kind, outputPath) {
       state: 'draft',
       actor: 'mole-cli',
       actorType: 'automation',
-      reason: `Created ${kind} draft from a template.`
+      reason: `Created ${kind} draft from a template.`,
+      newFile: true
     });
     console.log(`Source ID: ${sourceId}`);
     console.log(`Lifecycle record: ${lifecycle.record_id} (draft)`);
@@ -1258,7 +1259,8 @@ function runLifecycleCommand(action, values = []) {
         if (!apply) {
           for (const candidate of result.candidates) {
             const status = candidate.legacy_status ? ` (frontmatter status: ${candidate.legacy_status})` : '';
-            console.log(`- ${candidate.path} -> ${candidate.proposed_state}${status}`);
+            const named = candidate.named_source_id ? ` (frontmatter names ${candidate.named_source_id}, which is not this file's source)` : '';
+            console.log(`- ${candidate.path} -> ${candidate.proposed_state}${status}${named}`);
           }
           if (result.candidates.length) console.log('Nothing was changed. Rerun with --apply --actor <name> --actor-type <type> to register these files. Files under 6-raw/ become raw and the rest become unreviewed. A frontmatter status is not a review decision.');
         }

@@ -219,7 +219,8 @@ cases this way.
 | A draft was renamed and edited | Cannot match it by hash. `submit` fails and audit reports `source_unresolved`. | `mole lifecycle relocate <record_id> --path <new path>` |
 | The file was deleted or abandoned | Audit reports `source_unresolved`. | `mole lifecycle withdraw <record_id>` |
 | Two unclaimed copies hold a moved file's bytes | Refuses to guess. Audit lists both under `candidate_paths`. | `mole lifecycle relocate <record_id> --path <path>` |
-| A file that already has an open record is registered as a source again | Refuses a second lifecycle record and names the existing one. The existing record keeps working, and audit stays clean. | Use the existing record. Find it with `mole lifecycle list --path <path>`. |
+| A file that already has an open record is registered as a source again | Refuses a second lifecycle record and names the existing one. This holds at the registered path and for a file that moved without `relocate`. `relocate` refuses to point another record at such a file for the same reason. When two records with the same bytes both follow one file, relocating one onto it settles which owns it, and audit then reports the other. A record cannot take the file this way from one with more review standing: accepted outranks pending, and pending outranks the rest. The existing record keeps working, and audit stays clean. | Use the existing record. Find it with `mole lifecycle list --path <path>`. |
+| A record's file is gone and the only copy of its bytes belongs to another open record | Audit reports `source_unresolved` and lists the copy under `claimed_paths`. Releases before this check allowed a moved file to be registered twice, which leaves this state. | If the copy is the record's moved file, `mole lifecycle withdraw <duplicate record_id>`. Otherwise withdraw the record whose file is gone. |
 | A new file is written at a path an open record still owns | Refuses a lifecycle record for the new file, and `mole create` refuses to write there. | Relocate the existing record to where its file went, or withdraw it if that file is gone. |
 | A new file appears at the old path of a superseded or withdrawn record | Treats the new file as untracked. When it is registered, Mole clears the closed record's stored path. | Register the new file, or run `mole lifecycle migrate --apply`. |
 
@@ -332,15 +333,37 @@ A registered file that moved without a reconcile keeps its source ID. Migration
 matches it to the registered source whose path is empty and whose hash equals
 the file's bytes. It never gives one file a second identity.
 
-Migration skips, and reports:
+The file at the registered path of an open lifecycle record is not reported
+as a `source_id_mismatch`, whatever `source_id` its frontmatter names. A
+tracked file that moved without a reconcile is matched to its record only
+while its bytes are unchanged and its old path is empty. Otherwise migration
+treats the file at the new path like any other file without a record.
 
-- `README.md` files, symlinks, and sync conflict copies
-- a file whose frontmatter names a `source_id` that the registry does not
-  place at that path and that does not match the file's bytes
-- a file that could belong to more than one moved source, or a moved source
-  that matches more than one file
+A copy can keep the `source_id:` frontmatter of the file it was copied from,
+such as a capture copied into `5-evidence/` and then edited. Migration treats
+the copy as an ordinary untracked file when it can account for the original:
+it matched the original as a moved file, or the file at the registered path
+still holds the source's bytes or names the source in its own frontmatter.
+The dry run names the frontmatter ID next to the copy, and the record's first
+history entry keeps it. Otherwise migration reports the file, because it may
+be the original after a move.
 
-Fix the last two with the `mole source` commands and run the migration again.
+Migration skips `README.md` files, symlinks, and sync conflict copies without
+a finding. It skips these with a finding, and exits 1:
+
+- `source_id_mismatch`: a file that migration cannot match to a source by
+  its path or its bytes, and whose frontmatter names a `source_id` that
+  migration cannot place at another scanned file. The finding prints `mole
+  source register <path>`, which tracks the file as its own source and clears
+  the finding. When the file holds the named source's bytes, it also prints
+  `mole source reconcile`, which keeps the file's identity instead. When the
+  named source has an open record and no file at its registered path, it
+  also points to `mole lifecycle audit`.
+- `ambiguous_source`: a file that could belong to more than one moved source,
+  or a moved source that matches more than one file. Follow the step the
+  finding prints.
+
+Then run the migration again.
 
 Running the migration again is safe. It is also the way to backfill a capture
 that was saved while the ledger could not be written.
@@ -369,7 +392,7 @@ superseded or withdrawn records for a missing file.
 | `ledger_conflict_copy` | A sync tool left a second ledger. Keep every copy, compare them, and leave one. |
 | `accepted_content_changed` | Restore the accepted bytes, or run `revise` and `submit` so a person reviews the new version. |
 | `pending_content_changed` | Run `revise`, then `submit` again. |
-| `source_unresolved` | The file was renamed and edited, or deleted. Run `relocate` or `withdraw` as the finding advises. |
+| `source_unresolved` | The file was renamed and edited, or deleted. Run `relocate` or `withdraw` as the finding advises. When `claimed_paths` is present, another open record owns the only copy of the file's bytes, and withdrawing that duplicate record lets this one find its file. |
 | `path_claim_conflict` | Two open records point at one file. The commands do not create this state. Relocate the record whose file moved, or withdraw the one that should not own the file. |
 | `source_record_missing`, `source_record_invalid`, `unsafe_path`, `no_local_file` | The source record is gone or untrusted. Recover it with the `mole source` commands, or withdraw the record. |
 | `supporting_source_missing` | Recover the source record that the acceptance cites. |
@@ -392,7 +415,10 @@ the whole ledger, checks that the write keeps every earlier history entry, and
 replaces `records.json` with one atomic rename. The lock sits beside the ledger
 so every process that can write the ledger sees it, whatever its temporary
 folder or user account. A second command waits up to ten seconds for the
-first, then fails with `LIFECYCLE_BUSY`.
+first, then fails with `LIFECYCLE_BUSY`. A UI capture waits 1.5 seconds, because
+the wait blocks the local UI server. After that the capture is saved with the
+"no lifecycle record yet" warning and `mole lifecycle migrate --apply`
+backfills its record.
 
 If a command is killed during a write, its lock stays behind. Mole never
 removes another process's lock on its own. Run `mole lifecycle unlock`. It
@@ -434,14 +460,14 @@ output. A refusal prints `{ "ok": false, "error": { "code", "message",
 functions that take the workspace root first.
 
 ```js
-registerLifecycleRecord(root, { sourceId, state, actor, actorType, sourceIds, reason, now })
+registerLifecycleRecord(root, { sourceId, state, actor, actorType, sourceIds, reason, newFile, now })
 transitionLifecycleRecord(root, recordId, {
   action, actor, actorType, humanConfirmed, reason,
   sourceIds, removeSourceIds, supersedes, replacementId, expectedRevision, now
 })
 relocateLifecycleRecord(root, recordId, { path, actor, actorType, reason, expectedRevision, now })
 readLifecycleRecord(root, recordId)
-listLifecycleRecords(root, { states })
+listLifecycleRecords(root, { states, path })
 retrieveLifecycleRecords(root, { includeStates })
 retrieveLifecycleRecord(root, recordId, { includeStates })
 auditLifecycle(root)
@@ -453,6 +479,11 @@ validateLifecycleLedger(ledger)
 ```
 
 A refused operation throws a `LifecycleError` with a `code` and `details`.
+Every call that writes also accepts `lockWaitMs`, the time to wait for another
+writer. The default is 10,000.
+Pass `newFile: true` only for a file the caller has just written, as
+`mole create` does. It skips the moved-file check, which would otherwise
+match a new template copy to a record whose unedited draft was deleted.
 `LIFECYCLE_TRANSITIONS` holds the transition table above and
 `transitionRequiresHuman(action, fromState)` answers the human question, so
 other features such as travel logs and evidence promotion can check a move
@@ -476,5 +507,5 @@ before they try it.
   measured about 0.5 s per capture and 1.4 to 2.0 s per audit at 3,000
   records, and about 1 s and 3.6 to 6.4 s at 10,000. Under heavy parallel
   capture at that size, a capture that waits longer than ten seconds for the
-  lock is saved with a warning and backfilled by `mole lifecycle migrate
-  --apply`.
+  lock, or 1.5 seconds from the UI, is saved with a warning and backfilled by
+  `mole lifecycle migrate --apply`.
