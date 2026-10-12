@@ -35,7 +35,7 @@ When the agent cannot proceed reliably, it should:
 1. state what input is missing,
 2. explain why it matters,
 3. propose fastest answer format,
-4. queue it in `governance/input-queue.md`.
+4. queue it with `mole input-queue add` (see `docs/input-queue.md`).
 
 ---
 

@@ -32,6 +32,7 @@ local_ownership:
     - 5-evidence/
     - 6-raw/
     - governance/sources/
+    - governance/input-queue/
 
 notes: |
   Keep this file current when making local structural changes.

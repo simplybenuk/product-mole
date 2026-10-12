@@ -15,7 +15,7 @@ Maintainer-only task queues, progress journals, agent skills, and local workflow
 5. After adding evidence/context, update relevant indexes and summaries.
 6. Only remove an inbox file after a retrieval receipt exists and the content has been promoted or archived.
 7. Keep docs focused (avoid giant omnibus files).
-8. Keep `governance/input-queue.md` current for human asks.
+8. Keep the human-input queue current with `mole input-queue`. The table in `governance/input-queue.md` is generated from it.
 
 ## Source provenance
 

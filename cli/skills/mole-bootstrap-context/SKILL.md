@@ -18,7 +18,7 @@ Create the first useful `2-summaries/` and `3-indexes/` from the durable context
 3. Read all existing `4-context/` modules, useful `5-evidence/` files, and relevant unprocessed material in `6-raw/inbox/`.
 4. Populate initial `2-summaries/` files with concise, evidence-backed domain context. Keep each summary compact and focused on durable facts, current product understanding, important hypotheses, and routing pointers.
 5. Populate initial `3-indexes/` files with navigation entries that point to the most useful context, evidence, decisions, artefacts, experiments, problems, or source documents.
-6. Add missing human questions to `governance/input-queue.md` when the lower layers do not justify a confident summary or index entry.
+6. Add missing human questions with `mole input-queue add` (do not edit the generated table in `governance/input-queue.md`) when the lower layers do not justify a confident summary or index entry.
 7. Report which summaries and indexes were populated, which source files supported them, and which areas remain too weak or unknown.
 
 Do not invent product facts. Mark low-confidence conclusions as hypotheses and link to supporting files.
