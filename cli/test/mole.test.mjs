@@ -130,7 +130,7 @@ describe('doctor', () => {
       const output = getDoctorOutput(dir);
 
       assert.match(output, /Mole doctor/);
-      assert.match(output, /source version\s+0\.2\.8/);
+      assert.match(output, /source version\s+0\.3\.0/);
       assert.match(output, /instance version\s+0\.1\.0/);
       assert.doesNotMatch(output, /missing instance metadata/i);
     });
@@ -140,7 +140,7 @@ describe('doctor', () => {
     withTempInstance((dir) => {
       const output = getDoctorOutput(dir);
 
-      assert.match(output, /source version\s+0\.2\.8/);
+      assert.match(output, /source version\s+0\.3\.0/);
       assert.match(output, /instance version\s+not found/);
       assert.match(output, /missing instance metadata/i);
     });
@@ -151,7 +151,7 @@ describe('help', () => {
   it('uses consistent Mole naming and documented command examples', () => {
     const output = getHelpOutput();
 
-    assert.match(output, /^Mole CLI v0\.2\.8/m);
+    assert.match(output, /^Mole CLI v0\.3\.0/m);
     assert.match(output, /mole new my-mole/);
     assert.match(output, /mole init my-mole/);
     assert.match(output, /mole create roadmap/);
@@ -181,7 +181,7 @@ describe('help', () => {
     assert.match(output, /mole install skills\s+Install Mole agent skills into ~\/\.agents\/skills/);
     assert.match(output, /More help:\n  https:\/\/github\.com\/simplybenuk\/product-mole#readme/);
     assert.match(output, /mole check-updates/);
-    assert.match(output, /mole upgrade 0\.2\.8/);
+    assert.match(output, /mole upgrade 0\.3\.0/);
     assert.match(output, /mole doctor/);
     assert.doesNotMatch(output, /Cascade/);
     assert.doesNotMatch(output, /mole install codex/);
@@ -413,7 +413,7 @@ describe('upgrade command', () => {
       'npm',
       'install',
       '-g',
-      'github:simplybenuk/product-mole#v0.2.8'
+      'github:simplybenuk/product-mole#v0.3.0'
     ]);
   });
 
@@ -434,9 +434,9 @@ describe('release metadata', () => {
   it('keeps the release version and MIT metadata internally consistent', () => {
     const metadata = getReleaseMetadata(repoRoot);
 
-    assert.equal(metadata.version, '0.2.8');
-    assert.equal(metadata.packageVersion, '0.2.8');
-    assert.equal(metadata.cliPackageVersion, '0.2.8');
+    assert.equal(metadata.version, '0.3.0');
+    assert.equal(metadata.packageVersion, '0.3.0');
+    assert.equal(metadata.cliPackageVersion, '0.3.0');
     assert.equal(metadata.packageLicense, 'MIT');
     assert.equal(metadata.cliPackageLicense, 'MIT');
     assert.match(metadata.licenseText, /MIT License/);
@@ -667,15 +667,15 @@ describe('check-updates', () => {
     withTempInstance((dir) => {
       fs.writeFileSync(
         path.join(dir, 'mole.instance.yaml'),
-        'instance_name: test-instance\ncascade_version: 0.2.8\n',
+        'instance_name: test-instance\ncascade_version: 0.3.0\n',
         'utf8'
       );
 
       const output = getCheckUpdatesOutput(dir);
 
       assert.match(output, /Mole update check/);
-      assert.match(output, /source version\s+0\.2\.8/);
-      assert.match(output, /instance version\s+0\.2\.8/);
+      assert.match(output, /source version\s+0\.3\.0/);
+      assert.match(output, /instance version\s+0\.3\.0/);
       assert.match(output, /status\s+up to date/);
       assert.match(output, /read-only report/i);
     });

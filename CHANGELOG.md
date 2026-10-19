@@ -6,6 +6,8 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-19
+
 ### Added
 - Added MIT package metadata, a root `LICENSE` file, and a strict release guard.
 - Added Node.js CI coverage for 18.x, 20.x, 22.x, and 24.x.
@@ -103,9 +105,6 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   untracked file when migration can account for the original.
 - Added release, upgrade, contribution, and development guidance for the
   open-source package lifecycle.
-
-The intended MIT terms are prepared, but release publication remains blocked
-until a maintainer confirms the copyright-holder line in `LICENSE`.
 
 ## [0.2.8] - 2026-06-17
 

@@ -33,7 +33,7 @@ Then update it with your real local customisations over time.
 Keep the tool that performs workspace operations on a known release tag:
 
 ```bash
-mole upgrade 0.2.8
+mole upgrade 0.3.0
 mole install skills
 ```
 
@@ -61,7 +61,7 @@ Prefer reading the changelog and upgrade docs first, rather than blindly merging
 
 ```bash
 git checkout main
-git merge v0.2.8   # replace with the release you want
+git merge v0.3.0   # replace with the release you want
 ```
 
 Or merge upstream main if you are deliberately tracking unreleased work and
