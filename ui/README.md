@@ -23,11 +23,13 @@ Then open:
 ## Notes
 
 - The server listens on `127.0.0.1` only, because it serves private
-  workspace files. Set `MOLE_UI_HOST` to listen on another address, for
-  example `MOLE_UI_HOST=0.0.0.0`, only on a network you trust: anyone who can
-  reach the port can read the workspace and add captures.
+  workspace files. To use it from another machine on a network you trust,
+  set `MOLE_UI_HOST` to the address that other machine will type, for example
+  `MOLE_UI_HOST=192.168.1.20`. Anyone who can reach that address and port can
+  read the workspace and add captures.
 - Requests whose `Host` header is not `localhost`, a loopback address, or
-  `MOLE_UI_HOST` are refused, and `POST` requests must be `application/json`.
+  `MOLE_UI_HOST` are refused, so a wildcard such as `0.0.0.0` accepts only
+  loopback requests. `POST` requests must be `application/json`.
   This stops other websites open in your browser from reading or writing
   through the UI.
 - The explorer does not follow a link that leaves the workspace, and a
