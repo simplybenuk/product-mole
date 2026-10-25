@@ -234,6 +234,13 @@ before relocating it to an edited file. Use `relocate` rather than
 clears the stored path of a superseded or withdrawn record that used to live
 there.
 
+`mole source reconcile` refuses to point a source at a moved file that an open
+lifecycle record follows by its content, and names the `mole lifecycle
+relocate` command for that record. Without this, the other source would take
+the file and the record would stop resolving. As with `relocate`, a source
+whose own record follows the same file can take it only from records with
+equal or lower review standing.
+
 If a new file is written at an open record's path and that record is then
 submitted, the reviewer is shown the new file, and approving it accepts what
 they read. Mole cannot tell a replaced file from an edited one. When another

@@ -6,6 +6,12 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Fixed
+- `mole source reconcile` no longer points a source at a moved file that an
+  open lifecycle record follows by its content. It refuses and names the
+  `mole lifecycle relocate` command, so an accepted record cannot become
+  `source_unresolved` this way.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added
