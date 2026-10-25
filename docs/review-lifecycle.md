@@ -234,12 +234,14 @@ before relocating it to an edited file. Use `relocate` rather than
 clears the stored path of a superseded or withdrawn record that used to live
 there.
 
-`mole source reconcile` refuses to point a source at a moved file that an open
-lifecycle record follows by its content, and names the `mole lifecycle
-relocate` command for that record. Without this, the other source would take
-the file and the record would stop resolving. As with `relocate`, a source
-whose own record follows the same file can take it only from records with
-equal or lower review standing.
+`mole source reconcile` refuses to point a source that has an open lifecycle
+record at a moved file that another open record follows by its content, and
+names the `mole lifecycle relocate` command for that record. Without this, the
+reconciled source would take the file and the other record would stop
+resolving. As with `relocate`, a source whose own record follows the same file
+can take it only from records with equal or lower review standing. Because the
+check reads the lifecycle ledger, `mole source reconcile` also stops when the
+ledger is invalid or has a conflict copy, as lifecycle commands do.
 
 If a new file is written at an open record's path and that record is then
 submitted, the reviewer is shown the new file, and approving it accepts what
