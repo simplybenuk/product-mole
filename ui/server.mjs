@@ -1,5 +1,6 @@
 import http from 'node:http';
 import fs from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
@@ -72,10 +73,23 @@ export function safeRepoPath(input = '', root = REPO_ROOT) {
     throw new Error('Path outside allowed roots');
   }
   // An allowed folder may hold a link to somewhere else; never serve it.
+  // The registry check trims its input, so refuse padded names outright and
+  // also compare the real location of anything that exists.
+  if (rel !== rel.trim()) throw new Error('Path outside allowed roots');
   try {
     toWorkspaceRelativePath(root, rel.split(path.sep).join('/'));
   } catch {
     throw new Error('Path outside allowed roots');
+  }
+  let real = null;
+  try {
+    real = realpathSync(resolved);
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+  if (real) {
+    const realRoot = realpathSync(root);
+    if (real !== realRoot && !real.startsWith(realRoot + path.sep)) throw new Error('Path outside allowed roots');
   }
   return { resolved, rel };
 }

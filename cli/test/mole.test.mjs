@@ -840,6 +840,10 @@ describe('capture attribution metadata', () => {
         assert.throws(() => safeRepoPath('4-context/secret.md', dir), /Path outside allowed roots/);
         assert.throws(() => safeRepoPath('5-evidence/secret.md', dir), /Path outside allowed roots/);
         assert.throws(() => safeRepoPath('5-evidence', dir), /Path outside allowed roots/);
+        // The registry check trims names, so a padded link name must not slip past it.
+        fs.symlinkSync(path.join(outside, 'secret.md'), path.join(dir, '4-context', 'padded.md '));
+        assert.throws(() => safeRepoPath('4-context/padded.md ', dir), /Path outside allowed roots/);
+        assert.throws(() => safeRepoPath('4-context/padded.md\t', dir), /Path outside allowed roots/);
       } finally {
         fs.rmSync(outside, { recursive: true, force: true });
       }
