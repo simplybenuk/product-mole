@@ -4044,7 +4044,7 @@ describe('processed inbox metrics', () => {
         const result = runCli(['metrics', 'backfill'], { cwd: dir });
 
         assert.equal(result.status, 1);
-        assert.match(result.stderr, /Refused: Inbox metrics were not written\. governance\/metrics resolves outside the workspace/);
+        assert.match(result.stderr, /Refused: Inbox metrics were not written\. governance\/metrics is outside the workspace: Symlink resolves outside the workspace: governance\/metrics/);
         assert.deepEqual(fs.readdirSync(outside), []);
       } finally {
         fs.rmSync(outside, { recursive: true, force: true });
