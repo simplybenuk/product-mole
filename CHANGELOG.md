@@ -6,6 +6,13 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Fixed
+- `mole inbox claim`, `heartbeat`, `checkpoint`, `complete`, and
+  `override-stale` refuse to run when the inbox lock, receipts, or overrides
+  path resolves outside the workspace through a link. Previously a linked
+  `governance/run-receipts/inbox-processing/` folder received receipts,
+  including run summaries and processed paths.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added
