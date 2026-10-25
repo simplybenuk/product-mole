@@ -39,7 +39,7 @@ import {
   getReleaseMetadata
 } from '../../scripts/check-release-consistency.mjs';
 import { createGitSnapshot } from '../../scripts/verify-package.mjs';
-import { buildUiCaptureContent, createCaptureRelPath } from '../../ui/server.mjs';
+import { buildUiCaptureContent, captureNote, createCaptureRelPath } from '../../ui/server.mjs';
 import { createSourceId, readSourceRecord, registerSource } from '../../lib/source-registry.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
@@ -805,6 +805,52 @@ describe('capture attribution metadata', () => {
       assert.equal(record.channel, 'cli');
       assert.equal(record.captured_by, 'Ada');
     });
+  });
+
+  it('refuses a CLI capture through an inbox linked outside the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        fs.mkdirSync(path.join(dir, '6-raw'), { recursive: true });
+        try {
+          fs.symlinkSync(outside, path.join(dir, '6-raw', 'inbox'), 'dir');
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        const result = runCli(['insight', 'A private observation'], { cwd: dir });
+
+        assert.equal(result.status, 1);
+        assert.match(result.stderr, /Capture not written: Symlink resolves outside the workspace: 6-raw\/inbox/);
+        assert.deepEqual(fs.readdirSync(outside), []);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it('refuses a UI capture through an inbox linked outside the workspace', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-test-'));
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+    try {
+      fs.mkdirSync(path.join(dir, '6-raw'), { recursive: true });
+      try {
+        fs.symlinkSync(outside, path.join(dir, '6-raw', 'inbox'), 'dir');
+      } catch (error) {
+        if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+        throw error;
+      }
+
+      const result = await captureNote(dir, { note: 'A private observation' });
+
+      assert.equal(result.status, 409);
+      assert.match(result.payload.error, /Capture not written: Symlink resolves outside the workspace/);
+      assert.deepEqual(fs.readdirSync(outside), []);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
   });
 
   it('serializes source IDs in UI capture frontmatter', () => {

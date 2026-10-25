@@ -6,6 +6,12 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Fixed
+- `mole insight` and UI captures no longer write raw text through a
+  `6-raw/inbox` link that leaves the workspace. The capture is refused before
+  anything is written. Previously the file was written outside the workspace
+  and only source registration failed.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added
