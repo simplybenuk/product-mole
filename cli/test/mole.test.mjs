@@ -696,9 +696,10 @@ describe('check-updates', () => {
     });
   });
 
-  it('creates a workspace in an existing empty folder', () => {
+  it('creates a workspace in an existing empty folder or fresh git repository', () => {
     withTempInstance((dir) => {
-      fs.mkdirSync(path.join(dir, 'ws'));
+      fs.mkdirSync(path.join(dir, 'ws', '.git'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'ws', '.DS_Store'), '');
       const result = runCli(['new', 'ws'], { cwd: dir });
       assert.equal(result.status, 0);
       assert.equal(fs.existsSync(path.join(dir, 'ws', 'mole.instance.yaml')), true);

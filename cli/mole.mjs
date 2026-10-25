@@ -395,10 +395,12 @@ function getAgentsHome() {
 function initInstance(targetDir) {
   const target = path.resolve(cwd, targetDir || 'mole-instance');
   // The scaffold copies over files of the same name, so an existing
-  // workspace would lose its summaries, indexes, and metric history.
+  // workspace would lose its summaries, indexes, and metric history.  The
+  // scaffold writes no top-level dotfiles, so a fresh git repository or a
+  // folder holding only operating-system noise still counts as empty.
   let entries = null;
   try {
-    entries = fs.readdirSync(target);
+    entries = fs.readdirSync(target).filter((name) => !name.startsWith('.') && name !== 'Thumbs.db');
   } catch (err) {
     if (err.code === 'ENOTDIR') {
       console.error(`Cannot create a workspace at ${target}: it is a file.`);
