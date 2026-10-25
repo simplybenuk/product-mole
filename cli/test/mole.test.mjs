@@ -39,7 +39,7 @@ import {
   getReleaseMetadata
 } from '../../scripts/check-release-consistency.mjs';
 import { createGitSnapshot } from '../../scripts/verify-package.mjs';
-import { buildUiCaptureContent, createCaptureRelPath } from '../../ui/server.mjs';
+import { buildUiCaptureContent, createCaptureRelPath, refuseRequest } from '../../ui/server.mjs';
 import { createSourceId, readSourceRecord, registerSource } from '../../lib/source-registry.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
@@ -805,6 +805,20 @@ describe('capture attribution metadata', () => {
       assert.equal(record.channel, 'cli');
       assert.equal(record.captured_by, 'Ada');
     });
+  });
+
+  it('refuses UI requests another website could send through the browser', () => {
+    for (const host of ['localhost:4173', '127.0.0.1:4173', '[::1]:4173', 'LOCALHOST']) {
+      assert.equal(refuseRequest('GET', { host }, { host: '127.0.0.1' }), null);
+    }
+    assert.equal(refuseRequest('GET', { host: 'evil.example:4173' }, { host: '127.0.0.1' }).status, 403);
+    assert.equal(refuseRequest('GET', { host: 'localhost.evil.example' }, { host: '127.0.0.1' }).status, 403);
+    assert.equal(refuseRequest('GET', {}, { host: '127.0.0.1' }).status, 403);
+    assert.equal(refuseRequest('POST', { host: 'localhost:4173', 'content-type': 'text/plain' }, { host: '127.0.0.1' }).status, 415);
+    assert.equal(refuseRequest('POST', { host: 'localhost:4173' }, { host: '127.0.0.1' }).status, 415);
+    assert.equal(refuseRequest('POST', { host: 'localhost:4173', 'content-type': 'application/json; charset=utf-8' }, { host: '127.0.0.1' }), null);
+    // A host chosen with MOLE_UI_HOST is allowed as well.
+    assert.equal(refuseRequest('GET', { host: '192.168.1.20:4173' }, { host: '192.168.1.20' }), null);
   });
 
   it('serializes source IDs in UI capture frontmatter', () => {

@@ -11,6 +11,10 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const PORT = process.env.PORT || 4173;
+// The UI serves private workspace files, so it listens on loopback only
+// unless MOLE_UI_HOST says otherwise.
+const HOST = process.env.MOLE_UI_HOST || '127.0.0.1';
+const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === __filename;
 
 // The lock wait is synchronous and would stall every other request, so a
@@ -202,6 +206,28 @@ export async function captureNote(root, body = {}) {
   };
 }
 
+/**
+ * Refuse a request a browser could send on behalf of another site.  A Host
+ * header that is not loopback means DNS rebinding; a POST that is not JSON
+ * is a cross-site form or beacon, because a JSON POST from another origin
+ * needs a CORS preflight this server never grants.
+ */
+export function refuseRequest(method, headers = {}, options = {}) {
+  const host = options.host ?? HOST;
+  const hostHeader = String(headers.host || '');
+  const hostname = hostHeader.startsWith('[')
+    ? hostHeader.slice(0, hostHeader.indexOf(']') + 1)
+    : hostHeader.split(':')[0];
+  const allowed = LOOPBACK_HOSTNAMES.has(host) ? LOOPBACK_HOSTNAMES : new Set([...LOOPBACK_HOSTNAMES, host]);
+  if (!allowed.has(hostname.toLowerCase())) {
+    return { status: 403, payload: { error: 'Host not allowed. Open the UI at http://localhost.' } };
+  }
+  if (method === 'POST' && !String(headers['content-type'] || '').toLowerCase().startsWith('application/json')) {
+    return { status: 415, payload: { error: 'Requests must be sent as application/json.' } };
+  }
+  return null;
+}
+
 async function routeApi(req, res, urlObj) {
   if (req.method === 'GET' && urlObj.pathname === '/api/tree') {
     const p = urlObj.searchParams.get('path') || '';
@@ -239,7 +265,9 @@ async function routeApi(req, res, urlObj) {
 
 const server = http.createServer(async (req, res) => {
   try {
-    const urlObj = new URL(req.url, `http://${req.headers.host}`);
+    const refused = refuseRequest(req.method, req.headers);
+    if (refused) return send(res, refused.status, refused.payload);
+    const urlObj = new URL(req.url, 'http://localhost');
     if (urlObj.pathname.startsWith('/api/')) {
       const handled = await routeApi(req, res, urlObj);
       if (handled !== false) return;
@@ -260,7 +288,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 if (isDirectRun) {
-  server.listen(PORT, () => {
-    console.log(`Context Cascade UI running on http://localhost:${PORT}`);
+  server.listen(PORT, HOST, () => {
+    console.log(`Context Cascade UI running on http://localhost:${PORT}${LOOPBACK_HOSTNAMES.has(HOST) ? '' : ` (listening on ${HOST})`}`);
   });
 }
