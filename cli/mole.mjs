@@ -2281,7 +2281,8 @@ if (isDirectRun) {
     case 'insight':
     case 'note':
     case 'signal':
-      captureInsight([subcommand, ...rest].filter(Boolean));
+      // Keep empty strings so an empty option value is reported, not skipped.
+      captureInsight([subcommand, ...rest].filter((value) => value !== undefined));
       break;
     case 'product-update':
       productUpdate([subcommand, ...rest].filter(Boolean));

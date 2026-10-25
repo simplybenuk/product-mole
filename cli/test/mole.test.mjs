@@ -774,7 +774,8 @@ describe('capture attribution metadata', () => {
       for (const args of [
         ['insight', '--stakeholder'],
         ['insight', 'Pricing feedback', '--audience'],
-        ['insight', '--stakeholder', '--audience', 'exec', 'Pricing feedback']
+        ['insight', '--stakeholder', '--audience', 'exec', 'Pricing feedback'],
+        ['insight', '--stakeholder', '', 'Pricing feedback']
       ]) {
         const result = runCli(args, { cwd: dir });
         assert.equal(result.status, 1);
