@@ -6,6 +6,13 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Fixed
+- `mole metrics backfill` and the metrics update in `mole inbox complete` no
+  longer write `daily.json`, `weekly.json`, `monthly.json`, or
+  `seen-today.json` through a `governance/metrics` link that leaves the
+  workspace. Backfill is refused and writes nothing; `mole inbox complete`
+  still writes its receipt.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added

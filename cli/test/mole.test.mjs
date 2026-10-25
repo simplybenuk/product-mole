@@ -4022,6 +4022,98 @@ describe('processed inbox metrics', () => {
     });
   });
 
+  it('refuses metrics backfill through a metrics folder linked outside the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+        fs.mkdirSync(receiptsDir, { recursive: true });
+        fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), `${JSON.stringify({
+          receipt_id: 'legacy-cli-receipt',
+          completed_at: '2026-06-11T10:00:00.000Z',
+          processed: ['6-raw/inbox/a.md']
+        }, null, 2)}\n`);
+        fs.rmSync(path.join(dir, 'governance', 'metrics'), { recursive: true, force: true });
+        try {
+          fs.symlinkSync(outside, path.join(dir, 'governance', 'metrics'), 'dir');
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        const result = runCli(['metrics', 'backfill'], { cwd: dir });
+
+        assert.equal(result.status, 1);
+        assert.match(result.stderr, /Refused: Inbox metrics were not written\. governance\/metrics resolves outside the workspace/);
+        assert.deepEqual(fs.readdirSync(outside), []);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it('refuses to write a metric file linked outside the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        const paths = getMetricsPaths(dir);
+        const outsideDaily = path.join(outside, 'daily.json');
+        fs.writeFileSync(outsideDaily, 'untouched\n');
+        fs.mkdirSync(paths.metricsDir, { recursive: true });
+        fs.rmSync(paths.dailyPath, { force: true });
+        try {
+          fs.symlinkSync(outsideDaily, paths.dailyPath);
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        assert.throws(
+          () => backfillProcessedInboxMetrics(dir),
+          (error) => error.code === 'METRICS_NOT_WRITTEN' && error.path === 'governance/metrics/daily.json'
+        );
+        assert.equal(fs.readFileSync(outsideDaily, 'utf8'), 'untouched\n');
+        assert.equal(fs.existsSync(paths.weeklyPath), false);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it('still writes the inbox receipt when metrics are linked outside the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        fs.rmSync(path.join(dir, 'governance', 'metrics'), { recursive: true, force: true });
+        fs.mkdirSync(path.join(dir, 'governance'), { recursive: true });
+        try {
+          fs.symlinkSync(outside, path.join(dir, 'governance', 'metrics'), 'dir');
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        const claim = runCli([
+          'inbox', 'claim', '--run-id', 'cli-run-link', '--processor', 'Ada',
+          '--claimed-path', '6-raw/inbox/a.md'
+        ], { cwd: dir });
+        const complete = runCli([
+          'inbox', 'complete', '--run-id', 'cli-run-link', '--processor', 'Ada',
+          '--processed', '6-raw/inbox/a.md', 'Promoted', 'one', 'note.'
+        ], { cwd: dir });
+
+        const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+        assert.equal(claim.status, 0);
+        assert.equal(complete.status, 0);
+        assert.match(complete.stderr, /Warning: inbox metrics reconciliation failed: Inbox metrics were not written/);
+        assert.equal(fs.readdirSync(receiptsDir).filter((file) => file.endsWith('.json')).length, 1);
+        assert.deepEqual(fs.readdirSync(outside), []);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
+    });
+  });
+
   it('fails closed from the CLI without rewriting blocked metric history', () => {
     withTempInstance((dir) => {
       createWorkspaceScaffold(dir);
