@@ -36,6 +36,8 @@ cd my-mole
 
 This creates a clean workspace scaffold with bootstrap guidance, routing rules, summaries, indexes, context/evidence folders, an inbox, and lightweight governance files. You do not need to clone the Mole repository to create or use a workspace.
 
+The target must be a new or empty directory. `mole new` and its `mole init` alias refuse nonempty directories, including those containing only hidden files, and refuse file or symlink targets.
+
 ### 3. Install agent skills
 
 Install the optional Mole agent skills:

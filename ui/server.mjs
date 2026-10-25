@@ -41,7 +41,7 @@ const mime = {
 
 function send(res, code, body, contentType = 'application/json; charset=utf-8') {
   res.writeHead(code, { 'content-type': contentType });
-  res.end(typeof body === 'string' ? body : JSON.stringify(body));
+  res.end(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body));
 }
 
 async function readBody(req) {
@@ -237,7 +237,7 @@ async function routeApi(req, res, urlObj) {
   return false;
 }
 
-const server = http.createServer(async (req, res) => {
+export const server = http.createServer(async (req, res) => {
   try {
     const urlObj = new URL(req.url, `http://${req.headers.host}`);
     if (urlObj.pathname.startsWith('/api/')) {

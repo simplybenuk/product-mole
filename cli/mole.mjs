@@ -296,6 +296,21 @@ function copyDirRecursive(from, to, options = {}) {
 }
 
 export function createWorkspaceScaffold(target) {
+  target = path.resolve(target);
+  let targetStat;
+  try {
+    targetStat = fs.lstatSync(target);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  if (targetStat) {
+    if (!targetStat.isDirectory()) {
+      throw new Error(`Workspace target must be a directory, not a file or symlink: ${target}`);
+    }
+    if (fs.readdirSync(target).length > 0) {
+      throw new Error(`Refusing to create a workspace in a nonempty directory: ${target}. Choose a new or empty directory.`);
+    }
+  }
   ensureDir(target);
 
   for (const dir of WORKSPACE_SCAFFOLD_DIRS) {
@@ -614,9 +629,12 @@ function captureInsight(values) {
   console.log('mole synthesise inbox');
 }
 
-function yamlScalar(value) {
-  const text = String(value || '').trim();
-  return text ? JSON.stringify(text) : '';
+function yamlScalar(value, { trim = true } = {}) {
+  const text = trim ? String(value || '').trim() : String(value ?? '');
+  if (!text && trim) return '';
+  // YAML folds some Unicode line breaks and rejects raw C1 controls.
+  return JSON.stringify(text).replace(/[\u007f-\u009f\u2028\u2029]/g,
+    character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
 }
 
 function yamlInlineList(values = []) {
@@ -633,9 +651,9 @@ title: Raw Insight
 capture_type: insight
 source: mole CLI
 source_id: ${options.sourceId || ''}
-captured_by: ${capturedBy}
+captured_by: ${yamlScalar(capturedBy)}
 created_at: ${createdAt}
-summary: ${text}
+summary: ${yamlScalar(text, { trim: false })}
 stakeholder: ${yamlScalar(options.stakeholder)}
 requested_by: ${yamlScalar(options.requestedBy)}
 audience: ${yamlInlineList(options.audience)}

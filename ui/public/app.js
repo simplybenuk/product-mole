@@ -39,7 +39,7 @@ form.addEventListener('submit', async (e) => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    statusEl.textContent = `Saved: ${result.path}`;
+    statusEl.textContent = `Saved: ${result.path}${result.warning ? `. Warning: ${result.warning}` : ''}`;
     form.reset();
   } catch (err) {
     statusEl.textContent = `Failed: ${err.message}`;

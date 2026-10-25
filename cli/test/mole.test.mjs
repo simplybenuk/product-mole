@@ -294,6 +294,68 @@ describe('product updates', () => {
 });
 
 describe('workspace scaffold', () => {
+  it('creates a workspace in a nonexistent target', () => {
+    withTempInstance((dir) => {
+      const target = path.join(dir, 'new', 'demo');
+      createWorkspaceScaffold(target);
+      assert.ok(fs.existsSync(path.join(target, 'mole.instance.yaml')));
+    });
+  });
+
+  it('refuses nonempty targets before writing, including hidden files', () => {
+    for (const name of ['unrelated.txt', '.keep']) {
+      withTempInstance((dir) => {
+        fs.writeFileSync(path.join(dir, name), 'Keep these bytes.\n');
+        assert.throws(() => createWorkspaceScaffold(dir), /nonempty directory/i);
+        assert.deepEqual(fs.readdirSync(dir), [name]);
+        assert.equal(fs.readFileSync(path.join(dir, name), 'utf8'), 'Keep these bytes.\n');
+      });
+    }
+  });
+
+  it('refuses file and symlink targets without changing them or their destinations', () => {
+    withTempInstance((dir) => {
+      const file = path.join(dir, 'file');
+      const empty = path.join(dir, 'empty');
+      fs.writeFileSync(file, 'Keep the file.\n');
+      fs.mkdirSync(empty);
+      const links = [path.join(dir, 'directory-link'), path.join(dir, 'file-link'), path.join(dir, 'dangling-link')];
+      for (const [index, destination] of [empty, file, path.join(dir, 'missing')].entries()) {
+        fs.symlinkSync(destination, links[index]);
+      }
+      for (const target of [file, ...links, `${links[0]}${path.sep}`, `${links[0]}${path.sep}.`]) {
+        assert.throws(() => createWorkspaceScaffold(target), /target must be a directory.*symlink/i);
+      }
+      assert.equal(fs.readFileSync(file, 'utf8'), 'Keep the file.\n');
+      assert.deepEqual(fs.readdirSync(empty), []);
+      assert.equal(fs.existsSync(path.join(dir, 'missing')), false);
+      for (const link of links) assert.ok(fs.lstatSync(link).isSymbolicLink());
+    });
+  });
+
+  for (const command of ['new', 'init']) {
+    it(`${command} permits an empty directory and refuses to overwrite a customized workspace`, () => {
+      withTempInstance((dir) => {
+        const target = path.join(dir, 'demo');
+        fs.mkdirSync(target);
+        const created = runCli([command, 'demo'], { cwd: dir });
+        assert.equal(created.status, 0, created.stderr);
+        const customized = ['mole.instance.yaml', '2-summaries/product-summary.md', 'unrelated.txt'];
+        for (const relative of customized) fs.writeFileSync(path.join(target, relative), `Custom ${relative}\n`);
+        const entries = fs.readdirSync(target);
+
+        const repeated = runCli([command, 'demo'], { cwd: dir });
+        assert.equal(repeated.status, 1);
+        assert.match(repeated.stderr, /nonempty directory/i);
+        assert.doesNotMatch(repeated.stdout, /Initialised Mole workspace/);
+        assert.deepEqual(fs.readdirSync(target), entries);
+        for (const relative of customized) {
+          assert.equal(fs.readFileSync(path.join(target, relative), 'utf8'), `Custom ${relative}\n`);
+        }
+      });
+    });
+  }
+
   it('creates a clean Mole workspace without source-repo files', () => {
     withTempInstance((dir) => {
       createWorkspaceScaffold(dir);
@@ -731,6 +793,49 @@ describe('team-safe capture filenames', () => {
 });
 
 describe('capture attribution metadata', () => {
+  it('round-trips free-form CLI summaries and attribution without changing the body', () => {
+    const samples = [
+      'Customer says: export fails',
+      'Export fails #42',
+      'First line\nSecond line\r\n---\nsource: customer',
+      '  Preserve whitespace\n\n',
+      'Quotes "like this", backslashes \\ and tabs\tstay.',
+      'null',
+      '[one, two]',
+      'Unicode separators\u0085next\u2028line\u2029paragraph and controls\u007f\u009f',
+      ''
+    ];
+    const capturedBy = 'Ada: PM\nResearch #42';
+    for (const summary of samples) {
+      const content = buildInsightCaptureContent(summary, { capturedBy });
+      const closing = content.indexOf('\n---\n', 4);
+      const frontmatter = content.slice(4, closing);
+      // JSON strings are YAML double-quoted scalars and can be checked on every supported Node version.
+      for (const [field, expected] of [['summary', summary], ['captured_by', capturedBy]]) {
+        const scalar = frontmatter.split('\n').find(line => line.startsWith(`${field}: `))?.slice(field.length + 2);
+        assert.equal(JSON.parse(scalar), expected);
+        assert.doesNotMatch(scalar, /[\u007f-\u009f\u2028\u2029]/);
+      }
+      assert.equal(content.slice(closing + '\n---\n'.length), `\n# Raw Insight\n\n## Insight\n${summary}\n\n## Context / why it matters\n\n## Optional follow-up questions\n-\n`);
+    }
+  });
+
+  it('writes YAML-safe CLI capture text and attribution with matching source metadata', () => {
+    withTempInstance((dir) => {
+      const summary = 'Customer says: export fails #42\nSecond line';
+      const capturedBy = 'Ada: PM\nResearch #42';
+      const result = runCli(['insight', summary, '--captured-by', capturedBy], { cwd: dir });
+      assert.equal(result.status, 0, result.stderr);
+      const capture = fs.readdirSync(path.join(dir, '6-raw', 'inbox'))[0];
+      const content = fs.readFileSync(path.join(dir, '6-raw', 'inbox', capture), 'utf8');
+      assert.equal(JSON.parse(content.match(/^summary: (.*)$/m)[1]), summary);
+      assert.equal(JSON.parse(content.match(/^captured_by: (.*)$/m)[1]), capturedBy);
+      const sourceId = content.match(/^source_id: (.*)$/m)[1];
+      assert.equal(readSourceRecord(dir, sourceId).captured_by, capturedBy);
+      assert.ok(content.includes(`\n## Insight\n${summary}\n`));
+    });
+  });
+
   it('resolves captured_by from explicit value or local environment defaults', () => {
     assert.equal(resolveCapturedBy('Ada'), 'Ada');
     assert.equal(resolveCapturedBy('', { MOLE_CAPTURED_BY: 'Grace' }), 'Grace');
@@ -744,7 +849,7 @@ describe('capture attribution metadata', () => {
       createdAt: '2026-05-13T10:11:12.345Z'
     });
 
-    assert.match(content, /captured_by: Ada/);
+    assert.match(content, /captured_by: "Ada"/);
     assert.match(content, /source: mole CLI/);
     assert.match(content, /visibility: \"internal\"/);
   });
