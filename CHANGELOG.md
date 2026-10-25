@@ -6,6 +6,12 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Fixed
+- `mole source migrate --apply` no longer writes its report through a link
+  that leaves the workspace, such as a linked
+  `governance/run-receipts/source-migration/` folder. The run is refused
+  before any artifact is changed.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added
