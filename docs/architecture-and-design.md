@@ -77,25 +77,25 @@ Examples of valid capture inputs:
 
 Individually these may be weak signals. In aggregate they are high-value product context.
 
-See workflow: [`docs/signal-inbox-workflow.md`](docs/signal-inbox-workflow.md)
+See workflow: [`docs/signal-inbox-workflow.md`](signal-inbox-workflow.md)
 
 ### Human input queue (what the agent needs from the PM)
 
 The agent should explicitly request missing human-only inputs.
 
 Use a standing queue at:
-- [`governance/input-queue.md`](governance/input-queue.md)
+- [`governance/input-queue.md`](../governance/input-queue.md)
 
 Requests are structured records in `governance/input-queue/requests.json`, and
 the table in that file is generated from them. See
-[`docs/input-queue.md`](docs/input-queue.md).
+[`docs/input-queue.md`](input-queue.md).
 
 Use this daily opener:
 - "What inputs do you need from me today?"
 
 Workflow docs:
-- [`docs/monday-input-brief-workflow.md`](docs/monday-input-brief-workflow.md)
-- [`docs/human-in-the-loop-operating-model.md`](docs/human-in-the-loop-operating-model.md)
+- [`docs/monday-input-brief-workflow.md`](monday-input-brief-workflow.md)
+- [`docs/human-in-the-loop-operating-model.md`](human-in-the-loop-operating-model.md)
 
 ---
 
@@ -430,7 +430,7 @@ Default to **no export dependency**:
 
 Add external publish/export only if a team has mandatory downstream systems.
 
-See detailed UI proposal: [`docs/ui-spec-v1.md`](docs/ui-spec-v1.md)
+See detailed UI proposal: [`docs/ui-spec-v1.md`](ui-spec-v1.md)
 
 ---
 

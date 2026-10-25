@@ -6,6 +6,14 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Added
+- Added `npm run check:links`, which fails on broken relative links in
+  Markdown files. CI runs it on every supported Node.js version.
+
+### Fixed
+- Fixed broken relative links in `docs/architecture-and-design.md` and
+  `cli/README.md`.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added

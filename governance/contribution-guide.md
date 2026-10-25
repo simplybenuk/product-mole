@@ -48,6 +48,7 @@ From the repository root, run:
 
 ```bash
 npm test
+npm run check:links
 npm run check:versions
 npm run check:package
 ```
