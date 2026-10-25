@@ -291,6 +291,17 @@ describe('product updates', () => {
     assert.match(result.stdout, /email format/);
     assert.match(result.stdout, /4-context\/stakeholders\.md/);
   });
+
+  it('refuses a product update --format with no value', () => {
+    for (const args of [
+      ['product-update', 'CEO', '2-weeks', '--format'],
+      ['product-update', 'CEO', '--format', '--other', '2-weeks']
+    ]) {
+      const result = runCli(args);
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /Missing value for --format\./);
+    }
+  });
 });
 
 describe('workspace scaffold', () => {

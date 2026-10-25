@@ -6,6 +6,10 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Fixed
+- `mole product-update` refuses `--format` with no value instead of treating
+  the next word, or nothing, as the format.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added
