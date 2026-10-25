@@ -768,6 +768,30 @@ describe('capture attribution metadata', () => {
     assert.match(content, /follow_up_by: "2026-05-20"/);
   });
 
+  it('refuses an insight option with no value instead of capturing the option name', () => {
+    withTempInstance((dir) => {
+      fs.mkdirSync(path.join(dir, '6-raw', 'inbox'), { recursive: true });
+      for (const args of [
+        ['insight', '--stakeholder'],
+        ['insight', 'Pricing feedback', '--audience'],
+        ['insight', '--stakeholder', '--audience', 'exec', 'Pricing feedback']
+      ]) {
+        const result = runCli(args, { cwd: dir });
+        assert.equal(result.status, 1);
+        assert.match(result.stderr, /Missing value for --(stakeholder|audience)\. Nothing was captured\./);
+      }
+      assert.deepEqual(fs.readdirSync(path.join(dir, '6-raw', 'inbox')), []);
+
+      const ok = runCli(['insight', '--stakeholder', 'CEO', '--audience', 'exec', 'Pricing feedback'], { cwd: dir });
+      assert.equal(ok.status, 0);
+      const [capture] = fs.readdirSync(path.join(dir, '6-raw', 'inbox'));
+      const content = fs.readFileSync(path.join(dir, '6-raw', 'inbox', capture), 'utf8');
+      assert.match(content, /stakeholder: "CEO"/);
+      assert.match(content, /audience: \["exec"\]/);
+      assert.match(content, /Pricing feedback/);
+    });
+  });
+
   it('emits captured_by in UI capture frontmatter', () => {
     const content = buildUiCaptureContent({
       source: 'customer',

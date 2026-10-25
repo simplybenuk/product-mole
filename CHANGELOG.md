@@ -6,6 +6,12 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Fixed
+- `mole insight` refuses an option with no value, such as a trailing
+  `--stakeholder`, instead of capturing the option name as the insight text.
+  An option followed by another option is refused too, instead of taking the
+  second option as its value.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added
