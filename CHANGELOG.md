@@ -6,6 +6,12 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Added
+- `mole validate` reports `WORKSPACE_PATH_LINKED_OUTSIDE` when a required
+  folder, such as `6-raw/inbox`, is a link to a location outside the
+  workspace. It used to call the folder missing. A link to a folder inside
+  the workspace is now accepted.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added
