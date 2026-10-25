@@ -65,7 +65,8 @@ the same way and prints the remedy after `Fix:`.
 | Code | Severity | Meaning |
 | --- | --- | --- |
 | `WORKSPACE_PATH_MISSING` | error | A required folder is missing or is not a folder. |
-| `WORKSPACE_PATH_LINKED_OUTSIDE` | error | A required folder, or `mole.instance.yaml`, is a link to a location outside the workspace. A link that stays inside the workspace is accepted. |
+| `WORKSPACE_PATH_LINKED_OUTSIDE` | error | A required folder, or `mole.instance.yaml`, is a link to a location outside the workspace. |
+| `WORKSPACE_PATH_LINKED` | error | A required folder, or `mole.instance.yaml`, is a link to another place in the workspace. Validation and inbox processing do not follow it. |
 | `INSTANCE_METADATA_MISSING` | error | `mole.instance.yaml` is missing. |
 | `INSTANCE_METADATA_INVALID` | error | `mole.instance.yaml` cannot be parsed or gives no usable `cascade_version`. |
 | `INSTANCE_VERSION_AHEAD` | warning | The workspace is newer than the CLI running the check. |
