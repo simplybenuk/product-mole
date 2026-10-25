@@ -105,6 +105,8 @@ mole critique spec drafts/spec.md
 | `mole travel-log <change-or-release>` | Prints an agent instruction for an outcome review of a change or release. See [`docs/product-travel-log.md`](../docs/product-travel-log.md). |
 | `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
+| `mole review input-queue [--limit <n>] [--stale-after-days <n>] [--duplicate-threshold <0-1>] [--format json]` | Returns the highest-value human-input requests, why each ranks where it does, and what answering it unblocks. Read-only. |
+| `mole input-queue add\|update\|close\|reopen\|show\|list\|migrate\|refresh-view\|audit\|unlock` | Manages human-input requests as records with stable IDs. Changing an owner, or closing a request that was not answered, needs `--actor-type human --confirm-human`. See [`docs/input-queue.md`](../docs/input-queue.md). |
 | `mole inbox claim [options]` | Claims a run with a leased, owned lock and returns its `run_id`; provide each `--claimed-path`. |
 | `mole inbox heartbeat --run-id <id>` | Renews the matching active run lease. |
 | `mole inbox checkpoint --run-id <id> [--processed <path>]` | Saves restart-safe partial progress for the matching run. |
