@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
-import { createSourceId, registerSource } from '../lib/source-registry.mjs';
+import { createSourceId, registerSource, toWorkspaceRelativePath } from '../lib/source-registry.mjs';
 import { registerLifecycleRecord } from '../lib/review-lifecycle.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -48,20 +48,33 @@ function send(res, code, body, contentType = 'application/json; charset=utf-8') 
   res.end(typeof body === 'string' ? body : JSON.stringify(body));
 }
 
+const MAX_BODY_BYTES = 1024 * 1024;
+
 async function readBody(req) {
   const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > MAX_BODY_BYTES) throw Object.assign(new Error('Request body is too large.'), { status: 413 });
+    chunks.push(chunk);
+  }
   if (!chunks.length) return {};
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
-function safeRepoPath(input = '') {
+export function safeRepoPath(input = '', root = REPO_ROOT) {
   const normalized = input.replace(/^\/+/, '');
-  const resolved = path.resolve(REPO_ROOT, normalized);
-  if (!resolved.startsWith(REPO_ROOT)) throw new Error('Invalid path');
-  const rel = path.relative(REPO_ROOT, resolved);
+  const resolved = path.resolve(root, normalized);
+  if (!resolved.startsWith(root)) throw new Error('Invalid path');
+  const rel = path.relative(root, resolved);
   const top = rel.split(path.sep)[0];
   if (!allowedRoots.has(top) && rel !== 'README.md') {
+    throw new Error('Path outside allowed roots');
+  }
+  // An allowed folder may hold a link to somewhere else; never serve it.
+  try {
+    toWorkspaceRelativePath(root, rel.split(path.sep).join('/'));
+  } catch {
     throw new Error('Path outside allowed roots');
   }
   return { resolved, rel };
@@ -283,7 +296,7 @@ const server = http.createServer(async (req, res) => {
     const content = await fs.readFile(filePath);
     return send(res, 200, content, contentType);
   } catch (err) {
-    return send(res, 500, { error: err.message || 'Server error' });
+    return send(res, err.status || 500, { error: err.message || 'Server error' });
   }
 });
 

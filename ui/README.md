@@ -30,6 +30,8 @@ Then open:
   `MOLE_UI_HOST` are refused, and `POST` requests must be `application/json`.
   This stops other websites open in your browser from reading or writing
   through the UI.
+- The explorer does not follow a link that leaves the workspace, and a
+  request body over 1 MB is refused.
 - Local filesystem is the source of truth.
 - No external services required.
 - This is a v0 scaffold for testing, not final UI.

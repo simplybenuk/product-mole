@@ -39,7 +39,7 @@ import {
   getReleaseMetadata
 } from '../../scripts/check-release-consistency.mjs';
 import { createGitSnapshot } from '../../scripts/verify-package.mjs';
-import { buildUiCaptureContent, createCaptureRelPath, refuseRequest } from '../../ui/server.mjs';
+import { buildUiCaptureContent, createCaptureRelPath, refuseRequest, safeRepoPath } from '../../ui/server.mjs';
 import { createSourceId, readSourceRecord, registerSource } from '../../lib/source-registry.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
@@ -819,6 +819,31 @@ describe('capture attribution metadata', () => {
     assert.equal(refuseRequest('POST', { host: 'localhost:4173', 'content-type': 'application/json; charset=utf-8' }, { host: '127.0.0.1' }), null);
     // A host chosen with MOLE_UI_HOST is allowed as well.
     assert.equal(refuseRequest('GET', { host: '192.168.1.20:4173' }, { host: '192.168.1.20' }), null);
+  });
+
+  it('does not serve a UI file through a link that leaves the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        fs.writeFileSync(path.join(outside, 'secret.md'), 'secret\n');
+        fs.mkdirSync(path.join(dir, '4-context'), { recursive: true });
+        fs.writeFileSync(path.join(dir, '4-context', 'notes.md'), 'notes\n');
+        try {
+          fs.symlinkSync(path.join(outside, 'secret.md'), path.join(dir, '4-context', 'secret.md'));
+          fs.symlinkSync(outside, path.join(dir, '5-evidence'), 'dir');
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        assert.equal(safeRepoPath('4-context/notes.md', dir).rel, path.join('4-context', 'notes.md'));
+        assert.throws(() => safeRepoPath('4-context/secret.md', dir), /Path outside allowed roots/);
+        assert.throws(() => safeRepoPath('5-evidence/secret.md', dir), /Path outside allowed roots/);
+        assert.throws(() => safeRepoPath('5-evidence', dir), /Path outside allowed roots/);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
+    });
   });
 
   it('serializes source IDs in UI capture frontmatter', () => {

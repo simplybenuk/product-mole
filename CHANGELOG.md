@@ -13,6 +13,8 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 - The UI refuses requests whose `Host` header is not loopback or
   `MOLE_UI_HOST`, which blocks DNS-rebinding reads, and refuses `POST`
   requests that are not `application/json`, which blocks cross-site captures.
+- The UI does not serve a file or folder that is reached through a link
+  leaving the workspace, and refuses a request body over 1 MB.
 
 ## [0.3.0] - 2026-10-19
 
