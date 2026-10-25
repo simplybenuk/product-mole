@@ -681,6 +681,39 @@ describe('check-updates', () => {
     });
   });
 
+  it('refuses to create a workspace over a folder that is not empty', () => {
+    withTempInstance((dir) => {
+      assert.equal(runCli(['new', 'ws'], { cwd: dir }).status, 0);
+      const summary = path.join(dir, 'ws', '2-summaries', 'user-summary.md');
+      fs.writeFileSync(summary, 'My own summary\n');
+
+      for (const command of ['new', 'init']) {
+        const result = runCli([command, 'ws'], { cwd: dir });
+        assert.equal(result.status, 1);
+        assert.match(result.stderr, /Refusing to create a workspace at .*: the folder is not empty/);
+      }
+      assert.equal(fs.readFileSync(summary, 'utf8'), 'My own summary\n');
+    });
+  });
+
+  it('creates a workspace in an existing empty folder', () => {
+    withTempInstance((dir) => {
+      fs.mkdirSync(path.join(dir, 'ws'));
+      const result = runCli(['new', 'ws'], { cwd: dir });
+      assert.equal(result.status, 0);
+      assert.equal(fs.existsSync(path.join(dir, 'ws', 'mole.instance.yaml')), true);
+    });
+  });
+
+  it('refuses to create a workspace at a file path', () => {
+    withTempInstance((dir) => {
+      fs.writeFileSync(path.join(dir, 'ws'), 'not a folder\n');
+      const result = runCli(['new', 'ws'], { cwd: dir });
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /it is a file/);
+    });
+  });
+
   it('reports when the source is newer than the instance', () => {
     withTempInstance((dir) => {
       fs.writeFileSync(
