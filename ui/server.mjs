@@ -1,9 +1,10 @@
 import http from 'node:http';
 import fs from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
-import { createSourceId, registerSource } from '../lib/source-registry.mjs';
+import { createSourceId, registerSource, toWorkspaceRelativePath } from '../lib/source-registry.mjs';
 import { registerLifecycleRecord } from '../lib/review-lifecycle.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -11,6 +12,10 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const PORT = process.env.PORT || 4173;
+// The UI serves private workspace files, so it listens on loopback only
+// unless MOLE_UI_HOST says otherwise.
+const HOST = process.env.MOLE_UI_HOST || '127.0.0.1';
+const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === __filename;
 
 // The lock wait is synchronous and would stall every other request, so a
@@ -44,21 +49,47 @@ function send(res, code, body, contentType = 'application/json; charset=utf-8') 
   res.end(typeof body === 'string' ? body : JSON.stringify(body));
 }
 
+const MAX_BODY_BYTES = 1024 * 1024;
+
 async function readBody(req) {
   const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > MAX_BODY_BYTES) throw Object.assign(new Error('Request body is too large.'), { status: 413 });
+    chunks.push(chunk);
+  }
   if (!chunks.length) return {};
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
-function safeRepoPath(input = '') {
+export function safeRepoPath(input = '', root = REPO_ROOT) {
   const normalized = input.replace(/^\/+/, '');
-  const resolved = path.resolve(REPO_ROOT, normalized);
-  if (!resolved.startsWith(REPO_ROOT)) throw new Error('Invalid path');
-  const rel = path.relative(REPO_ROOT, resolved);
+  const resolved = path.resolve(root, normalized);
+  if (!resolved.startsWith(root)) throw new Error('Invalid path');
+  const rel = path.relative(root, resolved);
   const top = rel.split(path.sep)[0];
   if (!allowedRoots.has(top) && rel !== 'README.md') {
     throw new Error('Path outside allowed roots');
+  }
+  // An allowed folder may hold a link to somewhere else; never serve it.
+  // The registry check trims its input, so refuse padded names outright and
+  // also compare the real location of anything that exists.
+  if (rel !== rel.trim()) throw new Error('Path outside allowed roots');
+  try {
+    toWorkspaceRelativePath(root, rel.split(path.sep).join('/'));
+  } catch {
+    throw new Error('Path outside allowed roots');
+  }
+  let real = null;
+  try {
+    real = realpathSync(resolved);
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+  if (real) {
+    const realRoot = realpathSync(root);
+    if (real !== realRoot && !real.startsWith(realRoot + path.sep)) throw new Error('Path outside allowed roots');
   }
   return { resolved, rel };
 }
@@ -137,6 +168,14 @@ export async function captureNote(root, body = {}) {
     capturedBy: body.capturedBy || body.captured_by
   }, { date, sourceId });
 
+  // Refuse an inbox that is a link leaving the workspace before the raw
+  // text is written anywhere.
+  try {
+    toWorkspaceRelativePath(root, relPath);
+  } catch (err) {
+    return { status: 409, payload: { error: `Capture not written: ${err.message}`, path: relPath } };
+  }
+
   await fs.mkdir(path.dirname(resolved), { recursive: true });
   try {
     await fs.writeFile(resolved, frontmatter, { encoding: 'utf8', flag: 'wx' });
@@ -202,6 +241,28 @@ export async function captureNote(root, body = {}) {
   };
 }
 
+/**
+ * Refuse a request a browser could send on behalf of another site.  A Host
+ * header that is not loopback means DNS rebinding; a POST that is not JSON
+ * is a cross-site form or beacon, because a JSON POST from another origin
+ * needs a CORS preflight this server never grants.
+ */
+export function refuseRequest(method, headers = {}, options = {}) {
+  const host = options.host ?? HOST;
+  const hostHeader = String(headers.host || '');
+  const hostname = hostHeader.startsWith('[')
+    ? hostHeader.slice(0, hostHeader.indexOf(']') + 1)
+    : hostHeader.split(':')[0];
+  const allowed = LOOPBACK_HOSTNAMES.has(host) ? LOOPBACK_HOSTNAMES : new Set([...LOOPBACK_HOSTNAMES, host]);
+  if (!allowed.has(hostname.toLowerCase())) {
+    return { status: 403, payload: { error: 'Host not allowed. Open the UI at http://localhost.' } };
+  }
+  if (method === 'POST' && !String(headers['content-type'] || '').toLowerCase().startsWith('application/json')) {
+    return { status: 415, payload: { error: 'Requests must be sent as application/json.' } };
+  }
+  return null;
+}
+
 async function routeApi(req, res, urlObj) {
   if (req.method === 'GET' && urlObj.pathname === '/api/tree') {
     const p = urlObj.searchParams.get('path') || '';
@@ -239,7 +300,9 @@ async function routeApi(req, res, urlObj) {
 
 const server = http.createServer(async (req, res) => {
   try {
-    const urlObj = new URL(req.url, `http://${req.headers.host}`);
+    const refused = refuseRequest(req.method, req.headers);
+    if (refused) return send(res, refused.status, refused.payload);
+    const urlObj = new URL(req.url, 'http://localhost');
     if (urlObj.pathname.startsWith('/api/')) {
       const handled = await routeApi(req, res, urlObj);
       if (handled !== false) return;
@@ -255,12 +318,12 @@ const server = http.createServer(async (req, res) => {
     const content = await fs.readFile(filePath);
     return send(res, 200, content, contentType);
   } catch (err) {
-    return send(res, 500, { error: err.message || 'Server error' });
+    return send(res, err.status || 500, { error: err.message || 'Server error' });
   }
 });
 
 if (isDirectRun) {
-  server.listen(PORT, () => {
-    console.log(`Context Cascade UI running on http://localhost:${PORT}`);
+  server.listen(PORT, HOST, () => {
+    console.log(`Context Cascade UI running on http://localhost:${PORT}${LOOPBACK_HOSTNAMES.has(HOST) ? '' : ` (listening on ${HOST})`}`);
   });
 }
