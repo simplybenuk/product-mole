@@ -730,10 +730,9 @@ function parseProductUpdateArgs(values) {
 
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
-    const next = values[index + 1];
 
-    if (value === '--format' && next) {
-      format = next;
+    if (value === '--format') {
+      format = readOptionValue(values, index, value);
       index += 1;
     } else {
       positional.push(value);
@@ -851,7 +850,14 @@ Refresh the Mole top layers. Compare \`2-summaries/\` and \`3-indexes/\` with lo
 }
 
 function productUpdate(values) {
-  const { audience, timescale, format } = parseProductUpdateArgs(values);
+  let parsed;
+  try {
+    parsed = parseProductUpdateArgs(values);
+  } catch (error) {
+    console.error(`${error.message} Example: mole product-update CEO 2-weeks --format email`);
+    process.exit(1);
+  }
+  const { audience, timescale, format } = parsed;
 
   if (!audience || !timescale) {
     console.error('Missing product update target. Example: mole product-update CEO 2-weeks --format email');

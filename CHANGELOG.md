@@ -37,6 +37,8 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   An option followed by another option is refused too, instead of taking the
   second option as its value. A value that itself starts with `--` is
   therefore no longer accepted.
+- `mole product-update` refuses `--format` with no value instead of treating
+  the next word, or nothing, as the format.
 
 ### Security
 - The local UI (`node ui/server.mjs`) listens on `127.0.0.1` by default
