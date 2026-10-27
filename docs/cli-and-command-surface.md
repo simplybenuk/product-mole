@@ -135,7 +135,7 @@ Examples:
 ```bash
 mole init
 mole check-updates
-mole upgrade 0.3.0
+mole upgrade 0.3.1
 ```
 
 Pass a target release to `mole upgrade`; without one, it uses the tag matching

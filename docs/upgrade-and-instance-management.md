@@ -102,11 +102,11 @@ Install a stable CLI from its tag when bootstrapping or repairing an older
 installation:
 
 ```bash
-npm install -g github:simplybenuk/product-mole#v0.3.0
+npm install -g github:simplybenuk/product-mole#v0.3.1
 ```
 
 Once the current CLI is installed, `mole upgrade [version]` performs the same
-refresh from a stable tag. Pass `0.3.0` or `v0.3.0` to choose a release. With no
+refresh from a stable tag. Pass `0.3.1` or `v0.3.1` to choose a release. With no
 argument, the CLI reuses the tag matching its installed version. It does not
 follow the moving `main` branch, so an upgrade target is reproducible.
 
@@ -179,7 +179,7 @@ The global CLI and a downstream working instance are different things. Refresh
 the first from a release tag, then apply the second through the ownership model:
 
 ```bash
-mole upgrade 0.3.0
+mole upgrade 0.3.1
 mole install skills
 ```
 

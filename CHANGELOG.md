@@ -6,6 +6,8 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-27
+
 ### Fixed
 - `mole new` and `mole init` refuse a target folder that is not empty.
   Previously they copied the scaffold over an existing workspace and replaced
@@ -43,14 +45,14 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   `cli/README.md`.
 
 ### Security
+- The UI does not serve a file or folder that is reached through a link
+  leaving the workspace, and refuses a request body over 1 MB.
 - The local UI (`node ui/server.mjs`) listens on `127.0.0.1` by default
   instead of every network interface. Set `MOLE_UI_HOST` to choose another
   address.
 - The UI refuses requests whose `Host` header is not loopback or
   `MOLE_UI_HOST`, which blocks DNS-rebinding reads, and refuses `POST`
   requests that are not `application/json`, which blocks cross-site captures.
-- The UI does not serve a file or folder that is reached through a link
-  leaving the workspace, and refuses a request body over 1 MB.
 
 ### Added
 - `mole validate` reports `WORKSPACE_PATH_LINKED_OUTSIDE` when a required
