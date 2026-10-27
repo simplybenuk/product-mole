@@ -32,6 +32,11 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   path resolves outside the workspace through a link. Previously a linked
   `governance/run-receipts/inbox-processing/` folder received receipts,
   including run summaries and processed paths.
+- `mole insight` refuses an option with no value, such as a trailing
+  `--stakeholder`, instead of capturing the option name as the insight text.
+  An option followed by another option is refused too, instead of taking the
+  second option as its value. A value that itself starts with `--` is
+  therefore no longer accepted.
 
 ### Security
 - The local UI (`node ui/server.mjs`) listens on `127.0.0.1` by default

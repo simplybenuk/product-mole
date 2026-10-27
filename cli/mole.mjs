@@ -515,6 +515,16 @@ function createArtifact(kind, outputPath) {
   outputDraftInstruction(kind);
 }
 
+const INSIGHT_OPTIONS = Object.freeze({
+  '--stakeholder': (metadata, value) => { metadata.stakeholder = value; },
+  '--requested-by': (metadata, value) => { metadata.requestedBy = value; },
+  '--audience': (metadata, value) => { metadata.audience.push(value); },
+  '--interest-area': (metadata, value) => { metadata.interestAreas.push(value); },
+  '--visibility': (metadata, value) => { metadata.visibility = value; },
+  '--captured-by': (metadata, value) => { metadata.capturedBy = value; },
+  '--follow-up-by': (metadata, value) => { metadata.followUpBy = value; }
+});
+
 function parseInsightArgs(values) {
   const metadata = {
     audience: [],
@@ -524,39 +534,27 @@ function parseInsightArgs(values) {
 
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
-    const next = values[index + 1];
-
-    if (value === '--stakeholder' && next) {
-      metadata.stakeholder = next;
-      index += 1;
-    } else if (value === '--requested-by' && next) {
-      metadata.requestedBy = next;
-      index += 1;
-    } else if (value === '--audience' && next) {
-      metadata.audience.push(next);
-      index += 1;
-    } else if (value === '--interest-area' && next) {
-      metadata.interestAreas.push(next);
-      index += 1;
-    } else if (value === '--visibility' && next) {
-      metadata.visibility = next;
-      index += 1;
-    } else if (value === '--captured-by' && next) {
-      metadata.capturedBy = next;
-      index += 1;
-    } else if (value === '--follow-up-by' && next) {
-      metadata.followUpBy = next;
-      index += 1;
-    } else {
+    const apply = Object.hasOwn(INSIGHT_OPTIONS, value) ? INSIGHT_OPTIONS[value] : null;
+    if (!apply) {
       textParts.push(value);
+      continue;
     }
+    // A missing value must not turn the option name into captured text.
+    const next = values[index + 1];
+    if (!next || next.startsWith('--')) return { error: `Missing value for ${value}.`, metadata };
+    apply(metadata, next);
+    index += 1;
   }
 
   return { text: textParts.join(' ').trim(), metadata };
 }
 
 function captureInsight(values) {
-  const { text, metadata } = parseInsightArgs(values);
+  const { text, metadata, error } = parseInsightArgs(values);
+  if (error) {
+    console.error(`${error} Nothing was captured.`);
+    process.exit(1);
+  }
   if (!text) {
     console.error('Missing insight text. Example: mole insight "Users trust CSV export more than dashboard totals"');
     process.exit(1);
@@ -2317,7 +2315,8 @@ if (isDirectRun) {
     case 'insight':
     case 'note':
     case 'signal':
-      captureInsight([subcommand, ...rest].filter(Boolean));
+      // Keep empty strings so an empty option value is reported, not skipped.
+      captureInsight([subcommand, ...rest].filter((value) => value !== undefined));
       break;
     case 'product-update':
       productUpdate([subcommand, ...rest].filter(Boolean));
