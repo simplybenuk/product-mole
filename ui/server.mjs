@@ -168,6 +168,14 @@ export async function captureNote(root, body = {}) {
     capturedBy: body.capturedBy || body.captured_by
   }, { date, sourceId });
 
+  // Refuse an inbox that is a link leaving the workspace before the raw
+  // text is written anywhere.
+  try {
+    toWorkspaceRelativePath(root, relPath);
+  } catch (err) {
+    return { status: 409, payload: { error: `Capture not written: ${err.message}`, path: relPath } };
+  }
+
   await fs.mkdir(path.dirname(resolved), { recursive: true });
   try {
     await fs.writeFile(resolved, frontmatter, { encoding: 'utf8', flag: 'wx' });
