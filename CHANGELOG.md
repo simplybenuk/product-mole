@@ -50,6 +50,14 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 - The UI does not serve a file or folder that is reached through a link
   leaving the workspace, and refuses a request body over 1 MB.
 
+### Added
+- `mole validate` reports `WORKSPACE_PATH_LINKED_OUTSIDE` when a required
+  folder, such as `6-raw/inbox`, is a link to a location outside the
+  workspace, and `WORKSPACE_PATH_LINKED` when it links elsewhere inside the
+  workspace. Both used to be reported as a missing folder. The inbox check is
+  skipped for a linked layout, so files behind the link are not reported as
+  unprocessed.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added
