@@ -39,6 +39,8 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   therefore no longer accepted.
 - `mole product-update` refuses `--format` with no value instead of treating
   the next word, or nothing, as the format.
+- Fixed broken relative links in `docs/architecture-and-design.md` and
+  `cli/README.md`.
 
 ### Security
 - The local UI (`node ui/server.mjs`) listens on `127.0.0.1` by default
@@ -57,6 +59,8 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   workspace. Both used to be reported as a missing folder. The inbox check is
   skipped for a linked layout, so files behind the link are not reported as
   unprocessed.
+- Added `npm run check:links`, which fails on broken relative links in
+  Markdown files. CI runs it on every supported Node.js version.
 
 ## [0.3.0] - 2026-10-19
 
