@@ -19,7 +19,6 @@ import { formatMetricsSummary, summarizeMetrics, writeMetricsSnapshot } from '..
 import { formatUtcTimestamp } from '../lib/capture.mjs';
 import {
   correctSource,
-  reconcileSource,
   registerAttachment,
   registerSource,
   resolveSource,
@@ -36,6 +35,7 @@ import {
   migrateLifecycleRecords,
   readLifecycleRecord,
   registerLifecycleRecord,
+  reconcileTrackedSource,
   relocateLifecycleRecord,
   assertLifecycleWritable,
   findPathClaims,
@@ -394,6 +394,24 @@ function getAgentsHome() {
 
 function initInstance(targetDir) {
   const target = path.resolve(cwd, targetDir || 'mole-instance');
+  // The scaffold copies over files of the same name, so an existing
+  // workspace would lose its summaries, indexes, and metric history.  The
+  // scaffold writes no top-level dotfiles, so a fresh git repository or a
+  // folder holding only operating-system noise still counts as empty.
+  let entries = null;
+  try {
+    entries = fs.readdirSync(target).filter((name) => !name.startsWith('.') && name !== 'Thumbs.db');
+  } catch (err) {
+    if (err.code === 'ENOTDIR') {
+      console.error(`Cannot create a workspace at ${target}: it is a file.`);
+      process.exit(1);
+    }
+    if (err.code !== 'ENOENT') throw err;
+  }
+  if (entries && entries.length > 0) {
+    console.error(`Refusing to create a workspace at ${target}: the folder is not empty. Choose a new folder name. To update an existing workspace, run "mole check-updates" from inside it.`);
+    process.exit(1);
+  }
   createWorkspaceScaffold(target);
 
   console.log(`Initialised Mole workspace at: ${target}`);
@@ -497,6 +515,16 @@ function createArtifact(kind, outputPath) {
   outputDraftInstruction(kind);
 }
 
+const INSIGHT_OPTIONS = Object.freeze({
+  '--stakeholder': (metadata, value) => { metadata.stakeholder = value; },
+  '--requested-by': (metadata, value) => { metadata.requestedBy = value; },
+  '--audience': (metadata, value) => { metadata.audience.push(value); },
+  '--interest-area': (metadata, value) => { metadata.interestAreas.push(value); },
+  '--visibility': (metadata, value) => { metadata.visibility = value; },
+  '--captured-by': (metadata, value) => { metadata.capturedBy = value; },
+  '--follow-up-by': (metadata, value) => { metadata.followUpBy = value; }
+});
+
 function parseInsightArgs(values) {
   const metadata = {
     audience: [],
@@ -506,48 +534,44 @@ function parseInsightArgs(values) {
 
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
-    const next = values[index + 1];
-
-    if (value === '--stakeholder' && next) {
-      metadata.stakeholder = next;
-      index += 1;
-    } else if (value === '--requested-by' && next) {
-      metadata.requestedBy = next;
-      index += 1;
-    } else if (value === '--audience' && next) {
-      metadata.audience.push(next);
-      index += 1;
-    } else if (value === '--interest-area' && next) {
-      metadata.interestAreas.push(next);
-      index += 1;
-    } else if (value === '--visibility' && next) {
-      metadata.visibility = next;
-      index += 1;
-    } else if (value === '--captured-by' && next) {
-      metadata.capturedBy = next;
-      index += 1;
-    } else if (value === '--follow-up-by' && next) {
-      metadata.followUpBy = next;
-      index += 1;
-    } else {
+    const apply = Object.hasOwn(INSIGHT_OPTIONS, value) ? INSIGHT_OPTIONS[value] : null;
+    if (!apply) {
       textParts.push(value);
+      continue;
     }
+    // A missing value must not turn the option name into captured text.
+    const next = values[index + 1];
+    if (!next || next.startsWith('--')) return { error: `Missing value for ${value}.`, metadata };
+    apply(metadata, next);
+    index += 1;
   }
 
   return { text: textParts.join(' ').trim(), metadata };
 }
 
 function captureInsight(values) {
-  const { text, metadata } = parseInsightArgs(values);
+  const { text, metadata, error } = parseInsightArgs(values);
+  if (error) {
+    console.error(`${error} Nothing was captured.`);
+    process.exit(1);
+  }
   if (!text) {
     console.error('Missing insight text. Example: mole insight "Users trust CSV export more than dashboard totals"');
     process.exit(1);
   }
 
   const dir = path.join(cwd, '6-raw', 'inbox');
-  ensureDir(dir);
   const fileName = createCaptureFileName(text);
   const target = path.join(dir, fileName);
+  // Refuse an inbox that is a link leaving the workspace before the raw
+  // text is written anywhere.
+  try {
+    toWorkspaceRelativePath(cwd, `6-raw/inbox/${fileName}`);
+  } catch (err) {
+    console.error(`Capture not written: ${err.message}`);
+    process.exit(1);
+  }
+  ensureDir(dir);
   const createdAt = nowUtc();
   const sourceId = createSourceId();
 
@@ -706,10 +730,9 @@ function parseProductUpdateArgs(values) {
 
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
-    const next = values[index + 1];
 
-    if (value === '--format' && next) {
-      format = next;
+    if (value === '--format') {
+      format = readOptionValue(values, index, value);
       index += 1;
     } else {
       positional.push(value);
@@ -827,7 +850,14 @@ Refresh the Mole top layers. Compare \`2-summaries/\` and \`3-indexes/\` with lo
 }
 
 function productUpdate(values) {
-  const { audience, timescale, format } = parseProductUpdateArgs(values);
+  let parsed;
+  try {
+    parsed = parseProductUpdateArgs(values);
+  } catch (error) {
+    console.error(`${error.message} Example: mole product-update CEO 2-weeks --format email`);
+    process.exit(1);
+  }
+  const { audience, timescale, format } = parsed;
 
   if (!audience || !timescale) {
     console.error('Missing product update target. Example: mole product-update CEO 2-weeks --format email');
@@ -1016,7 +1046,7 @@ function runSourceCommand(action, values = []) {
     if (action === 'reconcile') {
       const { sourceId, options } = parseSourceIdAndOptions(values, action);
       if (!options.path) throw new Error('Missing value for --path.');
-      const result = reconcileSource(cwd, sourceId, options.path, options);
+      const result = reconcileTrackedSource(cwd, sourceId, options.path, options);
       if (!options.json) console.log(result.changed ? 'Reconciled source.' : 'Source already reconciled.');
       printSourceResult(result, options);
       return;
@@ -2114,7 +2144,15 @@ function runMetricsCommand(action, values = []) {
   }
 
   if (action === 'backfill') {
-    const result = backfillProcessedInboxMetrics(cwd);
+    let result;
+    try {
+      result = backfillProcessedInboxMetrics(cwd);
+    } catch (error) {
+      if (error.code !== 'METRICS_NOT_WRITTEN') throw error;
+      console.error(`Refused: ${error.message}`);
+      process.exitCode = 1;
+      return;
+    }
     const output = result.blocked ? console.error : console.log;
     output(result.blocked
       ? 'Mole metrics backfill blocked; existing metric files were preserved.'
@@ -2283,7 +2321,8 @@ if (isDirectRun) {
     case 'insight':
     case 'note':
     case 'signal':
-      captureInsight([subcommand, ...rest].filter(Boolean));
+      // Keep empty strings so an empty option value is reported, not skipped.
+      captureInsight([subcommand, ...rest].filter((value) => value !== undefined));
       break;
     case 'product-update':
       productUpdate([subcommand, ...rest].filter(Boolean));

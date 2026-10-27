@@ -6,6 +6,50 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Fixed
+- `mole new` and `mole init` refuse a target folder that is not empty.
+  Previously they copied the scaffold over an existing workspace and replaced
+  its summaries, indexes, and metric history without warning.
+- `mole metrics backfill` and the metrics update in `mole inbox complete` no
+  longer write `daily.json`, `weekly.json`, `monthly.json`, or
+  `seen-today.json` through a `governance/metrics` link that leaves the
+  workspace. Backfill is refused and writes nothing; `mole inbox complete`
+  still writes its receipt.
+- `mole source reconcile` no longer points a source at a moved file that an
+  open lifecycle record follows by its content. It refuses and names the
+  `mole lifecycle relocate` command, so an accepted record cannot become
+  `source_unresolved` this way.
+- `mole insight` and UI captures no longer write raw text through a
+  `6-raw/inbox` link that leaves the workspace. The capture is refused before
+  anything is written. Previously the file was written outside the workspace
+  and only source registration failed.
+- `mole source migrate --apply` no longer writes its report through a link
+  that leaves the workspace, such as a linked
+  `governance/run-receipts/source-migration/` folder. The run is refused
+  before any artifact is changed.
+- `mole inbox claim`, `heartbeat`, `checkpoint`, `complete`, and
+  `override-stale` refuse to run when the inbox lock, receipts, or overrides
+  path resolves outside the workspace through a link. Previously a linked
+  `governance/run-receipts/inbox-processing/` folder received receipts,
+  including run summaries and processed paths.
+- `mole insight` refuses an option with no value, such as a trailing
+  `--stakeholder`, instead of capturing the option name as the insight text.
+  An option followed by another option is refused too, instead of taking the
+  second option as its value. A value that itself starts with `--` is
+  therefore no longer accepted.
+- `mole product-update` refuses `--format` with no value instead of treating
+  the next word, or nothing, as the format.
+
+### Security
+- The local UI (`node ui/server.mjs`) listens on `127.0.0.1` by default
+  instead of every network interface. Set `MOLE_UI_HOST` to choose another
+  address.
+- The UI refuses requests whose `Host` header is not loopback or
+  `MOLE_UI_HOST`, which blocks DNS-rebinding reads, and refuses `POST`
+  requests that are not `application/json`, which blocks cross-site captures.
+- The UI does not serve a file or folder that is reached through a link
+  leaving the workspace, and refuses a request body over 1 MB.
+
 ### Added
 - `mole validate` reports `WORKSPACE_PATH_LINKED_OUTSIDE` when a required
   folder, such as `6-raw/inbox`, is a link to a location outside the
