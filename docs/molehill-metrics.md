@@ -140,6 +140,13 @@ and it changes nothing when receipt state is ambiguous. It does not create
 history for the other categories: those come from the ledger, which is
 already the full record of what it covers.
 
+Neither `mole metrics backfill` nor `mole inbox complete` writes metric
+history through a link that leaves the workspace. If `governance/metrics/`,
+or one of its history files, resolves outside the workspace, backfill is
+refused and writes nothing. `mole inbox complete` still writes its receipt
+and prints a warning; replace the link with a folder and run
+`mole metrics backfill` to rebuild the history.
+
 ## JSON shape
 
 ```json
