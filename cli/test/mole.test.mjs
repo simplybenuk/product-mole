@@ -39,7 +39,7 @@ import {
   getReleaseMetadata
 } from '../../scripts/check-release-consistency.mjs';
 import { createGitSnapshot } from '../../scripts/verify-package.mjs';
-import { buildUiCaptureContent, createCaptureRelPath, refuseRequest, captureNote } from '../../ui/server.mjs';
+import { buildUiCaptureContent, createCaptureRelPath, refuseRequest, captureNote, safeRepoPath } from '../../ui/server.mjs';
 import { createSourceId, readSourceRecord, registerSource } from '../../lib/source-registry.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
@@ -899,6 +899,35 @@ describe('capture attribution metadata', () => {
       fs.rmSync(dir, { recursive: true, force: true });
       fs.rmSync(outside, { recursive: true, force: true });
     }
+  });
+
+  it('does not serve a UI file through a link that leaves the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        fs.writeFileSync(path.join(outside, 'secret.md'), 'secret\n');
+        fs.mkdirSync(path.join(dir, '4-context'), { recursive: true });
+        fs.writeFileSync(path.join(dir, '4-context', 'notes.md'), 'notes\n');
+        try {
+          fs.symlinkSync(path.join(outside, 'secret.md'), path.join(dir, '4-context', 'secret.md'));
+          fs.symlinkSync(outside, path.join(dir, '5-evidence'), 'dir');
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        assert.equal(safeRepoPath('4-context/notes.md', dir).rel, path.join('4-context', 'notes.md'));
+        assert.throws(() => safeRepoPath('4-context/secret.md', dir), /Path outside allowed roots/);
+        assert.throws(() => safeRepoPath('5-evidence/secret.md', dir), /Path outside allowed roots/);
+        assert.throws(() => safeRepoPath('5-evidence', dir), /Path outside allowed roots/);
+        // The registry check trims names, so a padded link name must not slip past it.
+        fs.symlinkSync(path.join(outside, 'secret.md'), path.join(dir, '4-context', 'padded.md '));
+        assert.throws(() => safeRepoPath('4-context/padded.md ', dir), /Path outside allowed roots/);
+        assert.throws(() => safeRepoPath('4-context/padded.md\t', dir), /Path outside allowed roots/);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
+    });
   });
 
   it('serializes source IDs in UI capture frontmatter', () => {
