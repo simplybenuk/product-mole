@@ -7,6 +7,18 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 ## [Unreleased]
 
 ### Fixed
+- `mole new` and `mole init` refuse a target folder that is not empty.
+  Previously they copied the scaffold over an existing workspace and replaced
+  its summaries, indexes, and metric history without warning.
+- `mole metrics backfill` and the metrics update in `mole inbox complete` no
+  longer write `daily.json`, `weekly.json`, `monthly.json`, or
+  `seen-today.json` through a `governance/metrics` link that leaves the
+  workspace. Backfill is refused and writes nothing; `mole inbox complete`
+  still writes its receipt.
+- `mole source reconcile` no longer points a source at a moved file that an
+  open lifecycle record follows by its content. It refuses and names the
+  `mole lifecycle relocate` command, so an accepted record cannot become
+  `source_unresolved` this way.
 - `mole insight` and UI captures no longer write raw text through a
   `6-raw/inbox` link that leaves the workspace. The capture is refused before
   anything is written. Previously the file was written outside the workspace
