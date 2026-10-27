@@ -1396,6 +1396,42 @@ describe('inbox processing lock and receipt', () => {
     );
   });
 
+  it('refuses inbox coordination when receipts are linked outside the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        fs.mkdirSync(path.join(dir, '6-raw', 'inbox'), { recursive: true });
+        fs.writeFileSync(path.join(dir, '6-raw', 'inbox', 'a.md'), 'a\n');
+        fs.mkdirSync(path.join(dir, 'governance', 'run-receipts'), { recursive: true });
+        try {
+          fs.symlinkSync(outside, path.join(dir, 'governance', 'run-receipts', 'inbox-processing'), 'dir');
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        const claim = runCli([
+          'inbox', 'claim', '--run-id', 'linked-run', '--processor', 'Ada',
+          '--claimed-path', '6-raw/inbox/a.md'
+        ], { cwd: dir });
+        const complete = runCli([
+          'inbox', 'complete', '--run-id', 'linked-run', '--processor', 'Ada',
+          '--processed', '6-raw/inbox/a.md', '--override-missing-lock', '--reason', 'test',
+          'Private', 'summary.'
+        ], { cwd: dir });
+
+        for (const result of [claim, complete]) {
+          assert.equal(result.status, 1);
+          assert.match(result.stderr, /Inbox coordination files would be written outside the workspace \(Symlink resolves outside the workspace: governance\/run-receipts\/inbox-processing\)\. Nothing was written\./);
+        }
+        assert.deepEqual(fs.readdirSync(outside), []);
+        assert.equal(fs.existsSync(path.join(dir, 'governance', 'inbox-processing.lock.json')), false);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
+    });
+  });
+
   it('records processed paths in metrics when the CLI completes inbox processing', () => {
     withTempInstance((dir) => {
       const claim = runCli([
