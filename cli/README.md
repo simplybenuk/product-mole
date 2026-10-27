@@ -81,7 +81,7 @@ mole critique spec drafts/spec.md
 | Command | What it does |
 | --- | --- |
 | `mole --help` | Prints CLI usage, examples, and supported commands. |
-| `mole new <workspace-name>` | Creates a new Mole workspace from the bundled scaffold. |
+| `mole new <workspace-name>` | Creates a new Mole workspace from the bundled scaffold. Refuses a folder that already has files in it, other than dotfiles such as `.git`. |
 | `mole init [target-dir]` | Backwards-compatible alias for `mole new`. |
 | `mole install skills` | Installs Mole agent skills. |
 | `mole doctor` | Checks source and instance versions plus required instance folders. |

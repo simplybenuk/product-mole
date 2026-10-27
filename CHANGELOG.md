@@ -6,6 +6,11 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Fixed
+- `mole new` and `mole init` refuse a target folder that is not empty.
+  Previously they copied the scaffold over an existing workspace and replaced
+  its summaries, indexes, and metric history without warning.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added
