@@ -7,7 +7,11 @@ import { fileURLToPath } from 'node:url';
 
 export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const INLINE_LINK_PATTERN = /\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g;
+const INLINE_LINK_PATTERN = /\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g;
+const REFERENCE_DEFINITION_PATTERN = /^\s{0,3}\[([^\]]+)\]:\s*(?:<([^>]+)>|(\S+))(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*$/;
+const EMPTY_REFERENCE_DEFINITION_PATTERN = /^\s{0,3}\[([^\]]+)\]:\s*$/;
+const CONTINUED_REFERENCE_TARGET_PATTERN = /^\s*(?:<([^>]+)>|(\S+))(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*$/;
+const REFERENCE_PATTERN = /\[([^\]]+)\](?:\[([^\]]*)\])?/g;
 const EXTERNAL_TARGET_PATTERN = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 const FENCE_PATTERN = /^\s*(```|~~~)/;
 
@@ -56,31 +60,77 @@ export function findBrokenLinks(root = repoRoot) {
   for (const file of listMarkdownFiles(root)) {
     const content = stripCode(fs.readFileSync(path.join(root, file), 'utf8'));
     const lines = content.split('\n');
+    const references = new Map();
+    const definitionLines = new Set();
+
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      const definition = line.match(REFERENCE_DEFINITION_PATTERN);
+      if (definition) {
+        const [, label, angleTarget, bareTarget] = definition;
+        const key = normalizeReferenceLabel(label);
+        if (!references.has(key)) references.set(key, angleTarget ?? bareTarget);
+        definitionLines.add(index);
+        continue;
+      }
+
+      const emptyDefinition = line.match(EMPTY_REFERENCE_DEFINITION_PATTERN);
+      if (!emptyDefinition) continue;
+      definitionLines.add(index);
+      const continuedTarget = lines[index + 1]?.match(CONTINUED_REFERENCE_TARGET_PATTERN);
+      if (!continuedTarget) continue;
+      const [, angleTarget, bareTarget] = continuedTarget;
+      const key = normalizeReferenceLabel(emptyDefinition[1]);
+      if (!references.has(key)) references.set(key, angleTarget ?? bareTarget);
+      definitionLines.add(index + 1);
+      index += 1;
+    }
 
     lines.forEach((line, index) => {
+      const referenceText = line.replace(INLINE_LINK_PATTERN, (inlineLink) => ' '.repeat(inlineLink.length));
       for (const match of line.matchAll(INLINE_LINK_PATTERN)) {
-        const target = match[1];
-        if (EXTERNAL_TARGET_PATTERN.test(target) || target.startsWith('#')) continue;
+        checkTarget(match[1], file, index + 1, root, broken);
+      }
 
-        const targetPath = target.split('#')[0].split('?')[0];
-        let decodedPath;
-        try {
-          decodedPath = decodeURI(targetPath);
-        } catch {
-          decodedPath = targetPath;
-        }
-
-        const resolved = decodedPath.startsWith('/')
-          ? path.join(root, decodedPath)
-          : path.resolve(root, path.dirname(file), decodedPath);
-        if (!fs.existsSync(resolved)) {
-          broken.push({ file, line: index + 1, target });
-        }
+      if (definitionLines.has(index)) return;
+      for (const match of referenceText.matchAll(REFERENCE_PATTERN)) {
+        if (isEscaped(referenceText, match.index)) continue;
+        const label = match[2] === undefined || match[2] === '' ? match[1] : match[2];
+        const target = references.get(normalizeReferenceLabel(label));
+        if (target !== undefined) checkTarget(target, file, index + 1, root, broken);
       }
     });
   }
 
   return broken;
+}
+
+function isEscaped(text, index) {
+  let backslashes = 0;
+  for (let cursor = index - 1; cursor >= 0 && text[cursor] === '\\'; cursor -= 1) backslashes += 1;
+  return backslashes % 2 === 1;
+}
+
+function normalizeReferenceLabel(label) {
+  return label.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function checkTarget(target, file, line, root, broken) {
+  if (EXTERNAL_TARGET_PATTERN.test(target) || target.startsWith('#')) return;
+
+  const targetPath = target.split(/[?#]/, 1)[0];
+  let decodedPath;
+  try {
+    // decodeURIComponent also decodes reserved filename characters such as %23.
+    decodedPath = decodeURIComponent(targetPath);
+  } catch {
+    decodedPath = targetPath;
+  }
+
+  const resolved = decodedPath.startsWith('/')
+    ? path.join(root, decodedPath)
+    : path.resolve(root, path.dirname(file), decodedPath);
+  if (!fs.existsSync(resolved)) broken.push({ file, line, target });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
