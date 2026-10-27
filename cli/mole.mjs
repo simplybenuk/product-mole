@@ -2132,7 +2132,15 @@ function runMetricsCommand(action, values = []) {
   }
 
   if (action === 'backfill') {
-    const result = backfillProcessedInboxMetrics(cwd);
+    let result;
+    try {
+      result = backfillProcessedInboxMetrics(cwd);
+    } catch (error) {
+      if (error.code !== 'METRICS_NOT_WRITTEN') throw error;
+      console.error(`Refused: ${error.message}`);
+      process.exitCode = 1;
+      return;
+    }
     const output = result.blocked ? console.error : console.log;
     output(result.blocked
       ? 'Mole metrics backfill blocked; existing metric files were preserved.'
