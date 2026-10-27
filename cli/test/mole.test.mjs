@@ -39,7 +39,7 @@ import {
   getReleaseMetadata
 } from '../../scripts/check-release-consistency.mjs';
 import { createGitSnapshot } from '../../scripts/verify-package.mjs';
-import { buildUiCaptureContent, createCaptureRelPath } from '../../ui/server.mjs';
+import { buildUiCaptureContent, createCaptureRelPath, refuseRequest, captureNote, safeRepoPath } from '../../ui/server.mjs';
 import { createSourceId, readSourceRecord, registerSource } from '../../lib/source-registry.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
@@ -692,6 +692,40 @@ describe('check-updates', () => {
     });
   });
 
+  it('refuses to create a workspace over a folder that is not empty', () => {
+    withTempInstance((dir) => {
+      assert.equal(runCli(['new', 'ws'], { cwd: dir }).status, 0);
+      const summary = path.join(dir, 'ws', '2-summaries', 'user-summary.md');
+      fs.writeFileSync(summary, 'My own summary\n');
+
+      for (const command of ['new', 'init']) {
+        const result = runCli([command, 'ws'], { cwd: dir });
+        assert.equal(result.status, 1);
+        assert.match(result.stderr, /Refusing to create a workspace at .*: the folder is not empty/);
+      }
+      assert.equal(fs.readFileSync(summary, 'utf8'), 'My own summary\n');
+    });
+  });
+
+  it('creates a workspace in an existing empty folder or fresh git repository', () => {
+    withTempInstance((dir) => {
+      fs.mkdirSync(path.join(dir, 'ws', '.git'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'ws', '.DS_Store'), '');
+      const result = runCli(['new', 'ws'], { cwd: dir });
+      assert.equal(result.status, 0);
+      assert.equal(fs.existsSync(path.join(dir, 'ws', 'mole.instance.yaml')), true);
+    });
+  });
+
+  it('refuses to create a workspace at a file path', () => {
+    withTempInstance((dir) => {
+      fs.writeFileSync(path.join(dir, 'ws'), 'not a folder\n');
+      const result = runCli(['new', 'ws'], { cwd: dir });
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /it is a file/);
+    });
+  });
+
   it('reports when the source is newer than the instance', () => {
     withTempInstance((dir) => {
       fs.writeFileSync(
@@ -779,6 +813,31 @@ describe('capture attribution metadata', () => {
     assert.match(content, /follow_up_by: "2026-05-20"/);
   });
 
+  it('refuses an insight option with no value instead of capturing the option name', () => {
+    withTempInstance((dir) => {
+      fs.mkdirSync(path.join(dir, '6-raw', 'inbox'), { recursive: true });
+      for (const args of [
+        ['insight', '--stakeholder'],
+        ['insight', 'Pricing feedback', '--audience'],
+        ['insight', '--stakeholder', '--audience', 'exec', 'Pricing feedback'],
+        ['insight', '--stakeholder', '', 'Pricing feedback']
+      ]) {
+        const result = runCli(args, { cwd: dir });
+        assert.equal(result.status, 1);
+        assert.match(result.stderr, /Missing value for --(stakeholder|audience)\. Nothing was captured\./);
+      }
+      assert.deepEqual(fs.readdirSync(path.join(dir, '6-raw', 'inbox')), []);
+
+      const ok = runCli(['insight', '--stakeholder', 'CEO', '--audience', 'exec', 'Pricing feedback'], { cwd: dir });
+      assert.equal(ok.status, 0);
+      const [capture] = fs.readdirSync(path.join(dir, '6-raw', 'inbox'));
+      const content = fs.readFileSync(path.join(dir, '6-raw', 'inbox', capture), 'utf8');
+      assert.match(content, /stakeholder: "CEO"/);
+      assert.match(content, /audience: \["exec"\]/);
+      assert.match(content, /Pricing feedback/);
+    });
+  });
+
   it('emits captured_by in UI capture frontmatter', () => {
     const content = buildUiCaptureContent({
       source: 'customer',
@@ -815,6 +874,95 @@ describe('capture attribution metadata', () => {
       assert.equal(record.source_type, 'note');
       assert.equal(record.channel, 'cli');
       assert.equal(record.captured_by, 'Ada');
+    });
+  });
+
+  it('refuses UI requests another website could send through the browser', () => {
+    for (const host of ['localhost:4173', '127.0.0.1:4173', '[::1]:4173', 'LOCALHOST']) {
+      assert.equal(refuseRequest('GET', { host }, { host: '127.0.0.1' }), null);
+    }
+    assert.equal(refuseRequest('GET', { host: 'evil.example:4173' }, { host: '127.0.0.1' }).status, 403);
+    assert.equal(refuseRequest('GET', { host: 'localhost.evil.example' }, { host: '127.0.0.1' }).status, 403);
+    assert.equal(refuseRequest('GET', {}, { host: '127.0.0.1' }).status, 403);
+    assert.equal(refuseRequest('POST', { host: 'localhost:4173', 'content-type': 'text/plain' }, { host: '127.0.0.1' }).status, 415);
+    assert.equal(refuseRequest('POST', { host: 'localhost:4173' }, { host: '127.0.0.1' }).status, 415);
+    assert.equal(refuseRequest('POST', { host: 'localhost:4173', 'content-type': 'application/json; charset=utf-8' }, { host: '127.0.0.1' }), null);
+    // A host chosen with MOLE_UI_HOST is allowed as well.
+    assert.equal(refuseRequest('GET', { host: '192.168.1.20:4173' }, { host: '192.168.1.20' }), null);
+  });
+
+  it('refuses a CLI capture through an inbox linked outside the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        fs.mkdirSync(path.join(dir, '6-raw'), { recursive: true });
+        try {
+          fs.symlinkSync(outside, path.join(dir, '6-raw', 'inbox'), 'dir');
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        const result = runCli(['insight', 'A private observation'], { cwd: dir });
+
+        assert.equal(result.status, 1);
+        assert.match(result.stderr, /Capture not written: Symlink resolves outside the workspace: 6-raw\/inbox/);
+        assert.deepEqual(fs.readdirSync(outside), []);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it('refuses a UI capture through an inbox linked outside the workspace', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-test-'));
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+    try {
+      fs.mkdirSync(path.join(dir, '6-raw'), { recursive: true });
+      try {
+        fs.symlinkSync(outside, path.join(dir, '6-raw', 'inbox'), 'dir');
+      } catch (error) {
+        if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+        throw error;
+      }
+
+      const result = await captureNote(dir, { note: 'A private observation' });
+
+      assert.equal(result.status, 409);
+      assert.match(result.payload.error, /Capture not written: Symlink resolves outside the workspace/);
+      assert.deepEqual(fs.readdirSync(outside), []);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it('does not serve a UI file through a link that leaves the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        fs.writeFileSync(path.join(outside, 'secret.md'), 'secret\n');
+        fs.mkdirSync(path.join(dir, '4-context'), { recursive: true });
+        fs.writeFileSync(path.join(dir, '4-context', 'notes.md'), 'notes\n');
+        try {
+          fs.symlinkSync(path.join(outside, 'secret.md'), path.join(dir, '4-context', 'secret.md'));
+          fs.symlinkSync(outside, path.join(dir, '5-evidence'), 'dir');
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        assert.equal(safeRepoPath('4-context/notes.md', dir).rel, path.join('4-context', 'notes.md'));
+        assert.throws(() => safeRepoPath('4-context/secret.md', dir), /Path outside allowed roots/);
+        assert.throws(() => safeRepoPath('5-evidence/secret.md', dir), /Path outside allowed roots/);
+        assert.throws(() => safeRepoPath('5-evidence', dir), /Path outside allowed roots/);
+        // The registry check trims names, so a padded link name must not slip past it.
+        fs.symlinkSync(path.join(outside, 'secret.md'), path.join(dir, '4-context', 'padded.md '));
+        assert.throws(() => safeRepoPath('4-context/padded.md ', dir), /Path outside allowed roots/);
+        assert.throws(() => safeRepoPath('4-context/padded.md\t', dir), /Path outside allowed roots/);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
     });
   });
 
@@ -1325,6 +1473,42 @@ describe('inbox processing lock and receipt', () => {
       () => parseInboxCompleteValues(['--procesor', 'Ada']),
       /Unknown inbox completion option --procesor/
     );
+  });
+
+  it('refuses inbox coordination when receipts are linked outside the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        fs.mkdirSync(path.join(dir, '6-raw', 'inbox'), { recursive: true });
+        fs.writeFileSync(path.join(dir, '6-raw', 'inbox', 'a.md'), 'a\n');
+        fs.mkdirSync(path.join(dir, 'governance', 'run-receipts'), { recursive: true });
+        try {
+          fs.symlinkSync(outside, path.join(dir, 'governance', 'run-receipts', 'inbox-processing'), 'dir');
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        const claim = runCli([
+          'inbox', 'claim', '--run-id', 'linked-run', '--processor', 'Ada',
+          '--claimed-path', '6-raw/inbox/a.md'
+        ], { cwd: dir });
+        const complete = runCli([
+          'inbox', 'complete', '--run-id', 'linked-run', '--processor', 'Ada',
+          '--processed', '6-raw/inbox/a.md', '--override-missing-lock', '--reason', 'test',
+          'Private', 'summary.'
+        ], { cwd: dir });
+
+        for (const result of [claim, complete]) {
+          assert.equal(result.status, 1);
+          assert.match(result.stderr, /Inbox coordination files would be written outside the workspace \(Symlink resolves outside the workspace: governance\/run-receipts\/inbox-processing\)\. Nothing was written\./);
+        }
+        assert.deepEqual(fs.readdirSync(outside), []);
+        assert.equal(fs.existsSync(path.join(dir, 'governance', 'inbox-processing.lock.json')), false);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
+    });
   });
 
   it('records processed paths in metrics when the CLI completes inbox processing', () => {
@@ -4030,6 +4214,98 @@ describe('processed inbox metrics', () => {
       assert.match(result.stdout, /Mole metrics backfill complete/);
       assert.match(result.stdout, /Receipts scanned: 1/);
       assert.match(result.stdout, /Processed paths counted: 1/);
+    });
+  });
+
+  it('refuses metrics backfill through a metrics folder linked outside the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+        fs.mkdirSync(receiptsDir, { recursive: true });
+        fs.writeFileSync(path.join(receiptsDir, 'receipt.json'), `${JSON.stringify({
+          receipt_id: 'legacy-cli-receipt',
+          completed_at: '2026-06-11T10:00:00.000Z',
+          processed: ['6-raw/inbox/a.md']
+        }, null, 2)}\n`);
+        fs.rmSync(path.join(dir, 'governance', 'metrics'), { recursive: true, force: true });
+        try {
+          fs.symlinkSync(outside, path.join(dir, 'governance', 'metrics'), 'dir');
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        const result = runCli(['metrics', 'backfill'], { cwd: dir });
+
+        assert.equal(result.status, 1);
+        assert.match(result.stderr, /Refused: Inbox metrics were not written\. governance\/metrics is outside the workspace: Symlink resolves outside the workspace: governance\/metrics/);
+        assert.deepEqual(fs.readdirSync(outside), []);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it('refuses to write a metric file linked outside the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        const paths = getMetricsPaths(dir);
+        const outsideDaily = path.join(outside, 'daily.json');
+        fs.writeFileSync(outsideDaily, 'untouched\n');
+        fs.mkdirSync(paths.metricsDir, { recursive: true });
+        fs.rmSync(paths.dailyPath, { force: true });
+        try {
+          fs.symlinkSync(outsideDaily, paths.dailyPath);
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        assert.throws(
+          () => backfillProcessedInboxMetrics(dir),
+          (error) => error.code === 'METRICS_NOT_WRITTEN' && error.path === 'governance/metrics/daily.json'
+        );
+        assert.equal(fs.readFileSync(outsideDaily, 'utf8'), 'untouched\n');
+        assert.equal(fs.existsSync(paths.weeklyPath), false);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it('still writes the inbox receipt when metrics are linked outside the workspace', () => {
+    withTempInstance((dir) => {
+      const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mole-outside-'));
+      try {
+        fs.rmSync(path.join(dir, 'governance', 'metrics'), { recursive: true, force: true });
+        fs.mkdirSync(path.join(dir, 'governance'), { recursive: true });
+        try {
+          fs.symlinkSync(outside, path.join(dir, 'governance', 'metrics'), 'dir');
+        } catch (error) {
+          if (['EACCES', 'EPERM', 'EOPNOTSUPP'].includes(error.code)) return;
+          throw error;
+        }
+
+        const claim = runCli([
+          'inbox', 'claim', '--run-id', 'cli-run-link', '--processor', 'Ada',
+          '--claimed-path', '6-raw/inbox/a.md'
+        ], { cwd: dir });
+        const complete = runCli([
+          'inbox', 'complete', '--run-id', 'cli-run-link', '--processor', 'Ada',
+          '--processed', '6-raw/inbox/a.md', 'Promoted', 'one', 'note.'
+        ], { cwd: dir });
+
+        const receiptsDir = path.join(dir, 'governance', 'run-receipts', 'inbox-processing');
+        assert.equal(claim.status, 0);
+        assert.equal(complete.status, 0);
+        assert.match(complete.stderr, /Warning: inbox metrics reconciliation failed: Inbox metrics were not written/);
+        assert.equal(fs.readdirSync(receiptsDir).filter((file) => file.endsWith('.json')).length, 1);
+        assert.deepEqual(fs.readdirSync(outside), []);
+      } finally {
+        fs.rmSync(outside, { recursive: true, force: true });
+      }
     });
   });
 
