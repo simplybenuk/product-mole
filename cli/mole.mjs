@@ -563,9 +563,17 @@ function captureInsight(values) {
   }
 
   const dir = path.join(cwd, '6-raw', 'inbox');
-  ensureDir(dir);
   const fileName = createCaptureFileName(text);
   const target = path.join(dir, fileName);
+  // Refuse an inbox that is a link leaving the workspace before the raw
+  // text is written anywhere.
+  try {
+    toWorkspaceRelativePath(cwd, `6-raw/inbox/${fileName}`);
+  } catch (err) {
+    console.error(`Capture not written: ${err.message}`);
+    process.exit(1);
+  }
+  ensureDir(dir);
   const createdAt = nowUtc();
   const sourceId = createSourceId();
 

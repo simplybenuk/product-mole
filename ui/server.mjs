@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCaptureFileName, resolveCapturedBy } from '../lib/capture.mjs';
-import { createSourceId, registerSource } from '../lib/source-registry.mjs';
+import { createSourceId, registerSource, toWorkspaceRelativePath } from '../lib/source-registry.mjs';
 import { registerLifecycleRecord } from '../lib/review-lifecycle.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -136,6 +136,14 @@ export async function captureNote(root, body = {}) {
     note,
     capturedBy: body.capturedBy || body.captured_by
   }, { date, sourceId });
+
+  // Refuse an inbox that is a link leaving the workspace before the raw
+  // text is written anywhere.
+  try {
+    toWorkspaceRelativePath(root, relPath);
+  } catch (err) {
+    return { status: 409, payload: { error: `Capture not written: ${err.message}`, path: relPath } };
+  }
 
   await fs.mkdir(path.dirname(resolved), { recursive: true });
   try {
