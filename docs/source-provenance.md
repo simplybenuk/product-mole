@@ -96,7 +96,9 @@ mole source migrate [--apply] [--json]
 `register` creates metadata without changing the source bytes. `resolve` is
 read-only. It checks the current path, path history, and exact hash before using
 archive search. A filename alone is never enough. `reconcile` records a move
-only after the candidate still matches the stored hash. `correct` records a new
+only after the candidate still matches the stored hash, and refuses a file that
+an open lifecycle record follows by its content (see
+[`review-lifecycle.md`](review-lifecycle.md)). `correct` records a new
 hash and reason for the same logical source.
 
 Migration is read-only by default. It classifies legacy path references as
