@@ -19,7 +19,6 @@ import { formatMetricsSummary, summarizeMetrics, writeMetricsSnapshot } from '..
 import { formatUtcTimestamp } from '../lib/capture.mjs';
 import {
   correctSource,
-  reconcileSource,
   registerAttachment,
   registerSource,
   resolveSource,
@@ -36,6 +35,7 @@ import {
   migrateLifecycleRecords,
   readLifecycleRecord,
   registerLifecycleRecord,
+  reconcileTrackedSource,
   relocateLifecycleRecord,
   assertLifecycleWritable,
   findPathClaims,
@@ -1034,7 +1034,7 @@ function runSourceCommand(action, values = []) {
     if (action === 'reconcile') {
       const { sourceId, options } = parseSourceIdAndOptions(values, action);
       if (!options.path) throw new Error('Missing value for --path.');
-      const result = reconcileSource(cwd, sourceId, options.path, options);
+      const result = reconcileTrackedSource(cwd, sourceId, options.path, options);
       if (!options.json) console.log(result.changed ? 'Reconciled source.' : 'Source already reconciled.');
       printSourceResult(result, options);
       return;
