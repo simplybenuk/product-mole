@@ -394,6 +394,24 @@ function getAgentsHome() {
 
 function initInstance(targetDir) {
   const target = path.resolve(cwd, targetDir || 'mole-instance');
+  // The scaffold copies over files of the same name, so an existing
+  // workspace would lose its summaries, indexes, and metric history.  The
+  // scaffold writes no top-level dotfiles, so a fresh git repository or a
+  // folder holding only operating-system noise still counts as empty.
+  let entries = null;
+  try {
+    entries = fs.readdirSync(target).filter((name) => !name.startsWith('.') && name !== 'Thumbs.db');
+  } catch (err) {
+    if (err.code === 'ENOTDIR') {
+      console.error(`Cannot create a workspace at ${target}: it is a file.`);
+      process.exit(1);
+    }
+    if (err.code !== 'ENOENT') throw err;
+  }
+  if (entries && entries.length > 0) {
+    console.error(`Refusing to create a workspace at ${target}: the folder is not empty. Choose a new folder name. To update an existing workspace, run "mole check-updates" from inside it.`);
+    process.exit(1);
+  }
   createWorkspaceScaffold(target);
 
   console.log(`Initialised Mole workspace at: ${target}`);
@@ -2114,7 +2132,15 @@ function runMetricsCommand(action, values = []) {
   }
 
   if (action === 'backfill') {
-    const result = backfillProcessedInboxMetrics(cwd);
+    let result;
+    try {
+      result = backfillProcessedInboxMetrics(cwd);
+    } catch (error) {
+      if (error.code !== 'METRICS_NOT_WRITTEN') throw error;
+      console.error(`Refused: ${error.message}`);
+      process.exitCode = 1;
+      return;
+    }
     const output = result.blocked ? console.error : console.log;
     output(result.blocked
       ? 'Mole metrics backfill blocked; existing metric files were preserved.'
