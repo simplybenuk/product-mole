@@ -13,6 +13,7 @@ import {
   checkpointInboxProcessing,
   overrideStaleInboxProcessing
 } from '../lib/inbox-processing.mjs';
+import { inspectInboxDuplicates, recordDuplicateDecision } from '../lib/inbox-duplicates.mjs';
 import { auditInbox } from '../lib/inbox-audit.mjs';
 import { backfillProcessedInboxMetrics } from '../lib/metrics.mjs';
 import { formatMetricsSummary, summarizeMetrics, writeMetricsSnapshot } from '../lib/metrics-summary.mjs';
@@ -160,6 +161,8 @@ Usage:
   mole inbox checkpoint --run-id id [--processed path]
                                       Save restart-safe partial progress.
   mole inbox audit                    Audit live files, leases, conflicts, and receipts.
+  mole inbox duplicates check <id>...  Check registered sources before enrichment.
+  mole inbox duplicates decide        Record an explicit human duplicate decision.
   mole inbox complete [options] [summary]
                                       Write an idempotent receipt and release the lock.
   mole inbox override-stale [options] Replace an expired lock with an audited override.
@@ -1898,6 +1901,34 @@ function upgradeTool(version) {
 }
 
 function runInboxCommand(action, values = []) {
+  if (action === 'duplicates') {
+    try {
+      const [operation, ...args] = values;
+      if (operation === 'check') {
+        let threshold = 0.8;
+        const ids = [];
+        for (let i = 0; i < args.length; i++) {
+          if (args[i] === '--threshold') threshold = Number(args[++i]);
+          else ids.push(args[i]);
+        }
+        if (!ids.length) throw new Error('Provide registered source IDs.');
+        // Index the whole batch before returning symmetric comparison reports.
+        for (const id of ids) inspectInboxDuplicates(cwd, id, { threshold, near: false });
+        console.log(JSON.stringify(ids.map(id => inspectInboxDuplicates(cwd, id, { threshold })), null, 2));
+      } else if (operation === 'decide') {
+        const [sourceId, targetId, status, ...flags] = args;
+        const options = { sourceId, targetId, status };
+        for (let i = 0; i < flags.length; i++) {
+          if (flags[i] === '--confirm-human') options.confirmHuman = true;
+          else if (flags[i] === '--actor') options.actor = flags[++i];
+          else if (flags[i] === '--reason') options.reason = flags[++i];
+          else throw new Error('Unknown duplicate decision option.');
+        }
+        console.log(JSON.stringify(recordDuplicateDecision(cwd, options), null, 2));
+      } else throw new Error('Use inbox duplicates check <source-id>... [--threshold 0.8] or decide <source-id> <target-id> <status> --confirm-human --actor <local-id> --reason <code>.');
+    } catch (error) { console.error(error.message); process.exit(1); }
+    return;
+  }
   if (action === 'audit') {
     const result = auditInbox(cwd);
     console.log('Mole inbox audit');
