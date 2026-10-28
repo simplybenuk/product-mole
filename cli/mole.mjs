@@ -14,7 +14,7 @@ import {
   checkpointInboxProcessing,
   overrideStaleInboxProcessing
 } from '../lib/inbox-processing.mjs';
-import { ingestPrivateCapture, scanRaw, purgeRaw, reviewQuarantine, auditPrivacy } from '../lib/privacy.mjs';
+import { ingestCaptureFields, scanRaw, purgeRaw, reviewQuarantine, auditPrivacy } from '../lib/privacy.mjs';
 import { auditInbox } from '../lib/inbox-audit.mjs';
 import { backfillProcessedInboxMetrics } from '../lib/metrics.mjs';
 import { formatMetricsSummary, summarizeMetrics, writeMetricsSnapshot } from '../lib/metrics-summary.mjs';
@@ -591,8 +591,11 @@ function captureInsight(values) {
   const sourceId = createSourceId();
   let privacy;
   try {
-    privacy = ingestPrivateCapture(cwd, { sourceId, now: createdAt,
-      content: buildInsightCaptureContent(text, { ...metadata, sourceId, createdAt, capturedBy: '[PERSON_NAME]' }) });
+    privacy = ingestCaptureFields(cwd, { sourceId, now: createdAt,
+      fields: { text, ...metadata, capturedBy: resolveCapturedBy(metadata.capturedBy) },
+      render: (fields, quarantine) => buildInsightCaptureContent(fields.text, {
+        ...fields, sourceId, createdAt, capturedBy: quarantine ? fields.capturedBy : '[PERSON_NAME]'
+      }) });
   } catch {
     console.error('Privacy capture failed; inspect local policy and permissions.');
     process.exit(1);

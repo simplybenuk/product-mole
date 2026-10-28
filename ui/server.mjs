@@ -1,6 +1,6 @@
 import { lstatSync } from 'node:fs';
 import { validateVisibility } from '../lib/privacy-policy.mjs';
-import { ingestPrivateCapture } from '../lib/privacy.mjs';
+import { ingestCaptureFields } from '../lib/privacy.mjs';
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
@@ -171,8 +171,12 @@ export async function captureNote(root, body = {}) {
   const capturedAt = new Date().toISOString();
   let privacy;
   try {
-    privacy = ingestPrivateCapture(root, { sourceId, now: capturedAt,
-      content: buildUiCaptureContent({ ...body, capturedBy: '[PERSON_NAME]', captured_by: '[PERSON_NAME]' }, { date, sourceId }) });
+    privacy = ingestCaptureFields(root, { sourceId, now: capturedAt,
+      fields: { ...body, capturedBy: resolveCapturedBy(body.capturedBy || body.captured_by) },
+      render: (fields, quarantine) => buildUiCaptureContent({ ...fields,
+        capturedBy: quarantine ? fields.capturedBy : '[PERSON_NAME]',
+        captured_by: quarantine ? fields.captured_by : '[PERSON_NAME]'
+      }, { date, sourceId }) });
   } catch { return { status: 409, payload: { error: 'Privacy capture failed; inspect local policy and permissions.' } }; }
   const relPath = privacy.path;
   if (privacy.outcome === 'quarantined') return { status: 200, payload: { ok: true, source_id: sourceId, state: 'quarantined', path: relPath } };
