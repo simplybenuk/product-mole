@@ -51,7 +51,9 @@ fingerprints after their raw content is deleted. No text is reconstructed.
 ## Human review
 
 Different capture timestamps, channels, or provider references may mean two
-separate events. Exact content with conflicting metadata requires a human
+separate events. Privacy redaction can also collapse distinct originals into
+the same cleaned text. Any exact match involving a redacted source reports
+`privacy_redaction` and requires a human decision. Exact content with conflicting metadata requires a human
 decision before completion. Sync conflict source copies remain blocked by the
 inbox audit and processing lock rules; this check never resolves a sync conflict.
 
