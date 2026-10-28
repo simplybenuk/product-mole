@@ -97,10 +97,9 @@ changes and two reports:
 
 - The report is as good as the evidence in the workspace. The skill does not
   fetch data.
-- Mole has no structured record for intent, release artefacts, or analytics
-  evidence yet. The skill finds them as ordinary context and evidence files.
-- Accepted learnings stay in the approved report. Nothing copies them into
-  summaries or indexes; do that with `mole refresh top-layers`.
+- Reports can link structured change and release records, alongside ordinary
+  context and evidence files. Missing links remain explicit gaps.
+- Preserve and retrieve approved lessons with [accepted learning](accepted-learning.md). Its controlled pointers do not rewrite summaries or decisions.
 
 ## Reusable change records
 

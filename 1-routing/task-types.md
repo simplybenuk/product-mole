@@ -18,3 +18,8 @@ Read: L0 -> L1 -> L2 -> L3 -> L4 -> L5
 
 ## Deep audit / dispute
 Read: L0 -> L1 -> L2 -> L3 -> L4 -> L5 (+L6 if required)
+
+For roadmap, specification, decision, prioritisation and critique tasks, retrieve
+prior accepted lessons with `mole learning list --query "<topic>"`. Follow the
+returned report and source IDs only as needed. Read projection files through
+this command so changed or superseded reports do not count as accepted context.

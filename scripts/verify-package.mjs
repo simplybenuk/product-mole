@@ -21,6 +21,8 @@ export const REQUIRED_PACKAGED_FILES = Object.freeze([
   'governance/input-queue/README.md',
   'governance/lifecycle/README.md',
   'lib/capture.mjs',
+  'lib/accepted-learning.mjs',
+  'docs/accepted-learning.md',
   'lib/change-records.mjs',
   'schemas/change-record-v1.schema.json',
   'docs/change-records.md',

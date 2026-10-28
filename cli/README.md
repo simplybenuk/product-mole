@@ -196,3 +196,10 @@ In a synced folder, file coordination can lag. Mole refuses to choose between co
 Backfill reads `governance/run-receipts/inbox-processing/*.json`, prefers ID-bearing `processed_sources` entries, and falls back to `processed` paths for historical receipts with valid completion dates. It does not infer from raw folders. If receipt or recovery state is ambiguous, backfill exits without rewriting existing metric history until the state is reconciled.
 
 In a synced folder, file coordination can lag. Mole refuses to choose between competing claims, duplicate receipt copies, or conflict-named source files. It also flags receipts from different run IDs that claim the same canonical path and excludes that path from normal processed counts. Preserve every copy and resolve it explicitly. A missing or expired lock also fails normal completion. Use `mole inbox override-stale --run-id <new-run-id> --processor "Your Name" --reason "..."` or `mole inbox complete --override-missing-lock --run-id <run-id> --processor "Your Name" --host <host> --reason "..."` only after checking the sync history; malformed override records fail the audit and processing commands until repaired. Override records are retained under `governance/run-receipts/inbox-processing/overrides/`.
+
+## Accepted learning
+
+Use `mole learning promote <record-id>` after human report approval, then
+`mole learning list --query "<topic>"` or `mole learning show <learning-id>`.
+See [accepted learning](../docs/accepted-learning.md) for reviewed link metadata,
+corrections and a worked retrieval example.
