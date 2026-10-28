@@ -41,6 +41,9 @@ transitions, and recovery steps.
 
 ## Development checks
 
+The [operational acceptance guide](../docs/operational-acceptance.md) maps the
+connected temporary-workspace tests to the safety contracts and their limits.
+
 Mole supports Node.js 18.x, 20.x, 22.x, and 24.x. CI runs the root checks on
 each version.
 
