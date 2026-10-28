@@ -117,7 +117,11 @@ release is a privacy decision and leaves the lifecycle state raw, not accepted.
 Batch checks validate all live indexed candidates and attachments before writes.
 An unsafe or expired indexed candidate therefore blocks new indexing until the
 owner resolves it or runs retention purge after ending active claims. Empty
-completion can release a claim without processing its unsafe input. Tombstones
+completion can release an uncheckpointed claim without processing its unsafe
+input. A checkpointed input that expires remains in the immutable processed
+set, so empty completion cannot drop it. There is no automatic cancel or
+checkpoint-rewrite command; owner reconciliation of coordination state is
+required before purge in that case. Tombstones
 then allow metadata-only exact comparison. Near matching against a deleted
 candidate stops. No automatic exception, approval, or ambiguity decision is made.
 
