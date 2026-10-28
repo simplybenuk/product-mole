@@ -19,7 +19,9 @@ merged, deleted, rewritten, or assigned another source's ID.
 Normalization version 1 uses Unicode NFC, lowercase, and collapsed whitespace.
 It preserves punctuation, numbers, and word order. In leading YAML frontmatter,
 it removes only `source_id`, `captured_by`, `created_at`, and `captured_at`
-lines. Other fields remain content. Binary data uses an exact byte hash.
+lines. Other fields remain content. Every input must pass the privacy UTF-8
+check. Unsupported binary originals require quarantine review and a cleaned
+text derivative; they cannot be fingerprinted directly.
 The fingerprint includes the sorted SHA-256 hashes of registered attachments,
 including repeated attachments. Attachment labels, paths and IDs do not define
 content equivalence. The original exact byte hash remains separate.
@@ -49,7 +51,9 @@ fingerprints after their raw content is deleted. No text is reconstructed.
 ## Human review
 
 Different capture timestamps, channels, or provider references may mean two
-separate events. Exact content with conflicting metadata requires a human
+separate events. Privacy redaction can also collapse distinct originals into
+the same cleaned text. Any exact match involving a redacted source reports
+`privacy_redaction` and requires a human decision. Exact content with conflicting metadata requires a human
 decision before completion. Sync conflict source copies remain blocked by the
 inbox audit and processing lock rules; this check never resolves a sync conflict.
 
