@@ -19,8 +19,6 @@ Label each statement as a **fact**, an **observation**, an **interpretation**,
 or an **assumption**. Where there is no evidence, write `unknown` and say what
 is needed. Do not leave a section empty.
 
-## Learning links
-
 Fill these links before submitting the report. Use stable change/release IDs,
 or `null` if unknown. Reference arrays contain registered source IDs also
 cited on the lifecycle submission. Empty arrays mean no linked source yet.
