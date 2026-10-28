@@ -93,6 +93,11 @@ changes and two reports:
 - `reports/travel-log-release-notes-only.md` uses the release notes alone and
   shows how gaps are written.
 
+For an executable walkthrough from intent and release ingestion through
+synthetic review and later retrieval, see the
+[local acceptance guide](../examples/product-travel-log/acceptance/README.md).
+It uses disposable fixtures and does not approve real workspace data.
+
 ## Limits
 
 - The report is as good as the evidence in the workspace. The skill does not
