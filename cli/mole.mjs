@@ -310,7 +310,7 @@ export function createWorkspaceScaffold(target) {
     if (!targetStat.isDirectory()) {
       throw new Error(`Workspace target must be a directory, not a file or symlink: ${target}`);
     }
-    if (fs.readdirSync(target).length > 0) {
+    if (fs.readdirSync(target).some((name) => !['.git', '.DS_Store', 'Thumbs.db'].includes(name))) {
       throw new Error(`Refusing to create a workspace in a nonempty directory: ${target}. Choose a new or empty directory.`);
     }
   }
