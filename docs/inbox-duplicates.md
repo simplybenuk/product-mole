@@ -39,8 +39,10 @@ add no processed-input metric events. This does not deduplicate independently
 registered lifecycle drafts or erase capture history. Run the check before
 creating drafts to avoid doing the work twice.
 
-Legacy paths without registry records retain the earlier path-only processing
-behavior. Register them before processing for content-based duplicate coverage.
+Legacy and unregistered paths cannot be checkpointed or completed. A registry
+record alone does not establish privacy eligibility. Use `mole privacy scan
+--apply` to quarantine manual imports, then follow the documented human-reviewed
+derivative release procedure before processing.
 Existing receipts from before fingerprint indexing cannot supply normalized
 fingerprints after their raw content is deleted. No text is reconstructed.
 
@@ -82,7 +84,7 @@ has no semantic model and can miss paraphrases. It makes no hosted AI calls.
 Sources above 2 MiB fail closed, including attachments, to bound local reads.
 
 `governance/inbox-duplicates/` is instance-owned. Its durable records contain
-versioned fingerprints, byte and attachment hashes, source IDs, capture and
+version 2 fingerprints, byte and attachment hashes, source IDs, capture and
 registration times, and hashes of channel/provider reference. Decisions contain
 only the fields described above. Raw text, word sets, embeddings, paths, URLs,
 and provider credentials are not copied into the ledger. Hashes allow correlation
@@ -91,7 +93,30 @@ and dictionary guessing; they are sensitive metadata, not anonymization.
 Near checks read currently resolvable source text into memory. When raw content
 is deleted under the privacy policy, near comparison against it stops. Exact
 fingerprints and decisions remain useful without that content. Privacy approval
-must precede indexing; the parallel privacy implementation supplies that gate.
+precedes indexing through `assertPrivacyProcessing`, including every indexed live
+candidate and attachment. Metadata-only source lookup avoids the general resolver
+and its ungated hashes. Edited sensitive, expired, quarantined, missing or ambiguous
+inputs stop the entire batch before duplicate ledger writes.
+Only privacy-cleaned UTF-8 inputs can acquire a version 2 fingerprint. Earlier
+version 1 records fail closed and require owner review; they are never silently
+trusted or migrated. Stored hashes for deleted privacy tombstones participate
+in exact comparison only. They never authorize processing a restored source.
+
+Privacy storage currently supports generated source-ID locations only. The
+quarantine derivative release moves cleaned bytes to the generated inbox path
+without changing source ID or expiry. Arbitrary archive/rename moves fail closed;
+restore the canonical generated path without changing bytes, then reconcile a
+stale source registry path if necessary. There is no privacy-aware archive command.
+Do not change a privacy manifest to authorize an arbitrary path. Quarantine
+release is a privacy decision and leaves the lifecycle state raw, not accepted.
+
+Batch checks validate all live indexed candidates and attachments before writes.
+An unsafe or expired indexed candidate therefore blocks new indexing until the
+owner resolves it or runs retention purge after ending active claims. Empty
+completion can release a claim without processing its unsafe input. Tombstones
+then allow metadata-only exact comparison. Near matching against a deleted
+candidate stops. No automatic exception, approval, or ambiguity decision is made.
+
 Never include raw content or credentials in actor identifiers.
 
 Retrieval receipt: based on the source registry, inbox processing receipt

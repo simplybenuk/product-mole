@@ -26,3 +26,9 @@ coverage/
 # Operating-system noise
 .DS_Store
 Thumbs.db
+
+# Raw instance content, including quarantine, staging and archives
+/6-raw/**
+!/6-raw/inbox/
+!/6-raw/inbox/README.md
+/governance/privacy/
