@@ -13,18 +13,18 @@ Generated workspaces are clean Mole instances, not copies of the Product Mole so
 Install from GitHub:
 
 ```bash
-npm install -g github:simplybenuk/product-mole#v0.3.0
+npm install -g github:simplybenuk/product-mole#v0.3.1
 mole new my-mole
 cd my-mole
 ```
 
-Replace `v0.3.0` with the stable release you want. Install from `#main` only
+Replace `v0.3.1` with the stable release you want. Install from `#main` only
 when you explicitly want unreleased changes.
 
 To update an installed CLI from a stable release tag:
 
 ```bash
-mole upgrade 0.3.0
+mole upgrade 0.3.1
 mole install skills
 ```
 `mole upgrade` without a version uses the tag matching the installed CLI's
@@ -83,11 +83,11 @@ mole critique spec drafts/spec.md
 | Command | What it does |
 | --- | --- |
 | `mole --help` | Prints CLI usage, examples, and supported commands. |
-| `mole new <workspace-name>` | Creates a new Mole workspace from the bundled scaffold. |
+| `mole new <workspace-name>` | Creates a new Mole workspace from the bundled scaffold. Refuses a folder that already has files in it, other than dotfiles such as `.git`. |
 | `mole init [target-dir]` | Backwards-compatible alias for `mole new`. |
 | `mole install skills` | Installs Mole agent skills. |
 | `mole doctor` | Checks source and instance versions plus required instance folders. |
-| `mole validate [path] [--format text\|json]` | Runs the full read-only workspace check: inbox, receipts, sources, review records, frontmatter, summaries, duplicates, and the input queue. Exits 0 when healthy and 1 with findings. See [`docs/workspace-validation.md`](docs/workspace-validation.md). |
+| `mole validate [path] [--format text\|json]` | Runs the full read-only workspace check: inbox, receipts, sources, review records, frontmatter, summaries, duplicates, and the input queue. Exits 0 when healthy and 1 with findings. See [`docs/workspace-validation.md`](../docs/workspace-validation.md). |
 | `mole check-updates` | Reports whether the installed Mole source is newer than the current workspace. |
 | `mole insight "<text>"` | Captures a raw insight into `6-raw/inbox/`. |
 | `mole note "<text>"` | Alias for `mole insight`. |
@@ -107,6 +107,8 @@ mole critique spec drafts/spec.md
 | `mole travel-log <change-or-release>` | Prints an agent instruction for an outcome review of a change or release. See [`docs/product-travel-log.md`](../docs/product-travel-log.md). |
 | `mole synthesise <target>` | Prints an agent instruction for synthesising a target using the Mole operating model. |
 | `mole review <target>` | Prints an agent instruction for reviewing a target and surfacing next actions. |
+| `mole review input-queue [--limit <n>] [--stale-after-days <n>] [--duplicate-threshold <0-1>] [--format json]` | Returns the highest-value human-input requests, why each ranks where it does, and what answering it unblocks. Read-only. |
+| `mole input-queue add\|update\|close\|reopen\|show\|list\|migrate\|refresh-view\|audit\|unlock` | Manages human-input requests as records with stable IDs. Changing an owner, or closing a request that was not answered, needs `--actor-type human --confirm-human`. See [`docs/input-queue.md`](../docs/input-queue.md). |
 | `mole inbox claim [options]` | Claims a run with a leased, owned lock and returns its `run_id`; provide each `--claimed-path`. |
 | `mole inbox heartbeat --run-id <id>` | Renews the matching active run lease. |
 | `mole inbox checkpoint --run-id <id> [--processed <path>]` | Saves restart-safe partial progress for the matching run. |

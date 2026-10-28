@@ -6,7 +6,7 @@ import { server } from '../server.mjs';
 
 async function request(url, { method = 'GET', body } = {}) {
   const req = Readable.from(body === undefined ? [] : [Buffer.from(JSON.stringify(body))]);
-  Object.assign(req, { url, method, headers: { host: 'localhost' } });
+  Object.assign(req, { url, method, headers: { host: 'localhost', ...(body === undefined ? {} : { 'content-type': 'application/json' }) } });
   const response = {};
   const res = {
     writeHead(status, headers) {

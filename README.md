@@ -2,7 +2,7 @@
 
 Mole is a portable, local-first context operating system for product managers and AI assistants.
 
-Current version: `0.3.0`
+Current version: `0.3.1`
 
 It gives teams a file-based place to capture messy product inputs, distil them into structured evidence, and generate better roadmaps, specs, decisions, and prioritisation work from shared context. Mole is designed to work locally, in synced folders such as SharePoint/OneDrive or Google Drive, or alongside a codebase in Git.
 
@@ -19,11 +19,11 @@ a release is published.
 ### 1. Install from GitHub
 
 ```bash
-npm install -g github:simplybenuk/product-mole#v0.3.0
+npm install -g github:simplybenuk/product-mole#v0.3.1
 mole --help
 ```
 
-This installs the `mole` command globally from the tagged `v0.3.0` release.
+This installs the `mole` command globally from the tagged `v0.3.1` release.
 Replace the tag with the release you want. Installing from `main` is for
 contributors or users who explicitly want unreleased changes.
 
@@ -80,7 +80,7 @@ After installing skills, ask your agent for Mole-specific work such as:
 | Command | What it does |
 | --- | --- |
 | `mole --help` | Prints CLI usage, examples, and supported commands. |
-| `mole new <workspace-name>` | Creates a new Mole workspace from the bundled scaffold. |
+| `mole new <workspace-name>` | Creates a new Mole workspace from the bundled scaffold. Refuses a folder that already has files in it, other than dotfiles such as `.git`. |
 | `mole init [target-dir]` | Backwards-compatible alias for `mole new`. |
 | `mole install skills` | Installs Mole agent skills into `~/.agents/skills/` or `$AGENTS_HOME/skills/`. |
 | `mole doctor` | Checks source and instance versions plus required instance folders. |
@@ -302,12 +302,12 @@ Mole separates the installed tool from generated working instances.
 When the source/tool changes, update the global install:
 
 ```bash
-mole upgrade 0.3.0
+mole upgrade 0.3.1
 mole install skills
 ```
 
 `mole upgrade <version>` refreshes the globally installed CLI from a stable
-release tag. Pass `0.3.0` or `v0.3.0` to select a release explicitly.
+release tag. Pass `0.3.1` or `v0.3.1` to select a release explicitly.
 With no argument, it uses the tag matching the installed CLI version. It does
 not use the moving `main` branch.
 

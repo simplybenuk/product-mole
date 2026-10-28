@@ -27,6 +27,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Run tests
         run: npm test
+      - name: Check Markdown links
+        run: npm run check:links
       - name: Check release metadata
         run: npm run check:versions
       - name: Verify packed artefact

@@ -77,7 +77,9 @@ document.getElementById('loadPathBtn').addEventListener('click', async () => {
   try {
     await loadPath(pathInput.value.trim() || '.');
   } catch (e) {
-    treeList.innerHTML = `<li>Failed: ${e.message}</li>`;
+    const li = document.createElement('li');
+    li.textContent = `Failed: ${e.message}`;
+    treeList.replaceChildren(li);
   }
 });
 
