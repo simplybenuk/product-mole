@@ -105,3 +105,5 @@ changes and two reports:
 ## Reusable change records
 
 The [versioned change and outcome contract](change-records.md) provides source-independent JSON values, field provenance and visible intent gaps for adapters and outcome reviews. Delivery and outcome review statuses remain separate from human approval in the lifecycle ledger.
+
+Use [local release ingestion](release-ingestion.md) to preserve a full release artifact and review unresolved intent links before writing a travel log.

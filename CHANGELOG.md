@@ -6,6 +6,10 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Added
+- Local release ingestion preserves raw artifacts and creates draft multi-change
+  events with explicit intent links, unresolved matches, and field provenance.
+
 ### Fixed
 - The local UI now serves HTML, JavaScript, and CSS as file contents instead
   of JSON-encoded buffers, so the page loads correctly.
