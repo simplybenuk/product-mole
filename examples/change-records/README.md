@@ -2,7 +2,7 @@
 
 These disposable examples demonstrate the [v1 change contract](../../docs/change-records.md).
 
-- [OpenSpec-style proposal](openspec.md) maps `Why` and `What changes` without an OpenSpec dependency.
+- [OpenSpec-style proposal](openspec.md) maps `Why` and explicit outcome headings without an OpenSpec dependency.
 - [Other specification](specification.md) supplies explicit headings with sparse intent.
 - [Release notes only](release-notes.md) report delivery without inventing a hypothesis or measurement result.
 - [Manual capture](manual.json) records an inconclusive result, uncertainty and a next decision.

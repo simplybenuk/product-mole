@@ -6,6 +6,9 @@ Customers wait for large exports.
 ## What changes
 Queue exports and notify customers when complete.
 
+## Expected outcome
+More customers complete their exports.
+
 ## Hypothesis
 Background processing will reduce abandoned exports.
 
