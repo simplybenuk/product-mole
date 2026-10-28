@@ -13,6 +13,7 @@ import {
   checkpointInboxProcessing,
   overrideStaleInboxProcessing
 } from '../lib/inbox-processing.mjs';
+import { ingestPrivateCapture, scanRaw, purgeRaw, reviewQuarantine } from '../lib/privacy.mjs';
 import { auditInbox } from '../lib/inbox-audit.mjs';
 import { backfillProcessedInboxMetrics } from '../lib/metrics.mjs';
 import { formatMetricsSummary, summarizeMetrics, writeMetricsSnapshot } from '../lib/metrics-summary.mjs';
@@ -159,6 +160,9 @@ Usage:
   mole inbox heartbeat --run-id id     Renew the matching active run lease.
   mole inbox checkpoint --run-id id [--processed path]
                                       Save restart-safe partial progress.
+  mole privacy scan [--apply]          Quarantine manual raw files; dry-run by default.
+  mole retention purge [--apply]       Remove expired raw files; dry-run by default.
+  mole privacy release <source-id> --confirm-reviewed [--apply]
   mole inbox audit                    Audit live files, leases, conflicts, and receipts.
   mole inbox complete [options] [summary]
                                       Write an idempotent receipt and release the lock.
@@ -323,6 +327,8 @@ export function createWorkspaceScaffold(target) {
       ensureDir(targetPath);
     }
   }
+
+  fs.writeFileSync(path.join(target, '.gitignore'), '/6-raw/**\n!/6-raw/inbox/\n!/6-raw/inbox/README.md\n/governance/privacy/\n');
 
   for (const [source, destination] of WORKSPACE_SCAFFOLD_FILES) {
     copyFile(path.join(repoRoot, source), path.join(target, destination));
@@ -575,35 +581,20 @@ function captureInsight(values) {
     process.exit(1);
   }
 
-  const dir = path.join(cwd, '6-raw', 'inbox');
-  const fileName = createCaptureFileName(text);
-  const target = path.join(dir, fileName);
-  // Refuse an inbox that is a link leaving the workspace before the raw
-  // text is written anywhere.
-  try {
-    toWorkspaceRelativePath(cwd, `6-raw/inbox/${fileName}`);
-  } catch (err) {
-    console.error(`Capture not written: ${err.message}`);
-    process.exit(1);
-  }
-  ensureDir(dir);
   const createdAt = nowUtc();
   const sourceId = createSourceId();
-
-  const content = buildInsightCaptureContent(text, {
-    ...metadata,
-    sourceId,
-    createdAt
-  });
-
+  let privacy;
   try {
-    fs.writeFileSync(target, content, { encoding: 'utf8', flag: 'wx' });
-  } catch (err) {
-    if (err.code === 'EEXIST') {
-      console.error(`Refusing to overwrite existing capture: ${target}`);
-      process.exit(1);
-    }
-    throw err;
+    privacy = ingestPrivateCapture(cwd, { sourceId, now: createdAt,
+      content: buildInsightCaptureContent(text, { ...metadata, sourceId, createdAt, capturedBy: '[PERSON_NAME]' }) });
+  } catch {
+    console.error('Privacy capture failed; inspect local policy and permissions.');
+    process.exit(1);
+  }
+  const target = path.join(cwd, privacy.path);
+  if (privacy.outcome === 'quarantined') {
+    console.log(`Quarantined capture: ${sourceId}. Human privacy review required.`);
+    return;
   }
 
   try {
@@ -612,7 +603,7 @@ function captureInsight(values) {
       path: target,
       source_type: 'note',
       captured_at: createdAt,
-      captured_by: resolveCapturedBy(metadata.capturedBy),
+      captured_by: '[PERSON_NAME]',
       channel: 'cli',
       original_date: createdAt.slice(0, 10),
       visibility: metadata.visibility || 'internal',
@@ -620,7 +611,7 @@ function captureInsight(values) {
       content_change_type: 'captured'
     });
   } catch (err) {
-    console.error(`Capture written but source registration failed: ${err.message}`);
+    console.error('Capture saved; source registration requires local recovery.');
     process.exit(1);
   }
 
@@ -638,7 +629,7 @@ function captureInsight(values) {
       now: createdAt
     }).record_id;
   } catch (err) {
-    lifecycleWarning = err.message;
+    lifecycleWarning = 'Local lifecycle recovery required.';
   }
 
   console.log(`Captured insight: ${target}`);
@@ -2378,6 +2369,20 @@ if (isDirectRun) {
       }
       console.log(`Suggested agent instruction:\n\nReview ${subcommand || 'the requested target'} and return the highest-value next actions or missing human inputs.`);
       break;
+    case 'privacy':
+    case 'retention': {
+      try {
+        const options = { apply: rest.includes('--apply'), confirmReviewed: rest.includes('--confirm-reviewed') };
+        if (rest.some(v => !['--apply', '--confirm-reviewed'].includes(v) && !v.startsWith('src_'))) throw new Error();
+        const result = subcommand === 'purge' ? purgeRaw(cwd, options)
+          : subcommand === 'scan' || subcommand === 'audit' ? scanRaw(cwd, { ...options, apply: subcommand === 'scan' && options.apply })
+          : subcommand === 'release' ? reviewQuarantine(cwd, rest.find(v => v.startsWith('src_')), options) : null;
+        if (!result) throw new Error();
+        console.log(JSON.stringify(result, null, 2));
+        if (result.recovery_required || result.items?.some(i => i.status === 'deletion_failed')) process.exitCode = 1;
+      } catch { console.error('Privacy operation failed; check policy, claims and recovery state.'); process.exitCode = 1; }
+      break;
+    }
     case 'inbox':
       runInboxCommand(subcommand, rest);
       break;

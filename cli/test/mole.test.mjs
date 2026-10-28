@@ -865,7 +865,7 @@ describe('capture attribution metadata', () => {
     }
   });
 
-  it('writes YAML-safe CLI capture text and attribution with matching source metadata', () => {
+  it('writes YAML-safe CLI text with private attribution placeholders', () => {
     withTempInstance((dir) => {
       const summary = 'Customer says: export fails #42\nSecond line';
       const capturedBy = 'Ada: PM\nResearch #42';
@@ -874,9 +874,9 @@ describe('capture attribution metadata', () => {
       const capture = fs.readdirSync(path.join(dir, '6-raw', 'inbox'))[0];
       const content = fs.readFileSync(path.join(dir, '6-raw', 'inbox', capture), 'utf8');
       assert.equal(JSON.parse(content.match(/^summary: (.*)$/m)[1]), summary);
-      assert.equal(JSON.parse(content.match(/^captured_by: (.*)$/m)[1]), capturedBy);
+      assert.equal(JSON.parse(content.match(/^captured_by: (.*)$/m)[1]), '[PERSON_NAME]');
       const sourceId = content.match(/^source_id: (.*)$/m)[1];
-      assert.equal(readSourceRecord(dir, sourceId).captured_by, capturedBy);
+      assert.equal(readSourceRecord(dir, sourceId).captured_by, '[PERSON_NAME]');
       assert.ok(content.includes(`\n## Insight\n${summary}\n`));
     });
   });
@@ -978,7 +978,7 @@ describe('capture attribution metadata', () => {
       assert.equal(record.current_path, `6-raw/inbox/${capture}`);
       assert.equal(record.source_type, 'note');
       assert.equal(record.channel, 'cli');
-      assert.equal(record.captured_by, 'Ada');
+      assert.equal(record.captured_by, '[PERSON_NAME]');
     });
   });
 
@@ -1011,7 +1011,7 @@ describe('capture attribution metadata', () => {
         const result = runCli(['insight', 'A private observation'], { cwd: dir });
 
         assert.equal(result.status, 1);
-        assert.match(result.stderr, /Capture not written: Symlink resolves outside the workspace: 6-raw\/inbox/);
+        assert.match(result.stderr, /Privacy capture failed/);
         assert.deepEqual(fs.readdirSync(outside), []);
       } finally {
         fs.rmSync(outside, { recursive: true, force: true });
@@ -1034,7 +1034,7 @@ describe('capture attribution metadata', () => {
       const result = await captureNote(dir, { note: 'A private observation' });
 
       assert.equal(result.status, 409);
-      assert.match(result.payload.error, /Capture not written: Symlink resolves outside the workspace/);
+      assert.match(result.payload.error, /Privacy capture failed/);
       assert.deepEqual(fs.readdirSync(outside), []);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });

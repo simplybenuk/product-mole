@@ -1,3 +1,4 @@
+import { ingestPrivateCapture } from '../lib/privacy.mjs';
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
@@ -69,6 +70,7 @@ export function safeRepoPath(input = '', root = REPO_ROOT) {
   if (!resolved.startsWith(root)) throw new Error('Invalid path');
   const rel = path.relative(root, resolved);
   const top = rel.split(path.sep)[0];
+  if (/^6-raw[\\/](quarantine|staging)([\\/]|$)/.test(rel) || /^governance[\\/]privacy([\\/]|$)/.test(rel)) throw new Error('Private raw content requires local review.');
   if (!allowedRoots.has(top) && rel !== 'README.md') {
     throw new Error('Path outside allowed roots');
   }
@@ -154,37 +156,15 @@ export async function captureNote(root, body = {}) {
   if (!note) return { status: 400, payload: { error: 'Note is required' } };
 
   const date = todayDate();
-  const relPath = createCaptureRelPath(type, note);
-  const resolved = path.resolve(root, relPath);
   const sourceId = createSourceId();
   const capturedAt = new Date().toISOString();
-
-  const frontmatter = buildUiCaptureContent({
-    source,
-    channel,
-    confidence,
-    tags,
-    note,
-    capturedBy: body.capturedBy || body.captured_by
-  }, { date, sourceId });
-
-  // Refuse an inbox that is a link leaving the workspace before the raw
-  // text is written anywhere.
+  let privacy;
   try {
-    toWorkspaceRelativePath(root, relPath);
-  } catch (err) {
-    return { status: 409, payload: { error: `Capture not written: ${err.message}`, path: relPath } };
-  }
-
-  await fs.mkdir(path.dirname(resolved), { recursive: true });
-  try {
-    await fs.writeFile(resolved, frontmatter, { encoding: 'utf8', flag: 'wx' });
-  } catch (err) {
-    if (err.code === 'EEXIST') {
-      return { status: 409, payload: { error: 'Capture already exists; retry to generate a new filename.' } };
-    }
-    throw err;
-  }
+    privacy = ingestPrivateCapture(root, { sourceId, now: capturedAt,
+      content: buildUiCaptureContent({ ...body, capturedBy: '[PERSON_NAME]', captured_by: '[PERSON_NAME]' }, { date, sourceId }) });
+  } catch { return { status: 409, payload: { error: 'Privacy capture failed; inspect local policy and permissions.' } }; }
+  const relPath = privacy.path;
+  if (privacy.outcome === 'quarantined') return { status: 200, payload: { ok: true, source_id: sourceId, state: 'quarantined', path: relPath } };
 
   try {
     registerSource(root, {
@@ -192,8 +172,8 @@ export async function captureNote(root, body = {}) {
       path: relPath,
       source_type: 'note',
       captured_at: capturedAt,
-      captured_by: resolveCapturedBy(body.capturedBy || body.captured_by),
-      channel,
+      captured_by: '[PERSON_NAME]',
+      channel: 'ui',
       original_date: date,
       visibility: body.visibility || 'internal',
       path_reason: 'captured',
@@ -203,7 +183,7 @@ export async function captureNote(root, body = {}) {
     return {
       status: 500,
       payload: {
-        error: `Capture written but source registration failed: ${err.message}`,
+        error: 'Capture saved; source registration requires local recovery.',
         path: relPath,
         source_id: sourceId
       }
@@ -225,7 +205,7 @@ export async function captureNote(root, body = {}) {
       lockWaitMs: UI_LOCK_WAIT_MS
     }).record_id;
   } catch (err) {
-    warning = `The capture is saved but has no lifecycle record yet: ${err.message}`;
+    warning = 'Capture saved; lifecycle registration requires local recovery.';
   }
 
   return {

@@ -38,7 +38,9 @@
         "6-raw/",
         "governance/sources/",
         "governance/lifecycle/",
-        "governance/input-queue/"
+        "governance/input-queue/",
+        "governance/privacy/",
+        "mole.privacy.json"
       ]
     }
   }
