@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { validateVisibility } from '../lib/privacy-policy.mjs';
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -321,7 +322,10 @@ export function createWorkspaceScaffold(target) {
     const sourcePath = path.join(repoRoot, dir);
     const targetPath = path.join(target, dir);
 
-    if (exists(sourcePath)) {
+    if (dir === '6-raw') {
+      ensureDir(path.join(targetPath, 'inbox'));
+      copyFile(path.join(sourcePath, 'inbox', 'README.md'), path.join(targetPath, 'inbox', 'README.md'));
+    } else if (exists(sourcePath)) {
       copyDirRecursive(sourcePath, targetPath);
     } else {
       ensureDir(targetPath);
@@ -581,6 +585,8 @@ function captureInsight(values) {
     process.exit(1);
   }
 
+  try { metadata.visibility = validateVisibility(metadata.visibility || 'internal'); }
+  catch { console.error('Unsupported visibility. Nothing was captured.'); process.exit(1); }
   const createdAt = nowUtc();
   const sourceId = createSourceId();
   let privacy;

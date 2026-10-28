@@ -1,3 +1,5 @@
+import { lstatSync } from 'node:fs';
+import { validateVisibility } from '../lib/privacy-policy.mjs';
 import { ingestPrivateCapture } from '../lib/privacy.mjs';
 import http from 'node:http';
 import fs from 'node:fs/promises';
@@ -57,11 +59,12 @@ async function readBody(req) {
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BODY_BYTES) throw Object.assign(new Error('Request body is too large.'), { status: 413 });
+    if (size > MAX_BODY_BYTES) throw Object.assign(new Error('Request body is too large.'), { status: 413, safeResponse: true });
     chunks.push(chunk);
   }
   if (!chunks.length) return {};
-  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+  catch { throw Object.assign(new Error('Malformed JSON request.'), { status: 400, safeResponse: true }); }
 }
 
 export function safeRepoPath(input = '', root = REPO_ROOT) {
@@ -82,6 +85,12 @@ export function safeRepoPath(input = '', root = REPO_ROOT) {
     toWorkspaceRelativePath(root, rel.split(path.sep).join('/'));
   } catch {
     throw new Error('Path outside allowed roots');
+  }
+  let component = root;
+  for (const part of rel.split(path.sep)) {
+    component = path.join(component, part);
+    try { if (lstatSync(component).isSymbolicLink()) throw new Error('Path outside allowed roots'); }
+    catch (err) { if (err.code !== 'ENOENT') throw err; }
   }
   let real = null;
   try {
@@ -147,6 +156,8 @@ export function buildUiCaptureContent(body, options = {}) {
  * registration follow.
  */
 export async function captureNote(root, body = {}) {
+  if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.note !== 'string') return { status: 400, payload: { error: 'Capture requires an object with a text note.' } };
+  try { validateVisibility(body.visibility ?? 'internal'); } catch { return { status: 400, payload: { error: 'Unsupported visibility.' } }; }
   const type = body.type || 'quick-notes';
   const source = body.source || 'self';
   const channel = body.channel || 'chat';
@@ -298,7 +309,7 @@ export const server = http.createServer(async (req, res) => {
     const content = await fs.readFile(filePath);
     return send(res, 200, content, contentType);
   } catch (err) {
-    return send(res, err.status || 500, { error: err.message || 'Server error' });
+    return send(res, err.safeResponse === true ? err.status : 500, { error: err.safeResponse === true ? err.message : 'Request failed.' });
   }
 });
 
