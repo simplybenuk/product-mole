@@ -13,7 +13,7 @@ import {
   checkpointInboxProcessing,
   overrideStaleInboxProcessing
 } from '../lib/inbox-processing.mjs';
-import { ingestPrivateCapture, scanRaw, purgeRaw, reviewQuarantine } from '../lib/privacy.mjs';
+import { ingestPrivateCapture, scanRaw, purgeRaw, reviewQuarantine, auditPrivacy } from '../lib/privacy.mjs';
 import { auditInbox } from '../lib/inbox-audit.mjs';
 import { backfillProcessedInboxMetrics } from '../lib/metrics.mjs';
 import { formatMetricsSummary, summarizeMetrics, writeMetricsSnapshot } from '../lib/metrics-summary.mjs';
@@ -2375,7 +2375,8 @@ if (isDirectRun) {
         const options = { apply: rest.includes('--apply'), confirmReviewed: rest.includes('--confirm-reviewed') };
         if (rest.some(v => !['--apply', '--confirm-reviewed'].includes(v) && !v.startsWith('src_'))) throw new Error();
         const result = subcommand === 'purge' ? purgeRaw(cwd, options)
-          : subcommand === 'scan' || subcommand === 'audit' ? scanRaw(cwd, { ...options, apply: subcommand === 'scan' && options.apply })
+          : subcommand === 'audit' ? auditPrivacy(cwd)
+          : subcommand === 'scan' ? scanRaw(cwd, options)
           : subcommand === 'release' ? reviewQuarantine(cwd, rest.find(v => v.startsWith('src_')), options) : null;
         if (!result) throw new Error();
         console.log(JSON.stringify(result, null, 2));
