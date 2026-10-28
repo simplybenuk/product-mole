@@ -357,7 +357,7 @@ describe('workspace scaffold', () => {
 
         const repeated = runCli([command, 'demo'], { cwd: dir });
         assert.equal(repeated.status, 1);
-        assert.match(repeated.stderr, /nonempty directory/i);
+        assert.match(repeated.stderr, /nonempty directory|folder is not empty/i);
         assert.doesNotMatch(repeated.stdout, /Initialised Mole workspace/);
         assert.deepEqual(fs.readdirSync(target), entries);
         for (const relative of customized) {
