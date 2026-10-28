@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { importAnalytics } from '../lib/analytics-evidence.mjs';
 import { promoteLearning, retrieveLearnings } from '../lib/accepted-learning.mjs';
 import { importRelease } from '../lib/release-ingestion.mjs';
 
@@ -127,6 +128,7 @@ Usage:
                                       Print an agent instruction for a stakeholder update.
   mole critique <target> [claim-or-path]
                                       Print a context-grounded critique instruction.
+  mole analytics import <file> --namespace <product> --key <revision> --change-id <id>  Import aggregate CSV/JSON.
   mole release import <file> --namespace <product> --key <release>  Import a local draft release.
   mole learning promote <record-id>  Preserve an accepted report projection.
   mole learning list [--query <text>]  Retrieve current accepted learning.
@@ -2364,6 +2366,23 @@ if (isDirectRun) {
         : retrieveLearnings(cwd, { learningId: subcommand === 'show' ? parsed.positionals[0] : undefined,
           query: parsed.options['--query'], changeId: parsed.options['--change-id'], releaseId: parsed.options['--release-id'],
           includeHistory: parsed.options['--history'] === true });
+      console.log(JSON.stringify(result, null, 2));
+      break;
+    }
+    case 'analytics': {
+      if (subcommand !== 'import') throw new Error('Usage: mole analytics import <file> --namespace <product> --key <release> [--change-id <id>] [--release-id <id>] [--source-id <id>]');
+      const options = {};
+      for (let i = 0; i < rest.length; i++) {
+        const arg = rest[i];
+        if (['--namespace', '--key', '--change-id', '--release-id', '--source-id', '--format'].includes(arg)) {
+          if (!rest[i + 1] || rest[i + 1].startsWith('--') || Object.hasOwn(options, arg)) throw new Error(`Missing or duplicate option: ${arg}`);
+          options[arg] = rest[++i];
+        } else if (!arg.startsWith('-') && !options.file) options.file = arg;
+        else throw new Error(`Unexpected argument: ${arg}`);
+      }
+      const result = importAnalytics(cwd, { file: options.file, sourceId: options['--source-id'],
+        identity: { namespace: options['--namespace'], key: options['--key'] }, format: options['--format'],
+        changeId: options['--change-id'], releaseId: options['--release-id'] });
       console.log(JSON.stringify(result, null, 2));
       break;
     }

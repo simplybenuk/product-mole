@@ -7,6 +7,7 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 ## [Unreleased]
 
 ### Added
+- Local aggregate CSV/JSON analytics evidence import with explicit measurement states, UTC review windows, provenance and immutable draft publication.
 - Local accepted-report learning projections preserve approval provenance and
   support live retrieval queries, corrections and supersession history.
 - Local release ingestion preserves raw artifacts and creates draft multi-change

@@ -203,3 +203,7 @@ Use `mole learning promote <record-id>` after human report approval, then
 `mole learning list --query "<topic>"` or `mole learning show <learning-id>`.
 See [accepted learning](../docs/accepted-learning.md) for reviewed link metadata,
 corrections and a worked retrieval example.
+
+## Aggregate analytics import
+
+Use `mole analytics import review.csv --namespace product --key review-1 --change-id change-id` for a local draft evidence import. See the [analytics contract](../docs/analytics-evidence.md) for CSV/JSON fields, status rules, replay and provenance.
