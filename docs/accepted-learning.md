@@ -25,6 +25,10 @@ block. All five fields are required. For example:
 Observation: Search typos need a fallback. Retention impact remains unknown.
 ````
 
+Only report-level metadata blocks count. Metadata and headings inside code
+examples are ignored, including indented and longer-fence examples. Lesson
+text is copied from the original report without removing code or qualifications.
+
 Use the stable change and release IDs from [change records](change-records.md)
 and [release ingestion](release-ingestion.md). Use `null` for an unknown ID.
 `intent_refs` and `evidence_refs` contain immutable registered `src_...` IDs,
