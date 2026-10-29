@@ -233,3 +233,5 @@ Always include retrieval receipt + confidence markers.
 - High-signal artefacts are preserved as source notes before cleanup.
 - Promotions are evidence-led, not anecdote-led.
 - Summaries/indexes reflect validated patterns, not raw noise.
+
+See [raw inbox privacy and retention](raw-inbox-privacy.md) before processing captures or attachments. Run the privacy scan before reading manual imports.
