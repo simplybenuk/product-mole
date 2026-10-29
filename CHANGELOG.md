@@ -6,6 +6,21 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Fixed
+- The local UI now serves HTML, JavaScript, and CSS as file contents instead
+  of JSON-encoded buffers, so the page loads correctly.
+- The capture form displays warnings when a note is saved without a lifecycle
+  record, while still clearing the saved note from the form.
+- The repository explorer leaves room to read and edit its workspace path.
+- Workspace validation checks supporting source IDs only within `source_refs`,
+  avoiding false errors from example IDs in later metadata fields.
+- `mole new` and `mole init` refuse occupied targets before writing, preserving
+  customized workspaces and unrelated files.
+- CLI captures quote free-form summary and attribution metadata so punctuation,
+  line breaks, and Unicode controls survive YAML parsing without changing the note.
+- Source resolution excludes identical files claimed by another source and checks
+  recorded historical paths even when they fall outside the usual search folders.
+
 ## [0.3.1] - 2026-10-27
 
 ### Fixed

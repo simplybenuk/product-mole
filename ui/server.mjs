@@ -46,7 +46,7 @@ const mime = {
 
 function send(res, code, body, contentType = 'application/json; charset=utf-8') {
   res.writeHead(code, { 'content-type': contentType });
-  res.end(typeof body === 'string' ? body : JSON.stringify(body));
+  res.end(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body));
 }
 
 const MAX_BODY_BYTES = 1024 * 1024;
@@ -298,7 +298,7 @@ async function routeApi(req, res, urlObj) {
   return false;
 }
 
-const server = http.createServer(async (req, res) => {
+export const server = http.createServer(async (req, res) => {
   try {
     const refused = refuseRequest(req.method, req.headers);
     if (refused) return send(res, refused.status, refused.payload);

@@ -6,6 +6,9 @@ It is intentionally thin: the CLI manages files and skills, while synthesis and 
 
 Generated workspaces are clean Mole instances, not copies of the Product Mole source repository. The scaffold is copied from an explicit allowlist of workspace paths.
 
+`mole new` and its `mole init` alias require a new or empty target directory. They refuse nonempty directories, including those containing only hidden files, and refuse file or symlink targets before copying any scaffold files.
+Git metadata and the operating-system files `.DS_Store` and `Thumbs.db` are allowed and preserved in an otherwise empty target.
+
 ## Installation
 
 Install from GitHub:
