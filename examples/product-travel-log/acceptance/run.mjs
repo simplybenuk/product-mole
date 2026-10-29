@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createWorkspaceScaffold } from '../../../cli/mole.mjs';
+import { privacyInventory, scanRaw, purgeRaw } from '../../../lib/privacy.mjs';
 import { parseChangeRecord } from '../../../lib/change-records.mjs';
 import { registerSource, resolveSource } from '../../../lib/source-registry.mjs';
 import { listLifecycleRecords, readLifecycleRecord, transitionLifecycleRecord, registerLifecycleRecord } from '../../../lib/review-lifecycle.mjs';
@@ -172,6 +173,33 @@ export function runAcceptance({ releaseOnly = false } = {}) {
     assert.notEqual(conflict.status, 0);
     assert.equal(read(path.join(root, release.raw_path)), read(path.join(here, 'release.md')));
     trace.push({ stage: 'exclusions-and-preservation', edited_excluded: true, superseded_excluded: true, history_current: false, immutable_snapshots: true, summary_unchanged: true, conflicting_release_refused: true });
+    const inventory = privacyInventory(root);
+    assert.equal(inventory.length, releaseOnly ? 1 : 2);
+    assert.equal(scanRaw(root, { apply: true }).unregistered_items, 0);
+    assert.equal(purgeRaw(root).recovery_required, false);
+    assert.equal(purgeRaw(root, { apply: true, now: '2099-01-01' }).items.every(item => item.status === 'deleted'), true);
+    const ledgers = () => {
+      const files = [];
+      const walk = directory => {
+        for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+          const file = path.join(directory, entry.name);
+          if (entry.isDirectory()) walk(file);
+          else files.push([path.relative(root, file), fs.statSync(file).mtimeMs, read(file)]);
+        }
+      };
+      walk(root);
+      return files;
+    };
+    const afterPurge = ledgers();
+    const requests = [releaseArgs];
+    if (!releaseOnly) requests.push(['analytics', 'import', 'inputs/analytics.json', '--namespace', 'acceptance', '--key', 'review-1']);
+    for (const args of requests) {
+      const replay = spawnSync(process.execPath, [cli, ...args], { cwd: root, encoding: 'utf8' });
+      assert.notEqual(replay.status, 0);
+      assert.match(replay.stderr, /privacy/i);
+    }
+    assert.deepEqual(ledgers(), afterPurge, 'purged replay cannot repair, renew or resurrect');
+    trace.push({ stage: 'privacy-retention', imports_managed: inventory.length, scan_unknown: 0, purge_recovery_required: false, purged_replay_refused_without_writes: true });
     return { scenario: releaseOnly ? 'release-only' : 'rich', trace, cleaned_workspace: root };
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

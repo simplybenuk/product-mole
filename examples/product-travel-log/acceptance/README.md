@@ -84,6 +84,11 @@ resolvable source IDs, immutable learning snapshots and an unchanged owner
 summary. Source IDs are generated per disposable workspace; change and
 release IDs remain explicit and stable.
 
+Finally, each scenario runs privacy scan with zero unknown imports, verifies
+that retention requires no migration, applies a future synthetic purge, and
+checks that release/analytics replay refuses without ledger changes or raw
+resurrection. This happens only in the runner-owned disposable workspace.
+
 ## Read the release-only case
 
 The second command imports the same release with an empty intent list and no
@@ -108,8 +113,10 @@ the lifecycle decision. After that decision, `mole learning promote` and
 `mole learning list` provide current retrieval for later work. Summaries and
 indexes remain user-owned and require their own review when changed.
 
-This example covers the ingestion/report/learning stack only. It makes no
-combined privacy or sensitive-data acceptance claim for issues #25 or #26.
+This example covers ingestion/report/learning with the import-specific privacy
+and retention boundaries described in the [import guide](../../../docs/import-privacy.md).
+It does not certify semantic privacy detection, distributed coordination or
+backup erasure. The combined stack still requires independent review.
 Synthetic test review does not complete human testing of the product.
 
 ## Retrieval receipt

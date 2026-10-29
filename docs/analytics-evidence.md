@@ -135,29 +135,28 @@ authoritative even if a JSON field says draft.
 
 ## Publication, replay and retention
 
-The importer copies exact source bytes under `6-raw/analytics/` and stores the
-normalized event under `5-evidence/analytics/`. It never overwrites the input.
-Both paths use a hash of evidence identity, avoiding input-derived paths.
-The raw file gets a source record and raw lifecycle state; the normalized file
-gets its own source record and draft lifecycle state citing that raw source ID.
-Resolve source IDs with the [source registry](source-provenance.md) after moves;
-paths in evidence are navigation hints.
+Eligible unchanged exports are retained under the privacy-managed generated inbox
+path with one stable privacy/source ID and declared media type. Normalized events
+remain under `5-evidence/analytics/`, with their own draft source/lifecycle record
+citing the selected raw source ID. An eligible supplied source ID is reused
+without copying its raw bytes, altering its source reference or renewing expiry.
 
-The raw registration includes an immutable request fingerprint over identity,
-format, explicit bindings and exact byte hash. Both raw and normalized registered files can be relocated. Replay returns the
-resolved normalized path without creating a duplicate. Replay verifies that fingerprint,
-the normalized event and resolved raw bytes, including after raw capture moves.
-Changed bytes/options require a new revision identity. Missing historical
-fingerprints fail closed. Existing destinations are never replaced. Payloads
-stage in private sibling directories, verify bytes, fsync and publish with an
-atomic no-replace hard link, following release ingestion's retry practice.
-Retry resumes files/registrations after handled failures. A killed process may
-leave ignored staging directories. Conflicting or missing source resolutions
-and symlink paths fail closed. Registration uses the existing local registry
-and lifecycle locking rules; this is not a distributed transaction.
+The instance-owned request receipt under `governance/imports/analytics/` binds
+the original v1 fingerprint over identity, format, explicit bindings and exact
+byte hash. Changed bytes or options require a new revision identity. Existing
+files are never overwritten. Explicitly reconciled normalized evidence moves
+use the registered current durable path; imports never discover or hash raw
+archive/quarantine candidates.
 
-Imports deliberately retain exact aggregate exports. Privacy/retention work in
-issue #25 must cover both analytics directories, request/source records,
-references, normalized provenance and interrupted staging payloads. Do not
-assume a retention policy is implemented here. No credentials, hosted calls or
-raw user-event requirement belong in future provider adapters either.
+Read the [shared import privacy and recovery contract](import-privacy.md).
+Fresh captures are managed immediately. Sensitive/uncertain values refuse
+before importer persistence; raw text and decoded JSON keys/scalars or strict
+CSV headers/cells are scanned. Registered-only, unmanaged, quarantined, expired,
+purged or missing raw sources refuse before raw reads/hashes or repairs.
+
+Exclusive publication still verifies and fsyncs complete staged bytes, then
+links without replacing a destination. Partial retries can finish only the
+same eligible receipt/source and stored bytes with unchanged fingerprint and
+expiry. Missing or truncated stages require explicit recovery. Neither imports
+nor retention form a distributed transaction or approve draft evidence. No
+credentials, hosted calls or raw user-event requirement belong in adapters.

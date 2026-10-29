@@ -343,7 +343,7 @@ export function createWorkspaceScaffold(target) {
     }
   }
 
-  fs.writeFileSync(path.join(target, '.gitignore'), '/6-raw/**\n!/6-raw/inbox/\n!/6-raw/inbox/README.md\n/governance/privacy/\n');
+  fs.writeFileSync(path.join(target, '.gitignore'), '/6-raw/**\n!/6-raw/inbox/\n!/6-raw/inbox/README.md\n/governance/privacy/\n/governance/imports/\n');
 
   for (const [source, destination] of WORKSPACE_SCAFFOLD_FILES) {
     copyFile(path.join(repoRoot, source), path.join(target, destination));

@@ -8,9 +8,9 @@ mole release import release.json --namespace my-product --key release-2026-09 --
 mole release import --source-id src_8d31cc34-c04c-41ac-82e3-75518bb5a7e0 --namespace my-product --key release-2026-09
 ```
 
-Run these commands in your Mole workspace. The input file can live outside it and is read only. `--source-id` resolves a registered workspace source by immutable identity, including a uniquely resolved move. Resolution never reconciles a registry path automatically. Ambiguous moves fail for human review. Supply either a file or a source ID. `--format markdown|json` overrides extension detection.
+Run these commands in your Mole workspace. The input file can live outside it and is read only. `--source-id` selects a privacy-eligible managed source by immutable identity. Its registry and privacy current paths must agree; import never discovers a move or reconciles it automatically. Supply either a file or a source ID. `--format markdown|json` overrides extension detection.
 
-Choose a stable product namespace and release key. These identify an import across file renames. A source-supplied `release_id` takes precedence. The raw source registry record stores a fingerprint of the release namespace/key, selected format, supplied intents, and exact input bytes. This evidence follows the immutable source ID when the capture moves. Repeating an identical import returns `changed: false`; changed source bytes, intent links, or normalized data under the same release identity fail. Give revisions their own release ID and key. An explicit release ID must also change for a revision. Never delete the earlier capture to force replacement.
+Choose a stable product namespace and release key. These identify an import across file renames. A source-supplied `release_id` takes precedence. The immutable import request receipt stores a fingerprint of the release namespace/key, selected format, supplied intents, and exact input bytes. This evidence binds the immutable source ID without replacing existing source provenance. Repeating an identical import returns `changed: false`; changed source bytes, intent links, or normalized data under the same release identity fail. Give revisions their own release ID and key. An explicit release ID must also change for a revision. Never delete the earlier capture to force replacement.
 
 ## Markdown and manual context
 
@@ -65,8 +65,24 @@ Only `explicit` populates `intent_link.intent_id`. Candidate entries retain sour
 
 ## Storage and recovery
 
-Exact original bytes go under `6-raw/releases/<hashed-release-id>.md` or `.json`. The source registry registers that capture, and lifecycle records it as `raw`. The event goes under `5-evidence/releases/<hashed-release-id>.json`, registered as `draft` with the raw source ID as supporting evidence. Normalized records carry field provenance pointing to the raw capture. The returned JSON includes the paths, event, and replay result. Hashed names keep supplied IDs out of paths.
+Eligible unchanged bytes go under the privacy-managed generated inbox path
+using one stable privacy/source ID and the source media type. Normalized events
+remain under `5-evidence/releases/<hashed-release-id>.json`, registered as draft
+with the raw source ID as support. Request receipts are instance-owned metadata
+under `governance/imports/release/`. Supplied eligible source IDs reuse their
+original capture time, expiry and source reference.
 
-Imports never replace an existing file and reject symlink paths, including registry and lifecycle paths. A malformed input fails before capture. Payloads are written and verified in exclusive sibling staging directories, flushed, then atomically published with a no-replace hard link. A failed or short payload write leaves no truncated canonical file. Cleanup removes only the staging directory owned by that call. A process killed before cleanup may leave a hidden `.mole-release-*` staging directory; retries never treat it as a published capture. A filesystem or ledger error can leave a complete capture without all registrations; keep it and repeat the same command after repairing the reported problem. Publication refuses an occupied destination. Completed imports can recover missing registrations on replay. Concurrent imports of the same release may fail with an exclusive-write conflict; retry after the other run finishes.
+Read the [shared import privacy and recovery contract](import-privacy.md) before
+using source IDs, replaying old imports or moving captures. Raw metadata gates
+precede byte reads/hashes. Sensitive/uncertain input refuses without importer
+persistence; legacy unmanaged, quarantined, expired, missing or purged sources
+cannot be replayed or repaired automatically. Importers no longer discover raw
+sources by hash. Explicit normalized-evidence reconciliation is supported;
+arbitrary raw archive discovery is not an import recovery strategy.
 
-`review_state: draft` describes the imported artifact. The [lifecycle ledger](review-lifecycle.md) remains authoritative after human review. The importer cannot approve context or impersonate a human. Replay compares exact incoming bytes with the safely resolved raw file, then verifies the request fingerprint as well as the normalized event. Older captures without the fingerprint require human inspection and a new revision identity; the importer never invents missing import evidence. Supporting raw capture identity survives archive moves; ambiguous or conflicting source resolution stops replay. Both raw and event files are user-owned workspace data, with the same preservation rules as other raw and evidence files. No workspace content in this repository is changed by the example commands until you run them in your own instance.
+Publication remains immutable and exclusive. Same-request partial retries are
+limited to still-eligible stored bytes, allocated IDs, timestamps and matching
+fingerprints. Missing/truncated raw staging needs explicit recovery rather than
+recopying an external file. Source and lifecycle ledgers remain instance-owned;
+`review_state: draft` never approves context. See the executable
+[travel-log loop](../examples/product-travel-log/acceptance/README.md).

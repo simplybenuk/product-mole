@@ -15,6 +15,7 @@ for (const releaseOnly of [false, true]) {
     assert.match(later.decision, new RegExp(later.learning_id));
     assert.match(later.decision, /draft/);
     assert.equal(later.current, true);
-    assert.equal(result.trace.at(-1).summary_unchanged, true);
+    assert.equal(result.trace.find(item => item.stage === 'exclusions-and-preservation').summary_unchanged, true);
+    assert.equal(result.trace.at(-1).purged_replay_refused_without_writes, true);
   });
 }

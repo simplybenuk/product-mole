@@ -23,6 +23,7 @@ export const REQUIRED_PACKAGED_FILES = Object.freeze([
   'lib/capture.mjs',
   'lib/accepted-learning.mjs',
   'lib/analytics-evidence.mjs',
+  'lib/import-privacy.mjs',
   'docs/analytics-evidence.md',
   'examples/analytics-evidence/review.json',
   'examples/analytics-evidence/review.csv',
@@ -82,7 +83,7 @@ export function assertRequiredPackagedFiles(entries, required = REQUIRED_PACKAGE
 export function assertNoPrivatePackagedFiles(entries, forbiddenPrefixes = FORBIDDEN_PACKAGED_PREFIXES) {
   const privateFiles = entries
     .map(normaliseArchivePath)
-    .filter((file) => (file.startsWith('6-raw/') && file !== '6-raw/inbox/README.md') || file.startsWith('governance/privacy/') || forbiddenPrefixes.some((prefix) => file.startsWith(prefix)));
+    .filter((file) => (file.startsWith('6-raw/') && file !== '6-raw/inbox/README.md') || file.startsWith('governance/privacy/') || file.startsWith('governance/imports/') || forbiddenPrefixes.some((prefix) => file.startsWith(prefix)));
 
   if (privateFiles.length) {
     throw new Error('Packed artefact contains private workflow or raw files; rejected count: ' + privateFiles.length);

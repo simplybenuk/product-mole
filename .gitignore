@@ -32,3 +32,6 @@ Thumbs.db
 !/6-raw/inbox/
 !/6-raw/inbox/README.md
 /governance/privacy/
+
+# Instance-owned immutable import request evidence
+/governance/imports/

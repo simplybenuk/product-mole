@@ -41,6 +41,7 @@
         "governance/input-queue/",
         "governance/inbox-duplicates/",
         "governance/privacy/",
+        "governance/imports/",
         "mole.privacy.json"
       ]
     }
