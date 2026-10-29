@@ -19,6 +19,20 @@ Label each statement as a **fact**, an **observation**, an **interpretation**,
 or an **assumption**. Where there is no evidence, write `unknown` and say what
 is needed. Do not leave a section empty.
 
+Fill these links before submitting the report. Use stable change/release IDs,
+or `null` if unknown. Reference arrays contain registered source IDs also
+cited on the lifecycle submission. Empty arrays mean no linked source yet.
+
+```mole-learning
+{
+  "schema_version": 1,
+  "change_id": null,
+  "release_id": null,
+  "intent_refs": [],
+  "evidence_refs": []
+}
+```
+
 ## Change and release
 
 The change or release under review, its date, and where it is recorded. For a

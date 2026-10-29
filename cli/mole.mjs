@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { promoteLearning, retrieveLearnings } from '../lib/accepted-learning.mjs';
 import { importRelease } from '../lib/release-ingestion.mjs';
 
 import fs from 'node:fs';
@@ -110,7 +111,7 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
   ['mole.instance-template.yaml', 'mole.instance.yaml']
 ]);
 
-const LIFECYCLE_AGENT_GUIDANCE = 'Check review state with `mole retrieve` before relying on context. Only accepted records are approved, and a file without an accepted record is unreviewed. Leave new durable context as a draft and submit it with `mole lifecycle submit`. After editing an accepted file in place, run `mole lifecycle revise` on its record and submit it again. Never approve, reject, or supersede a record yourself; those decisions belong to a human.';
+const LIFECYCLE_AGENT_GUIDANCE = 'For prior accepted lessons, query `mole learning list --query "<topic>"` and cite the learning ID and approval revision. Check review state with `mole retrieve` before relying on context. Only accepted records are approved, and a file without an accepted record is unreviewed. Leave new durable context as a draft and submit it with `mole lifecycle submit`. After editing an accepted file in place, run `mole lifecycle revise` on its record and submit it again. Never approve, reject, or supersede a record yourself; those decisions belong to a human.';
 
 export function getHelpOutput() {
   return `Mole CLI v${getSourceVersion()}
@@ -127,6 +128,9 @@ Usage:
   mole critique <target> [claim-or-path]
                                       Print a context-grounded critique instruction.
   mole release import <file> --namespace <product> --key <release>  Import a local draft release.
+  mole learning promote <record-id>  Preserve an accepted report projection.
+  mole learning list [--query <text>]  Retrieve current accepted learning.
+  mole learning show <learning-id> [--history]  Read a lesson and optional history.
   mole travel-log <change-or-release>  Print an agent instruction for an outcome review of a change or release.
   mole bootstrap-context              Print an agent instruction for first-time top-layer setup.
   mole refresh top-layers             Print an agent instruction for summary/index refresh.
@@ -2350,6 +2354,19 @@ if (isDirectRun) {
     case 'critique':
       critique([subcommand, ...rest].filter(Boolean));
       break;
+    case 'learning': {
+      if (!['promote', 'list', 'show'].includes(subcommand)) throw new Error('Usage: mole learning promote <record-id> | list | show <learning-id>');
+      const parsed = parseLifecycleValues(rest, { positionals: subcommand === 'list' ? 0 : 1,
+        scalars: ['--query', '--change-id', '--release-id'], booleans: ['--history'] });
+      if (subcommand !== 'list' && !parsed.positionals[0]) throw new Error('A record or learning ID is required');
+      const result = subcommand === 'promote'
+        ? promoteLearning(cwd, { recordId: parsed.positionals[0] })
+        : retrieveLearnings(cwd, { learningId: subcommand === 'show' ? parsed.positionals[0] : undefined,
+          query: parsed.options['--query'], changeId: parsed.options['--change-id'], releaseId: parsed.options['--release-id'],
+          includeHistory: parsed.options['--history'] === true });
+      console.log(JSON.stringify(result, null, 2));
+      break;
+    }
     case 'release': {
       if (subcommand !== 'import') throw new Error('Usage: mole release import <file> --namespace <product> --key <release> [--intents <json>] [--source-id <id>]');
       const options = {};
