@@ -6,7 +6,27 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+### Added
+- Versioned change intent and outcome records with stable IDs, field provenance,
+  explicit gaps, and separate delivery and outcome-review status.
+- Raw capture redaction, quarantine, explicit short-retention purge, managed
+  source-ID-preserving archive moves, and checks that keep raw data out of Git.
+- Exact and lexical near-duplicate inbox checks with retained minimal metadata
+  and explicit human decisions for ambiguous matches.
+- Executable travel-log and operational acceptance guides covering review,
+  learning retrieval, processing retries, archive moves, and retention.
+- Local aggregate CSV/JSON analytics evidence import with explicit measurement states, UTC review windows, provenance and immutable draft publication.
+- Local accepted-report learning projections preserve approval provenance and
+  support live retrieval queries, corrections and supersession history.
+- Local release ingestion preserves raw artifacts and creates draft multi-change
+  events with explicit intent links, unresolved matches, and field provenance.
+
 ### Fixed
+- Release and analytics imports enter managed retention immediately and refuse
+  quarantined, expired, deleted, or unmanaged raw sources before replay reads.
+- Import registration uses authorized byte snapshots without content discovery;
+  exclusive output publication refuses competing requests instead of registering
+  their output under another identity.
 - The local UI now serves HTML, JavaScript, and CSS as file contents instead
   of JSON-encoded buffers, so the page loads correctly.
 - The capture form displays warnings when a note is saved without a lifecycle

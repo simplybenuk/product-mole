@@ -23,6 +23,13 @@ workspace.
 | `reports/travel-log-rich.md` | All four | A complete report. Each change has its own decision. Attribution limits are stated. |
 | `reports/travel-log-release-notes-only.md` | The release notes alone | The same release with no intent record and no analytics. Every gap is written as `unknown`, and no decision claims an outcome. |
 
+## Executable acceptance example
+
+Run the [complete local loop](acceptance/README.md) to exercise real ingestion,
+review, learning promotion and later retrieval in a disposable workspace. It
+includes a release-only case and checks that unreviewed or superseded learning
+is excluded. Report text is an explicit fixture, not automated generation.
+
 ## Try it
 
 In a Mole workspace, copy `inputs/intent-csv-export.md` into
@@ -38,3 +45,9 @@ mole travel-log "release 2026.09"
 Give the printed instruction to an agent that has the Mole skills installed
 (`mole install skills`). Compare its draft with the reports here. The agent
 submits the draft for review; a person approves or rejects it.
+
+For structured aggregate imports, see the [analytics evidence contract](../../docs/analytics-evidence.md)
+and its CSV/JSON fixtures. This example's weekly wide-table export is a source
+for manual review, not the import format. Map it explicitly to one row per
+metric with baseline/post windows and aggregation definitions before importing;
+Mole does not infer denominators or sum weekly active-user populations.

@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+import { importAnalytics } from '../lib/analytics-evidence.mjs';
+import { promoteLearning, retrieveLearnings } from '../lib/accepted-learning.mjs';
+import { importRelease } from '../lib/release-ingestion.mjs';
+import { validateVisibility } from '../lib/privacy-policy.mjs';
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -13,6 +17,8 @@ import {
   checkpointInboxProcessing,
   overrideStaleInboxProcessing
 } from '../lib/inbox-processing.mjs';
+import { inspectInboxDuplicateBatch, recordDuplicateDecision } from '../lib/inbox-duplicates.mjs';
+import { archiveManagedRaw, ingestCaptureFields, scanRaw, purgeRaw, reviewQuarantine, auditPrivacy } from '../lib/privacy.mjs';
 import { auditInbox } from '../lib/inbox-audit.mjs';
 import { backfillProcessedInboxMetrics } from '../lib/metrics.mjs';
 import { formatMetricsSummary, summarizeMetrics, writeMetricsSnapshot } from '../lib/metrics-summary.mjs';
@@ -109,7 +115,7 @@ const WORKSPACE_SCAFFOLD_FILES = Object.freeze([
   ['mole.instance-template.yaml', 'mole.instance.yaml']
 ]);
 
-const LIFECYCLE_AGENT_GUIDANCE = 'Check review state with `mole retrieve` before relying on context. Only accepted records are approved, and a file without an accepted record is unreviewed. Leave new durable context as a draft and submit it with `mole lifecycle submit`. After editing an accepted file in place, run `mole lifecycle revise` on its record and submit it again. Never approve, reject, or supersede a record yourself; those decisions belong to a human.';
+const LIFECYCLE_AGENT_GUIDANCE = 'For prior accepted lessons, query `mole learning list --query "<topic>"` and cite the learning ID and approval revision. Check review state with `mole retrieve` before relying on context. Only accepted records are approved, and a file without an accepted record is unreviewed. Leave new durable context as a draft and submit it with `mole lifecycle submit`. After editing an accepted file in place, run `mole lifecycle revise` on its record and submit it again. Never approve, reject, or supersede a record yourself; those decisions belong to a human.';
 
 export function getHelpOutput() {
   return `Mole CLI v${getSourceVersion()}
@@ -125,6 +131,11 @@ Usage:
                                       Print an agent instruction for a stakeholder update.
   mole critique <target> [claim-or-path]
                                       Print a context-grounded critique instruction.
+  mole analytics import <file> --namespace <product> --key <revision> --change-id <id>  Import aggregate CSV/JSON.
+  mole release import <file> --namespace <product> --key <release>  Import a local draft release.
+  mole learning promote <record-id>  Preserve an accepted report projection.
+  mole learning list [--query <text>]  Retrieve current accepted learning.
+  mole learning show <learning-id> [--history]  Read a lesson and optional history.
   mole travel-log <change-or-release>  Print an agent instruction for an outcome review of a change or release.
   mole bootstrap-context              Print an agent instruction for first-time top-layer setup.
   mole refresh top-layers             Print an agent instruction for summary/index refresh.
@@ -159,7 +170,14 @@ Usage:
   mole inbox heartbeat --run-id id     Renew the matching active run lease.
   mole inbox checkpoint --run-id id [--processed path]
                                       Save restart-safe partial progress.
+  mole privacy archive <source-id> [--apply] [--recover]
+                                      Move cleaned raw to its managed archive path.
+  mole privacy scan [--apply]          Quarantine manual raw files; dry-run by default.
+  mole retention purge [--apply]       Remove expired raw files; dry-run by default.
+  mole privacy release <source-id> --confirm-reviewed [--apply]
   mole inbox audit                    Audit live files, leases, conflicts, and receipts.
+  mole inbox duplicates check <id>...  Check registered sources before enrichment.
+  mole inbox duplicates decide        Record an explicit human duplicate decision.
   mole inbox complete [options] [summary]
                                       Write an idempotent receipt and release the lock.
   mole inbox override-stale [options] Replace an expired lock with an audited override.
@@ -317,12 +335,17 @@ export function createWorkspaceScaffold(target) {
     const sourcePath = path.join(repoRoot, dir);
     const targetPath = path.join(target, dir);
 
-    if (exists(sourcePath)) {
+    if (dir === '6-raw') {
+      ensureDir(path.join(targetPath, 'inbox'));
+      copyFile(path.join(sourcePath, 'inbox', 'README.md'), path.join(targetPath, 'inbox', 'README.md'));
+    } else if (exists(sourcePath)) {
       copyDirRecursive(sourcePath, targetPath);
     } else {
       ensureDir(targetPath);
     }
   }
+
+  fs.writeFileSync(path.join(target, '.gitignore'), '/6-raw/**\n!/6-raw/inbox/\n!/6-raw/inbox/README.md\n/governance/privacy/\n/governance/imports/\n');
 
   for (const [source, destination] of WORKSPACE_SCAFFOLD_FILES) {
     copyFile(path.join(repoRoot, source), path.join(target, destination));
@@ -575,35 +598,25 @@ function captureInsight(values) {
     process.exit(1);
   }
 
-  const dir = path.join(cwd, '6-raw', 'inbox');
-  const fileName = createCaptureFileName(text);
-  const target = path.join(dir, fileName);
-  // Refuse an inbox that is a link leaving the workspace before the raw
-  // text is written anywhere.
-  try {
-    toWorkspaceRelativePath(cwd, `6-raw/inbox/${fileName}`);
-  } catch (err) {
-    console.error(`Capture not written: ${err.message}`);
-    process.exit(1);
-  }
-  ensureDir(dir);
+  try { metadata.visibility = validateVisibility(metadata.visibility || 'internal'); }
+  catch { console.error('Unsupported visibility. Nothing was captured.'); process.exit(1); }
   const createdAt = nowUtc();
   const sourceId = createSourceId();
-
-  const content = buildInsightCaptureContent(text, {
-    ...metadata,
-    sourceId,
-    createdAt
-  });
-
+  let privacy;
   try {
-    fs.writeFileSync(target, content, { encoding: 'utf8', flag: 'wx' });
-  } catch (err) {
-    if (err.code === 'EEXIST') {
-      console.error(`Refusing to overwrite existing capture: ${target}`);
-      process.exit(1);
-    }
-    throw err;
+    privacy = ingestCaptureFields(cwd, { sourceId, now: createdAt,
+      fields: { text, ...metadata, capturedBy: resolveCapturedBy(metadata.capturedBy) },
+      render: (fields, quarantine) => buildInsightCaptureContent(fields.text, {
+        ...fields, sourceId, createdAt, capturedBy: quarantine ? fields.capturedBy : '[PERSON_NAME]'
+      }) });
+  } catch {
+    console.error('Privacy capture failed; inspect local policy and permissions.');
+    process.exit(1);
+  }
+  const target = path.join(cwd, privacy.path);
+  if (privacy.outcome === 'quarantined') {
+    console.log(`Quarantined capture: ${sourceId}. Human privacy review required.`);
+    return;
   }
 
   try {
@@ -612,7 +625,7 @@ function captureInsight(values) {
       path: target,
       source_type: 'note',
       captured_at: createdAt,
-      captured_by: resolveCapturedBy(metadata.capturedBy),
+      captured_by: '[PERSON_NAME]',
       channel: 'cli',
       original_date: createdAt.slice(0, 10),
       visibility: metadata.visibility || 'internal',
@@ -620,7 +633,7 @@ function captureInsight(values) {
       content_change_type: 'captured'
     });
   } catch (err) {
-    console.error(`Capture written but source registration failed: ${err.message}`);
+    console.error('Capture saved; source registration requires local recovery.');
     process.exit(1);
   }
 
@@ -638,7 +651,7 @@ function captureInsight(values) {
       now: createdAt
     }).record_id;
   } catch (err) {
-    lifecycleWarning = err.message;
+    lifecycleWarning = 'Local lifecycle recovery required.';
   }
 
   console.log(`Captured insight: ${target}`);
@@ -1898,6 +1911,32 @@ function upgradeTool(version) {
 }
 
 function runInboxCommand(action, values = []) {
+  if (action === 'duplicates') {
+    try {
+      const [operation, ...args] = values;
+      if (operation === 'check') {
+        let threshold = 0.8;
+        const ids = [];
+        for (let i = 0; i < args.length; i++) {
+          if (args[i] === '--threshold') threshold = Number(args[++i]);
+          else ids.push(args[i]);
+        }
+        if (!ids.length) throw new Error('Provide registered source IDs.');
+        console.log(JSON.stringify(inspectInboxDuplicateBatch(cwd, ids, { threshold }), null, 2));
+      } else if (operation === 'decide') {
+        const [sourceId, targetId, status, ...flags] = args;
+        const options = { sourceId, targetId, status };
+        for (let i = 0; i < flags.length; i++) {
+          if (flags[i] === '--confirm-human') options.confirmHuman = true;
+          else if (flags[i] === '--actor') options.actor = flags[++i];
+          else if (flags[i] === '--reason') options.reason = flags[++i];
+          else throw new Error('Unknown duplicate decision option.');
+        }
+        console.log(JSON.stringify(recordDuplicateDecision(cwd, options), null, 2));
+      } else throw new Error('Use inbox duplicates check <source-id>... [--threshold 0.8] or decide <source-id> <target-id> <status> --confirm-human --actor <local-id> --reason <code>.');
+    } catch (error) { console.error(error.message); process.exit(1); }
+    return;
+  }
   if (action === 'audit') {
     const result = auditInbox(cwd);
     console.log('Mole inbox audit');
@@ -2348,6 +2387,53 @@ if (isDirectRun) {
     case 'critique':
       critique([subcommand, ...rest].filter(Boolean));
       break;
+    case 'learning': {
+      if (!['promote', 'list', 'show'].includes(subcommand)) throw new Error('Usage: mole learning promote <record-id> | list | show <learning-id>');
+      const parsed = parseLifecycleValues(rest, { positionals: subcommand === 'list' ? 0 : 1,
+        scalars: ['--query', '--change-id', '--release-id'], booleans: ['--history'] });
+      if (subcommand !== 'list' && !parsed.positionals[0]) throw new Error('A record or learning ID is required');
+      const result = subcommand === 'promote'
+        ? promoteLearning(cwd, { recordId: parsed.positionals[0] })
+        : retrieveLearnings(cwd, { learningId: subcommand === 'show' ? parsed.positionals[0] : undefined,
+          query: parsed.options['--query'], changeId: parsed.options['--change-id'], releaseId: parsed.options['--release-id'],
+          includeHistory: parsed.options['--history'] === true });
+      console.log(JSON.stringify(result, null, 2));
+      break;
+    }
+    case 'analytics': {
+      if (subcommand !== 'import') throw new Error('Usage: mole analytics import <file> --namespace <product> --key <release> [--change-id <id>] [--release-id <id>] [--source-id <id>]');
+      const options = {};
+      for (let i = 0; i < rest.length; i++) {
+        const arg = rest[i];
+        if (['--namespace', '--key', '--change-id', '--release-id', '--source-id', '--format'].includes(arg)) {
+          if (!rest[i + 1] || rest[i + 1].startsWith('--') || Object.hasOwn(options, arg)) throw new Error(`Missing or duplicate option: ${arg}`);
+          options[arg] = rest[++i];
+        } else if (!arg.startsWith('-') && !options.file) options.file = arg;
+        else throw new Error(`Unexpected argument: ${arg}`);
+      }
+      const result = importAnalytics(cwd, { file: options.file, sourceId: options['--source-id'],
+        identity: { namespace: options['--namespace'], key: options['--key'] }, format: options['--format'],
+        changeId: options['--change-id'], releaseId: options['--release-id'] });
+      console.log(JSON.stringify(result, null, 2));
+      break;
+    }
+    case 'release': {
+      if (subcommand !== 'import') throw new Error('Usage: mole release import <file> --namespace <product> --key <release> [--intents <json>] [--source-id <id>]');
+      const options = {};
+      for (let i = 0; i < rest.length; i++) {
+        const arg = rest[i];
+        if (['--namespace', '--key', '--intents', '--source-id', '--format'].includes(arg)) {
+          if (!rest[i + 1] || rest[i + 1].startsWith('--') || Object.hasOwn(options, arg)) throw new Error(`Missing or duplicate option: ${arg}`);
+          options[arg] = rest[++i];
+        } else if (!arg.startsWith('-') && !options.file) options.file = arg;
+        else throw new Error(`Unexpected argument: ${arg}`);
+      }
+      const result = importRelease(cwd, { file: options.file, sourceId: options['--source-id'],
+        identity: { namespace: options['--namespace'], key: options['--key'] }, format: options['--format'],
+        intents: options['--intents'] ? JSON.parse(fs.readFileSync(path.resolve(cwd, options['--intents']), 'utf8')) : [] });
+      console.log(JSON.stringify(result, null, 2));
+      break;
+    }
     case 'travel-log':
       travelLog([subcommand, ...rest].filter(Boolean));
       break;
@@ -2378,6 +2464,22 @@ if (isDirectRun) {
       }
       console.log(`Suggested agent instruction:\n\nReview ${subcommand || 'the requested target'} and return the highest-value next actions or missing human inputs.`);
       break;
+    case 'privacy':
+    case 'retention': {
+      try {
+        const options = { apply: rest.includes('--apply'), confirmReviewed: rest.includes('--confirm-reviewed'), recover: rest.includes('--recover') };
+        if (rest.some(v => !['--apply', '--confirm-reviewed', '--recover'].includes(v) && !v.startsWith('src_'))) throw new Error();
+        const result = subcommand === 'archive' ? archiveManagedRaw(cwd, rest.find(v => v.startsWith('src_')), options)
+          : subcommand === 'purge' ? purgeRaw(cwd, options)
+          : subcommand === 'audit' ? auditPrivacy(cwd)
+          : subcommand === 'scan' ? scanRaw(cwd, options)
+          : subcommand === 'release' ? reviewQuarantine(cwd, rest.find(v => v.startsWith('src_')), options) : null;
+        if (!result) throw new Error();
+        console.log(JSON.stringify(result, null, 2));
+        if (result.recovery_required || result.items?.some(i => i.status === 'deletion_failed')) process.exitCode = 1;
+      } catch { console.error('Privacy operation failed; check policy, claims and recovery state.'); process.exitCode = 1; }
+      break;
+    }
     case 'inbox':
       runInboxCommand(subcommand, rest);
       break;

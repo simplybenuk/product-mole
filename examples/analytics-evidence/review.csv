@@ -1,0 +1,3 @@
+metric_id,definition,unit,segment,population,baseline_start,baseline_end,post_start,post_end,baseline_complete,post_complete,baseline_value,post_value,baseline_sample_size,post_sample_size,status,data_timestamp,export_ref,quality_notes
+search_completion,"Completed searches / starts, percent",percent,new accounts,eligible searches,2026-09-01,2026-09-08,2026-09-08,2026-09-15,true,true,50,60,1000,1200,measured,2026-09-16T10:00:00Z,local-export:search-v2,No control group
+search_errors,Search errors,count,all accounts,searches,2026-09-01,2026-09-08,2026-09-08,2026-09-15,true,false,0,3,1000,1200,measured,2026-09-16T10:00:00Z,local-export:errors-v1,Post window incomplete
