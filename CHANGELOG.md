@@ -6,6 +6,8 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-29
+
 ### Added
 - Versioned change intent and outcome records with stable IDs, field provenance,
   explicit gaps, and separate delivery and outcome-review status.
@@ -40,6 +42,14 @@ The format is loosely based on Keep a Changelog and uses lightweight SemVer.
   line breaks, and Unicode controls survive YAML parsing without changing the note.
 - Source resolution excludes identical files claimed by another source and checks
   recorded historical paths even when they fall outside the usual search folders.
+
+### Upgrade notes
+- Follow the [0.4.0 upgrade guidance](docs/upgrade-and-instance-management.md#upgrading-to-040)
+  before processing existing raw inputs. Source registration alone does not make
+  a legacy capture eligible for privacy-aware processing.
+- Review the seven-day default raw retention policy and schedule explicit purge.
+  Preserve instance-owned privacy, import, duplicate, source, lifecycle, and
+  processing records during the upgrade.
 
 ## [0.3.1] - 2026-10-27
 

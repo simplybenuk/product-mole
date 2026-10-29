@@ -238,7 +238,7 @@ Examples:
   mole product-update CEO 2-weeks --format email
   mole critique idea "Improve regulated-customer onboarding"
   mole critique spec drafts/spec.md
-  mole upgrade 0.3.1
+  mole upgrade 0.4.0
   mole bootstrap-context
   mole refresh top-layers
   mole install skills
