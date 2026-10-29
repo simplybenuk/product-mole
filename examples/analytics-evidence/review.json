@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "change_id": "change-search-typos",
+  "release_id": "release-2026-09",
+  "metrics": [
+    {
+      "metric_id": "search_completion",
+      "definition": "Completed searches / searches started, percent",
+      "unit": "percent",
+      "segment": "new accounts",
+      "population": "eligible searches",
+      "baseline_start": "2026-09-01",
+      "baseline_end": "2026-09-08",
+      "post_start": "2026-09-08",
+      "post_end": "2026-09-15",
+      "baseline_complete": true,
+      "post_complete": true,
+      "baseline_value": 50,
+      "post_value": 60,
+      "baseline_sample_size": 1000,
+      "post_sample_size": 1200,
+      "status": "measured",
+      "data_timestamp": "2026-09-16T10:00:00Z",
+      "query_ref": "local-query:search-completion-v2",
+      "quality_status": "good",
+      "quality_notes": "Aggregate export; bot filtering unchanged",
+      "confidence_notes": "Descriptive comparison; no control group"
+    },
+    { "metric_id": "support_contacts", "definition": "Contacts about search", "baseline_status": "not_measured", "post_status": "not_measured", "status": "not_measured" }
+  ]
+}
