@@ -60,6 +60,7 @@ cannot create the link, the original remains and the prepared intent needs
 recovery. The operation does not claim filesystem or multiple-ledger atomicity.
 
 After an interrupted move, processing and purge stop for the pending intent.
+`mole privacy audit` lists its source ID in `pending_moves`.
 Inspect privacy/source state locally, pause sync and processors, then run:
 
 ```bash
@@ -67,6 +68,8 @@ mole privacy archive <source-id> --recover
 mole privacy archive <source-id> --recover --apply
 ```
 
+Recovery never renews TTL. If expiry occurs while the intent is pending, the
+archive command refuses and owner reconciliation is required before purge.
 Recovery handles an intent created before linking, two links to the same inode,
 metadata updated before unlinking, or only the archive remaining after metadata
 updates. It verifies privacy eligibility and unchanged captured bytes before
