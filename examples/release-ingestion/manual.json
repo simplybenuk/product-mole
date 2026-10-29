@@ -1,0 +1,9 @@
+{
+  "title": "September release context",
+  "released_at": "2026-09-30",
+  "source_links": ["https://example.test/releases/2026-09"],
+  "changes": [
+    {"key": "search", "title": "Search handles typing mistakes", "intent_id": "search-typos", "description": "Shipped fuzzy search for product names."},
+    {"key": "csv", "title": "Export CSV files", "expected_outcome": "Reduce time spent preparing weekly reports"}
+  ]
+}

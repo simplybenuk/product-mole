@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { importRelease } from '../lib/release-ingestion.mjs';
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -125,6 +126,7 @@ Usage:
                                       Print an agent instruction for a stakeholder update.
   mole critique <target> [claim-or-path]
                                       Print a context-grounded critique instruction.
+  mole release import <file> --namespace <product> --key <release>  Import a local draft release.
   mole travel-log <change-or-release>  Print an agent instruction for an outcome review of a change or release.
   mole bootstrap-context              Print an agent instruction for first-time top-layer setup.
   mole refresh top-layers             Print an agent instruction for summary/index refresh.
@@ -2348,6 +2350,23 @@ if (isDirectRun) {
     case 'critique':
       critique([subcommand, ...rest].filter(Boolean));
       break;
+    case 'release': {
+      if (subcommand !== 'import') throw new Error('Usage: mole release import <file> --namespace <product> --key <release> [--intents <json>] [--source-id <id>]');
+      const options = {};
+      for (let i = 0; i < rest.length; i++) {
+        const arg = rest[i];
+        if (['--namespace', '--key', '--intents', '--source-id', '--format'].includes(arg)) {
+          if (!rest[i + 1] || rest[i + 1].startsWith('--') || Object.hasOwn(options, arg)) throw new Error(`Missing or duplicate option: ${arg}`);
+          options[arg] = rest[++i];
+        } else if (!arg.startsWith('-') && !options.file) options.file = arg;
+        else throw new Error(`Unexpected argument: ${arg}`);
+      }
+      const result = importRelease(cwd, { file: options.file, sourceId: options['--source-id'],
+        identity: { namespace: options['--namespace'], key: options['--key'] }, format: options['--format'],
+        intents: options['--intents'] ? JSON.parse(fs.readFileSync(path.resolve(cwd, options['--intents']), 'utf8')) : [] });
+      console.log(JSON.stringify(result, null, 2));
+      break;
+    }
     case 'travel-log':
       travelLog([subcommand, ...rest].filter(Boolean));
       break;
