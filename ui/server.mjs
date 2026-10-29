@@ -1,3 +1,6 @@
+import { lstatSync } from 'node:fs';
+import { validateVisibility } from '../lib/privacy-policy.mjs';
+import { ingestCaptureFields } from '../lib/privacy.mjs';
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
@@ -56,11 +59,12 @@ async function readBody(req) {
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BODY_BYTES) throw Object.assign(new Error('Request body is too large.'), { status: 413 });
+    if (size > MAX_BODY_BYTES) throw Object.assign(new Error('Request body is too large.'), { status: 413, safeResponse: true });
     chunks.push(chunk);
   }
   if (!chunks.length) return {};
-  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+  catch { throw Object.assign(new Error('Malformed JSON request.'), { status: 400, safeResponse: true }); }
 }
 
 export function safeRepoPath(input = '', root = REPO_ROOT) {
@@ -69,6 +73,7 @@ export function safeRepoPath(input = '', root = REPO_ROOT) {
   if (!resolved.startsWith(root)) throw new Error('Invalid path');
   const rel = path.relative(root, resolved);
   const top = rel.split(path.sep)[0];
+  if (/^6-raw[\\/](quarantine|staging)([\\/]|$)/.test(rel) || /^governance[\\/]privacy([\\/]|$)/.test(rel)) throw new Error('Private raw content requires local review.');
   if (!allowedRoots.has(top) && rel !== 'README.md') {
     throw new Error('Path outside allowed roots');
   }
@@ -80,6 +85,12 @@ export function safeRepoPath(input = '', root = REPO_ROOT) {
     toWorkspaceRelativePath(root, rel.split(path.sep).join('/'));
   } catch {
     throw new Error('Path outside allowed roots');
+  }
+  let component = root;
+  for (const part of rel.split(path.sep)) {
+    component = path.join(component, part);
+    try { if (lstatSync(component).isSymbolicLink()) throw new Error('Path outside allowed roots'); }
+    catch (err) { if (err.code !== 'ENOENT') throw err; }
   }
   let real = null;
   try {
@@ -145,6 +156,8 @@ export function buildUiCaptureContent(body, options = {}) {
  * registration follow.
  */
 export async function captureNote(root, body = {}) {
+  if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.note !== 'string') return { status: 400, payload: { error: 'Capture requires an object with a text note.' } };
+  try { validateVisibility(body.visibility ?? 'internal'); } catch { return { status: 400, payload: { error: 'Unsupported visibility.' } }; }
   const type = body.type || 'quick-notes';
   const source = body.source || 'self';
   const channel = body.channel || 'chat';
@@ -154,37 +167,19 @@ export async function captureNote(root, body = {}) {
   if (!note) return { status: 400, payload: { error: 'Note is required' } };
 
   const date = todayDate();
-  const relPath = createCaptureRelPath(type, note);
-  const resolved = path.resolve(root, relPath);
   const sourceId = createSourceId();
   const capturedAt = new Date().toISOString();
-
-  const frontmatter = buildUiCaptureContent({
-    source,
-    channel,
-    confidence,
-    tags,
-    note,
-    capturedBy: body.capturedBy || body.captured_by
-  }, { date, sourceId });
-
-  // Refuse an inbox that is a link leaving the workspace before the raw
-  // text is written anywhere.
+  let privacy;
   try {
-    toWorkspaceRelativePath(root, relPath);
-  } catch (err) {
-    return { status: 409, payload: { error: `Capture not written: ${err.message}`, path: relPath } };
-  }
-
-  await fs.mkdir(path.dirname(resolved), { recursive: true });
-  try {
-    await fs.writeFile(resolved, frontmatter, { encoding: 'utf8', flag: 'wx' });
-  } catch (err) {
-    if (err.code === 'EEXIST') {
-      return { status: 409, payload: { error: 'Capture already exists; retry to generate a new filename.' } };
-    }
-    throw err;
-  }
+    privacy = ingestCaptureFields(root, { sourceId, now: capturedAt,
+      fields: { ...body, capturedBy: resolveCapturedBy(body.capturedBy || body.captured_by) },
+      render: (fields, quarantine) => buildUiCaptureContent({ ...fields,
+        capturedBy: quarantine ? fields.capturedBy : '[PERSON_NAME]',
+        captured_by: quarantine ? fields.captured_by : '[PERSON_NAME]'
+      }, { date, sourceId }) });
+  } catch { return { status: 409, payload: { error: 'Privacy capture failed; inspect local policy and permissions.' } }; }
+  const relPath = privacy.path;
+  if (privacy.outcome === 'quarantined') return { status: 200, payload: { ok: true, source_id: sourceId, state: 'quarantined', path: relPath } };
 
   try {
     registerSource(root, {
@@ -192,8 +187,8 @@ export async function captureNote(root, body = {}) {
       path: relPath,
       source_type: 'note',
       captured_at: capturedAt,
-      captured_by: resolveCapturedBy(body.capturedBy || body.captured_by),
-      channel,
+      captured_by: '[PERSON_NAME]',
+      channel: 'ui',
       original_date: date,
       visibility: body.visibility || 'internal',
       path_reason: 'captured',
@@ -203,7 +198,7 @@ export async function captureNote(root, body = {}) {
     return {
       status: 500,
       payload: {
-        error: `Capture written but source registration failed: ${err.message}`,
+        error: 'Capture saved; source registration requires local recovery.',
         path: relPath,
         source_id: sourceId
       }
@@ -225,7 +220,7 @@ export async function captureNote(root, body = {}) {
       lockWaitMs: UI_LOCK_WAIT_MS
     }).record_id;
   } catch (err) {
-    warning = `The capture is saved but has no lifecycle record yet: ${err.message}`;
+    warning = 'Capture saved; lifecycle registration requires local recovery.';
   }
 
   return {
@@ -318,7 +313,7 @@ export const server = http.createServer(async (req, res) => {
     const content = await fs.readFile(filePath);
     return send(res, 200, content, contentType);
   } catch (err) {
-    return send(res, err.status || 500, { error: err.message || 'Server error' });
+    return send(res, err.safeResponse === true ? err.status : 500, { error: err.safeResponse === true ? err.message : 'Request failed.' });
   }
 });
 

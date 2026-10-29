@@ -577,7 +577,7 @@ describe('UI capture', () => {
       assert.ok(elapsed >= 1000 && elapsed < 8000, `capture returned after ${elapsed} ms`);
       assert.equal(kept.status, 200);
       assert.equal(kept.payload.record_id, null);
-      assert.match(kept.payload.warning, /The capture is saved but has no lifecycle record yet: .*in progress/);
+      assert.match(kept.payload.warning, /Capture saved; lifecycle registration requires local recovery/);
       assert.ok(fs.existsSync(path.join(workspace, kept.payload.path)));
 
       fs.rmSync(lockPath);
@@ -613,7 +613,7 @@ describe('UI capture', () => {
       assert.equal(kept.payload.ok, true);
       assert.equal(kept.payload.record_id, null);
       assert.equal(kept.payload.state, null);
-      assert.match(kept.payload.warning, /The capture is saved but has no lifecycle record yet: .*competing copies/);
+      assert.match(kept.payload.warning, /Capture saved; lifecycle registration requires local recovery/);
       assert.ok(fs.existsSync(path.join(workspace, kept.payload.path)));
       assert.equal(readSourceRecord(workspace, kept.payload.source_id).current_path, kept.payload.path.split(path.sep).join('/'));
 
