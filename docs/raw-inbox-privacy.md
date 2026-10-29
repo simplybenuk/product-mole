@@ -35,6 +35,48 @@ mole privacy release <source_id> --confirm-reviewed --apply
 
 The scanner must allow the derivative. Apply registers a raw source and lifecycle record for it, preserving its source ID and original expiry. Original bytes remain private until purge. Confirmation means a person reviewed privacy, not that the insight is approved. Lifecycle acceptance remains a separate human decision. Retention extensions are not supported in this release; copy no originals into durable evidence to bypass expiry.
 
+## Managed archive moves
+
+Archive a privacy-eligible cleaned raw source with:
+
+```bash
+mole privacy archive <source-id>
+mole privacy archive <source-id> --apply
+```
+
+The only destination is `6-raw/inbox/archive/<source-id>.md`. The dry-run changes
+nothing. Apply preserves source ID, bytes, original expiry, duplicate fingerprint
+and receipt identity, and appends the generated path to source history. It does
+not change lifecycle review state. Archived sources remain privacy-gated and can
+be checked for duplicates or explicitly claimed/processed at their archive path.
+Purge covers the managed archive and restored copies under the same expiry.
+
+An active or conflicted processing/lifecycle lock, symlink, conflicting source
+identity or existing destination stops the operation. There is no overwrite or
+arbitrary destination option. A prepared raw-free intent precedes an exclusive
+hard link, then privacy and source metadata updates, then removal of the original
+link. This operation requires a filesystem supporting local hard links. If it
+cannot create the link, the original remains and the prepared intent needs
+recovery. The operation does not claim filesystem or multiple-ledger atomicity.
+
+After an interrupted move, processing and purge stop for the pending intent.
+Inspect privacy/source state locally, pause sync and processors, then run:
+
+```bash
+mole privacy archive <source-id> --recover
+mole privacy archive <source-id> --recover --apply
+```
+
+Recovery handles an intent created before linking, two links to the same inode,
+metadata updated before unlinking, or only the archive remaining after metadata
+updates. It verifies privacy eligibility and unchanged captured bytes before
+continuing. Equal-looking copies with different inodes, foreign path ownership,
+malformed metadata, missing copies or inconsistent completed state are ambiguous;
+recovery preserves them and refuses to select a winner. Owner reconciliation is
+required in those cases. Atomic metadata write failures can also leave malformed
+or temporary records that require owner reconciliation. Do not delete a source
+to force recovery. Retrying a completed move is idempotent and never renews TTL.
+
 ## Recovery and synced workspaces
 
 Run scan before processing existing workspaces. It preserves the earliest available local birth/modified timestamp, capped at the scan time. That timestamp cannot prove the age of a file copied from another device. Migration does not preserve sensitive original filenames in a manifest. Existing registry entries can still contain legacy sensitive metadata; inspect them locally and correct them before sharing. A scan is not a scrub of previous history.
@@ -43,7 +85,7 @@ Any inbox processing lock or conflict lock blocks applying migration and expiry 
 
 An intent manifest precedes staging. A crash between staging, rename and manifest update is recoverable by purge, which checks all generated locations for the ID. Unknown files are quarantined by scan. Malformed manifests and symlinks fail closed. Recover their metadata locally before retrying; do not paste contents into error reports. Run jobs with one local writer and pause folder synchronization while changing privacy state. Local filesystem operations are not a distributed lock or protection against a malicious concurrent filesystem writer.
 
-Purge covers managed staging, quarantine and inbox copies. Manual archives anywhere under `6-raw/` must first pass scan. Moving a managed file manually requires recovery through scan. After deleting raw files, reconcile source/lifecycle ledgers with their normal audit tools; do not withdraw accepted context automatically. Keep cleaned durable evidence separately, with supporting source IDs and the normal draft/review process.
+Purge covers managed staging, quarantine, inbox and generated archive copies. Manual archives outside the managed operation must first pass scan. Moving a managed file manually does not authorize its new path. After deleting raw files, reconcile source/lifecycle ledgers with their normal audit tools; do not withdraw accepted context automatically. Keep cleaned durable evidence separately, with supporting source IDs and the normal draft/review process.
 
 Local unlink does not erase provider copies, backups, snapshots, trash, editor swap files or earlier Git commits. Exclude `6-raw/` from backups and hosted sync where possible. Set short provider retention, clear deleted versions under the provider's controls, and avoid backing up quarantine. On restore, pause processors, restore privacy tombstones with the workspace, scan recovered copies and run purge before resuming. A restored file is not authorized for reuse because it exists again.
 

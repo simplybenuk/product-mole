@@ -18,7 +18,7 @@ import {
   overrideStaleInboxProcessing
 } from '../lib/inbox-processing.mjs';
 import { inspectInboxDuplicateBatch, recordDuplicateDecision } from '../lib/inbox-duplicates.mjs';
-import { ingestCaptureFields, scanRaw, purgeRaw, reviewQuarantine, auditPrivacy } from '../lib/privacy.mjs';
+import { archiveManagedRaw, ingestCaptureFields, scanRaw, purgeRaw, reviewQuarantine, auditPrivacy } from '../lib/privacy.mjs';
 import { auditInbox } from '../lib/inbox-audit.mjs';
 import { backfillProcessedInboxMetrics } from '../lib/metrics.mjs';
 import { formatMetricsSummary, summarizeMetrics, writeMetricsSnapshot } from '../lib/metrics-summary.mjs';
@@ -170,6 +170,8 @@ Usage:
   mole inbox heartbeat --run-id id     Renew the matching active run lease.
   mole inbox checkpoint --run-id id [--processed path]
                                       Save restart-safe partial progress.
+  mole privacy archive <source-id> [--apply] [--recover]
+                                      Move cleaned raw to its managed archive path.
   mole privacy scan [--apply]          Quarantine manual raw files; dry-run by default.
   mole retention purge [--apply]       Remove expired raw files; dry-run by default.
   mole privacy release <source-id> --confirm-reviewed [--apply]
@@ -2465,9 +2467,10 @@ if (isDirectRun) {
     case 'privacy':
     case 'retention': {
       try {
-        const options = { apply: rest.includes('--apply'), confirmReviewed: rest.includes('--confirm-reviewed') };
-        if (rest.some(v => !['--apply', '--confirm-reviewed'].includes(v) && !v.startsWith('src_'))) throw new Error();
-        const result = subcommand === 'purge' ? purgeRaw(cwd, options)
+        const options = { apply: rest.includes('--apply'), confirmReviewed: rest.includes('--confirm-reviewed'), recover: rest.includes('--recover') };
+        if (rest.some(v => !['--apply', '--confirm-reviewed', '--recover'].includes(v) && !v.startsWith('src_'))) throw new Error();
+        const result = subcommand === 'archive' ? archiveManagedRaw(cwd, rest.find(v => v.startsWith('src_')), options)
+          : subcommand === 'purge' ? purgeRaw(cwd, options)
           : subcommand === 'audit' ? auditPrivacy(cwd)
           : subcommand === 'scan' ? scanRaw(cwd, options)
           : subcommand === 'release' ? reviewQuarantine(cwd, rest.find(v => v.startsWith('src_')), options) : null;
