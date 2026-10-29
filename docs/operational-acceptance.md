@@ -26,6 +26,15 @@ records a learning decision; processing a file alone does not. Keep a retrieval
 receipt before completing the run. Retry the same completion payload rather
 than inventing a new run to get around an error.
 
+After completion, preview a managed archive with `mole privacy archive <source-id>`.
+Apply it explicitly with `mole privacy archive <source-id> --apply`. This moves
+only from `6-raw/inbox/<source-id>.md` to
+`6-raw/inbox/archive/<source-id>.md`, preserving the source ID, cleaned bytes and
+original expiry. It updates the privacy manifest and source path history. It
+does not accept the raw capture or its draft output. Use this operation instead
+of moving managed captures by hand. The archive remains covered by duplicate
+checks and explicit retention purge.
+
 Use `mole review input-queue` to choose the next request. Recording an answer
 needs both the answer and its outcome. Closing an unanswered request as stale,
 duplicate or unnecessary requires an explicit human decision. Review suggestions
@@ -50,24 +59,36 @@ run. A passing result applies only to the checked revision and environment.
 | Queue ranking and closure | `operational flow` ranks a blocking high-priority request, refuses agent dismissal, records an answer and verifies the next request |
 | Retry without added receipts or metrics | `operational flow` snapshots the completed workspace before an identical retry; `ambiguity blocks completion` rejects a new run for repeated input |
 | Ambiguous ownership and sync state | `ambiguity blocks completion` preserves lock/source bytes on foreign-owner and conflict refusal, then resumes after removal of the test-injected conflict |
-| Stable identity and supported recovery | `provenance survives archive discovery` resolves a moved source by ID, refuses privacy processing and purge while archived, restores the canonical path without changing ID, expiry or fingerprint, and releases a reviewed quarantine derivative under its original ID |
+| Managed archive with stable identity and retention | `managed archive retains identity` completes a real owned run, checks archive dry-run and CLI apply, preserves ID/bytes/fingerprint/expiry and raw lifecycle state, refuses a copied observation, retries the original receipt before/after purge, and checks deletion of the archived raw file with retained provenance |
+| Unmanaged move refusal and supported recovery | `unmanaged archive discovery` resolves a manually moved source by ID, refuses privacy processing and purge for its arbitrary path, restores the canonical inbox path without changing ID, expiry or fingerprint, and releases a reviewed quarantine derivative under its original ID |
 | Read-only validation | `validation finds operational damage` requires text/JSON findings for a broken source reference, invalid/missing metadata, stale summary, malformed lock and overdue queue; full tree snapshots include file bytes, modes and modification times |
 | Explicit purge and retained provenance | `operational flow` proves dry-run changes nothing, applies expiry only to temporary captures, checks tombstones, retained IDs, absent synthetic email and continued accepted retrieval |
 | Privacy gate before duplicate reads/hashes; attachments, edited or expired inputs; cleaned fingerprint retention | `lib/test/inbox-privacy-integration.test.mjs` exercises the integration boundary, including a hash interception assertion |
 | Duplicate decisions and capture metadata ambiguity | `lib/test/inbox-duplicates.test.mjs` checks exact/near comparisons and explicit human decisions |
+| Attachment redaction and retained decisions | `lib/test/inbox-privacy-integration.test.mjs` requires review for aggregate parent/attachment redaction and conservative older records, and keeps directed decisions visible after thresholds change or target purge |
+| Interrupted managed move and ambiguous targets | `lib/test/inbox-privacy-integration.test.mjs` checks explicit recovery, pending-intent blocking, foreign targets, symlinks, existing copies and conflict locks |
 | Critique and release/install path | The damage scenario executes `mole critique idea` without changing files; `cli/test/mole.test.mjs` covers targets; `npm run check:package` packs, inspects, installs and smoke-tests the artifact |
 
 ## Limits and recovery
 
-Source resolution can discover an unchanged file after an archive move. Privacy
-and duplicate processing support canonical source-ID inbox paths and reviewed
-derivative release. They do **not** support processing arbitrary archived paths.
-The archive scenario intentionally expects refusal. An unmanaged archive blocks
-purge until recovery; it must never be counted as successfully expired.
-Restore the original managed file to its canonical path and reconcile its source
-record before retrying. See [privacy recovery](raw-inbox-privacy.md) and
-[source provenance](source-provenance.md). Scanning an unmanaged archive instead
-creates a quarantined import; it is not identity-preserving archive reconciliation.
+The supported managed operation has one generated destination under
+`6-raw/inbox/archive/`. It provides no arbitrary destination, overwrite, new
+identity or renewed TTL. Active or conflicted processing and lifecycle locks
+block the move. The filesystem must support local hard links. A failed link
+leaves the original and a prepared intent for explicit recovery.
+A prepared move intent blocks processing and purge until explicit recovery with
+`mole privacy archive <source-id> --recover --apply`. If recovery reports
+ambiguity, preserve both copies and resolve ownership before retrying. The move
+spans filesystem and ledger writes; it is not an atomic distributed transaction.
+
+Source resolution can also discover an unchanged file after a manual archive
+move. That does not authorize the path for privacy or duplicate processing.
+The separate unmanaged-move scenario intentionally expects refusal and blocked
+purge. Restore the original managed file to its canonical inbox path and reconcile
+its source record before retrying. See [privacy recovery](raw-inbox-privacy.md)
+and [source provenance](source-provenance.md). Scanning an unmanaged archive
+instead creates a quarantined import; it is not identity-preserving archive
+reconciliation. Reviewed derivative release remains a separate supported move.
 
 Local ownership checks do not establish distributed exactly-once processing.
 Actor declarations do not authenticate a person. Duplicate hashes are correlatable
