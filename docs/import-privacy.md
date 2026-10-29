@@ -9,7 +9,8 @@ reviewed derivative, then explicitly select that source ID for a new import.
 An import never silently substitutes a derivative or rewrites measurements.
 
 This policy applies to `mole release import` and `mole analytics import`.
-Markdown, JSON and CSV must be valid UTF-8 and at most 4 MiB. Mole scans both
+Markdown, JSON and CSV must be valid UTF-8 and at most 4 MiB; normalized
+evidence is also bounded to 4 MiB before publication. Mole scans both
 the original text and decoded JSON keys/string values or CSV headers/cells.
 Escaping a newline in JSON does not bypass that check. Unsupported/unparseable
 formats and invalid encoding get controlled errors without input excerpts.
@@ -61,8 +62,11 @@ For normalized evidence that was moved, explicitly reconcile its source outside
 import first. Replay validates only that registered current durable path.
 Importers do not run source resolution, archive discovery or global audits;
 they must not discover and hash quarantine copies while looking for a source.
-Privacy-managed moves use the privacy subsystem's canonical location and
-pending-move rules, rather than arbitrary archive paths.
+A completed `mole privacy archive <source-id> --apply` preserves import
+identity, expiry and replay at the canonical generated archive location. A
+prepared move intent blocks import before byte opens or repair until explicit
+privacy recovery. The importer shares the privacy subsystem's location and
+metadata gate; arbitrary manual archive paths remain ineligible.
 
 Publication uses complete staged bytes, verification, fsync and exclusive hard
 links. A small immutable request intent precedes the privacy intent and raw

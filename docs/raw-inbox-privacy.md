@@ -6,7 +6,12 @@ The scanner recognizes email addresses, international phone numbers beginning wi
 
 These rules do not recognize every name, language, address, secret format, financial statement or business fact. No match means `no_rule_match`, never a privacy certification. Unlabelled secret, medical, financial or confidential cues trigger quarantine. False positives are deliberate: a discussion of an unknown token needs review. Do not rely on the scanner to sanitize arbitrary documents automatically. Review cleaned content before enrichment, sharing or promotion.
 
-All manual imports and attachments quarantine, even text formats. PDF, Office, image metadata, structured formats and archives have no verified extraction adapter in this release. Mole never treats extraction failure as clean text. Captures are scanned in memory; only cleaned text or quarantined bytes enter private staging. There is no hosted scanner.
+Arbitrary manual drops and attachments quarantine, even text formats.
+The explicit release/analytics import adapters follow the narrower
+[managed import contract](import-privacy.md): only supported, bounded UTF-8
+inputs whose original text and decoded values need no redaction may retain
+unchanged managed raw bytes. Sensitive or uncertain attempts refuse without
+importer persistence and require the existing review route. PDF, Office, image metadata, structured formats and archives have no verified extraction adapter in this release. Mole never treats extraction failure as clean text. Captures are scanned in memory; only cleaned text or quarantined bytes enter private staging. There is no hosted scanner.
 
 ## Local commands
 
