@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "change_id": "chg_manual_export_followup",
+  "release_id": "rel_october_2026",
+  "source": {
+    "type": "manual",
+    "ref": "examples/change-records/manual.json",
+    "source_id": "source_manual_export_followup"
+  },
+  "title": "Export follow-up",
+  "problem": "Customers abandon exports while waiting.",
+  "expected_outcome": "More completed exports.",
+  "delivery_status": "released",
+  "review_status": "reviewed",
+  "outcome_status": "inconclusive",
+  "observed_outcome": "Completion rose, but the sample is too small to assess the target.",
+  "confidence": "Low: ten export attempts.",
+  "attribution_caveats": "Customer mix also changed.",
+  "learning": "Collect a larger sample before deciding.",
+  "next_decision": "Review again after 100 attempts.",
+  "evidence": ["source_export_counts"],
+  "dates": {"released":"2026-10-20","reviewed":"2026-10-27"}
+}

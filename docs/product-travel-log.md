@@ -101,3 +101,7 @@ changes and two reports:
   evidence yet. The skill finds them as ordinary context and evidence files.
 - Accepted learnings stay in the approved report. Nothing copies them into
   summaries or indexes; do that with `mole refresh top-layers`.
+
+## Reusable change records
+
+The [versioned change and outcome contract](change-records.md) provides source-independent JSON values, field provenance and visible intent gaps for adapters and outcome reviews. Delivery and outcome review statuses remain separate from human approval in the lifecycle ledger.
