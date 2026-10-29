@@ -71,7 +71,18 @@ metadata gate; arbitrary manual archive paths remain ineligible.
 Publication uses complete staged bytes, verification, fsync and exclusive hard
 links. A small immutable request intent precedes the privacy intent and raw
 publication. A concurrent writer adopts the winning request IDs on a gated
-retry. Existing files are preserved on conflicts.
+retry. Existing files are preserved on conflicts. A new request always attempts an
+exclusive output publication, even if a file appears after preflight. It cannot
+adopt a competing output merely because that path now exists. Same-receipt
+repair checks the allocated source IDs, fingerprint, unique output ownership
+and exact canonical bytes again before registration and success.
+
+Import source/lifecycle registration consumes gated current-file snapshots.
+The lifecycle snapshot is checked inside its mutation lock and again before
+commit; it never falls back to content discovery if a file disappears. Source
+registration binds the eligible snapshot's bytes and file identity. Late
+missing/changed files refuse, preserving competing data and partial metadata
+for explicit recovery.
 
 There is no multi-file transaction. A stopped writer may leave request or
 privacy intent, staging, raw bytes, source metadata or unregistered evidence.
