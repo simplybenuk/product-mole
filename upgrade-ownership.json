@@ -39,6 +39,7 @@
         "governance/sources/",
         "governance/lifecycle/",
         "governance/input-queue/",
+        "governance/inbox-duplicates/",
         "governance/privacy/",
         "mole.privacy.json"
       ]

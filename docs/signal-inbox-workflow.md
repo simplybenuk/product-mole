@@ -234,4 +234,7 @@ Always include retrieval receipt + confidence markers.
 - Promotions are evidence-led, not anecdote-led.
 - Summaries/indexes reflect validated patterns, not raw noise.
 
+Before enrichment, use the [duplicate check](inbox-duplicates.md) on registered
+source IDs. Review exact metadata conflicts and near-match suggestions before
+creating durable drafts.
 See [raw inbox privacy and retention](raw-inbox-privacy.md) before processing captures or attachments. Run the privacy scan before reading manual imports.

@@ -14,7 +14,8 @@ import {
   checkpointInboxProcessing,
   overrideStaleInboxProcessing
 } from '../lib/inbox-processing.mjs';
-import { ingestCaptureFields, scanRaw, purgeRaw, reviewQuarantine, auditPrivacy } from '../lib/privacy.mjs';
+import { inspectInboxDuplicateBatch, recordDuplicateDecision } from '../lib/inbox-duplicates.mjs';
+import { archiveManagedRaw, ingestCaptureFields, scanRaw, purgeRaw, reviewQuarantine, auditPrivacy } from '../lib/privacy.mjs';
 import { auditInbox } from '../lib/inbox-audit.mjs';
 import { backfillProcessedInboxMetrics } from '../lib/metrics.mjs';
 import { formatMetricsSummary, summarizeMetrics, writeMetricsSnapshot } from '../lib/metrics-summary.mjs';
@@ -161,10 +162,14 @@ Usage:
   mole inbox heartbeat --run-id id     Renew the matching active run lease.
   mole inbox checkpoint --run-id id [--processed path]
                                       Save restart-safe partial progress.
+  mole privacy archive <source-id> [--apply] [--recover]
+                                      Move cleaned raw to its managed archive path.
   mole privacy scan [--apply]          Quarantine manual raw files; dry-run by default.
   mole retention purge [--apply]       Remove expired raw files; dry-run by default.
   mole privacy release <source-id> --confirm-reviewed [--apply]
   mole inbox audit                    Audit live files, leases, conflicts, and receipts.
+  mole inbox duplicates check <id>...  Check registered sources before enrichment.
+  mole inbox duplicates decide        Record an explicit human duplicate decision.
   mole inbox complete [options] [summary]
                                       Write an idempotent receipt and release the lock.
   mole inbox override-stale [options] Replace an expired lock with an audited override.
@@ -1898,6 +1903,32 @@ function upgradeTool(version) {
 }
 
 function runInboxCommand(action, values = []) {
+  if (action === 'duplicates') {
+    try {
+      const [operation, ...args] = values;
+      if (operation === 'check') {
+        let threshold = 0.8;
+        const ids = [];
+        for (let i = 0; i < args.length; i++) {
+          if (args[i] === '--threshold') threshold = Number(args[++i]);
+          else ids.push(args[i]);
+        }
+        if (!ids.length) throw new Error('Provide registered source IDs.');
+        console.log(JSON.stringify(inspectInboxDuplicateBatch(cwd, ids, { threshold }), null, 2));
+      } else if (operation === 'decide') {
+        const [sourceId, targetId, status, ...flags] = args;
+        const options = { sourceId, targetId, status };
+        for (let i = 0; i < flags.length; i++) {
+          if (flags[i] === '--confirm-human') options.confirmHuman = true;
+          else if (flags[i] === '--actor') options.actor = flags[++i];
+          else if (flags[i] === '--reason') options.reason = flags[++i];
+          else throw new Error('Unknown duplicate decision option.');
+        }
+        console.log(JSON.stringify(recordDuplicateDecision(cwd, options), null, 2));
+      } else throw new Error('Use inbox duplicates check <source-id>... [--threshold 0.8] or decide <source-id> <target-id> <status> --confirm-human --actor <local-id> --reason <code>.');
+    } catch (error) { console.error(error.message); process.exit(1); }
+    return;
+  }
   if (action === 'audit') {
     const result = auditInbox(cwd);
     console.log('Mole inbox audit');
@@ -2381,9 +2412,10 @@ if (isDirectRun) {
     case 'privacy':
     case 'retention': {
       try {
-        const options = { apply: rest.includes('--apply'), confirmReviewed: rest.includes('--confirm-reviewed') };
-        if (rest.some(v => !['--apply', '--confirm-reviewed'].includes(v) && !v.startsWith('src_'))) throw new Error();
-        const result = subcommand === 'purge' ? purgeRaw(cwd, options)
+        const options = { apply: rest.includes('--apply'), confirmReviewed: rest.includes('--confirm-reviewed'), recover: rest.includes('--recover') };
+        if (rest.some(v => !['--apply', '--confirm-reviewed', '--recover'].includes(v) && !v.startsWith('src_'))) throw new Error();
+        const result = subcommand === 'archive' ? archiveManagedRaw(cwd, rest.find(v => v.startsWith('src_')), options)
+          : subcommand === 'purge' ? purgeRaw(cwd, options)
           : subcommand === 'audit' ? auditPrivacy(cwd)
           : subcommand === 'scan' ? scanRaw(cwd, options)
           : subcommand === 'release' ? reviewQuarantine(cwd, rest.find(v => v.startsWith('src_')), options) : null;
