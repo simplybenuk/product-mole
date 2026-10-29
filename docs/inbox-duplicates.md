@@ -52,7 +52,7 @@ fingerprints after their raw content is deleted. No text is reconstructed.
 
 Different capture timestamps, channels, or provider references may mean two
 separate events. Privacy redaction can also collapse distinct originals into
-the same cleaned text. Any exact match involving a redacted source reports
+the same cleaned text. Any exact match involving redaction in a source or its contributing attachments reports
 `privacy_redaction` and requires a human decision. Exact content with conflicting metadata requires a human
 decision before completion. Sync conflict source copies remain blocked by the
 inbox audit and processing lock rules; this check never resolves a sync conflict.
@@ -72,6 +72,12 @@ local identifier. Reasons are `retry`, `sync-copy`, `same-observation`,
 `related-observation`, `newer-observation`, and `separate-event`. Free text is
 excluded to keep sensitive source content out of this ledger.
 
+Default checks always show stored decisions, even below the chosen similarity
+threshold or after the other source is purged. The directed `decision` retains
+its original IDs and timestamp; `decision_target` reports the target source ID,
+retention state and whether raw comparison remains available. Purged sources
+need no raw read or hash to report their decisions.
+
 Decisions are immutable and retries are idempotent. A second different decision
 for the same pair fails closed, regardless of direction. Reversals and malformed
 or conflicting sync records require explicit owner reconciliation outside this
@@ -88,7 +94,7 @@ has no semantic model and can miss paraphrases. It makes no hosted AI calls.
 Sources above 2 MiB fail closed, including attachments, to bound local reads.
 
 `governance/inbox-duplicates/` is instance-owned. Its durable records contain
-version 2 fingerprints, byte and attachment hashes, source IDs, capture and
+version 3 fingerprints, byte and attachment hashes, source IDs, capture and
 registration times, and hashes of channel/provider reference. Decisions contain
 only the fields described above. Raw text, word sets, embeddings, paths, URLs,
 and provider credentials are not copied into the ledger. Hashes allow correlation
@@ -101,18 +107,21 @@ precedes indexing through `assertPrivacyProcessing`, including every indexed liv
 candidate and attachment. Metadata-only source lookup avoids the general resolver
 and its ungated hashes. Edited sensitive, expired, quarantined, missing or ambiguous
 inputs stop the entire batch before duplicate ledger writes.
-Only privacy-cleaned UTF-8 inputs can acquire a version 2 fingerprint. Earlier
-version 1 records fail closed and require owner review; they are never silently
-trusted or migrated. Stored hashes for deleted privacy tombstones participate
+Only privacy-cleaned UTF-8 inputs can acquire a version 3 fingerprint. A retained
+`redaction_ambiguous` boolean covers both the parent and all attachments whose
+cleaned bytes contribute to its fingerprint, and remains after purge. Version 2
+records lack that provenance and conservatively require human review for exact
+pairs, even if the original text is gone. They remain immutable. Version 1
+records fail closed and require owner review; they are never silently migrated. Stored hashes for deleted privacy tombstones participate
 in exact comparison only. They never authorize processing a restored source.
 
-Privacy storage currently supports generated source-ID locations only. The
-quarantine derivative release moves cleaned bytes to the generated inbox path
-without changing source ID or expiry. Arbitrary archive/rename moves fail closed;
-restore the canonical generated path without changing bytes, then reconcile a
-stale source registry path if necessary. There is no privacy-aware archive command.
-Do not change a privacy manifest to authorize an arbitrary path. Quarantine
-release is a privacy decision and leaves the lifecycle state raw, not accepted.
+Privacy storage supports generated source-ID destinations. Use the
+[managed archive operation](raw-inbox-privacy.md#managed-archive-moves) to move
+cleaned raw to `6-raw/inbox/archive/<source_id>.md`. It preserves source ID,
+bytes, expiry, duplicate fingerprint and receipt identity. Both duplicate checks
+and explicit inbox processing support that destination. Arbitrary archive/rename
+paths still fail closed. Do not edit manifests to authorize arbitrary paths.
+Quarantine release and archive moves never approve lifecycle content.
 
 Batch checks validate all live indexed candidates and attachments before writes.
 An unsafe or expired indexed candidate therefore blocks new indexing until the
