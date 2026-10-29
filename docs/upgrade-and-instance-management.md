@@ -89,6 +89,31 @@ It exists so the instance has an upgrade memory.
 
 ---
 
+## Upgrading to 0.4.0
+
+Back up the workspace and pause shared inbox processing while applying structural
+updates. Refreshing the installed CLI does not replace the instance's local data
+or apply every template change. Use the ownership classes above when merging
+framework files, summaries, indexes, and local configuration.
+
+Preserve instance-owned data, including `governance/privacy/`,
+`governance/imports/`, `governance/inbox-duplicates/`, source and lifecycle
+records, and processing receipts. Existing captures and completed import requests
+are not automatically migrated to the new privacy contract. Registration alone
+does not authorize raw processing. Follow the explicit recovery procedures in
+[raw privacy](raw-inbox-privacy.md) and [import privacy](import-privacy.md) for
+legacy or incompatible state.
+
+Review the seven-day default raw retention policy and arrange an explicit purge
+schedule. The CLI does not run a retention daemon. Use the managed archive command
+for eligible captures; arbitrary manual raw moves require recovery. See the
+[operational acceptance guide](operational-acceptance.md) for the supported flow
+and its recovery limits.
+
+The travel-log commands are optional workflows. Review their
+[release ingestion](release-ingestion.md), [analytics import](analytics-evidence.md),
+and [approved learning](accepted-learning.md) contracts before adopting them.
+
 ## Release model for upstream
 
 Upstream should publish releases with:
@@ -102,11 +127,11 @@ Install a stable CLI from its tag when bootstrapping or repairing an older
 installation:
 
 ```bash
-npm install -g github:simplybenuk/product-mole#v0.3.1
+npm install -g github:simplybenuk/product-mole#v0.4.0
 ```
 
 Once the current CLI is installed, `mole upgrade [version]` performs the same
-refresh from a stable tag. Pass `0.3.1` or `v0.3.1` to choose a release. With no
+refresh from a stable tag. Pass `0.4.0` or `v0.4.0` to choose a release. With no
 argument, the CLI reuses the tag matching its installed version. It does not
 follow the moving `main` branch, so an upgrade target is reproducible.
 
@@ -179,7 +204,7 @@ The global CLI and a downstream working instance are different things. Refresh
 the first from a release tag, then apply the second through the ownership model:
 
 ```bash
-mole upgrade 0.3.1
+mole upgrade 0.4.0
 mole install skills
 ```
 

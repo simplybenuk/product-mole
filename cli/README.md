@@ -14,18 +14,18 @@ Git metadata and the operating-system files `.DS_Store` and `Thumbs.db` are allo
 Install from GitHub:
 
 ```bash
-npm install -g github:simplybenuk/product-mole#v0.3.1
+npm install -g github:simplybenuk/product-mole#v0.4.0
 mole new my-mole
 cd my-mole
 ```
 
-Replace `v0.3.1` with the stable release you want. Install from `#main` only
+Replace `v0.4.0` with the stable release you want. Install from `#main` only
 when you explicitly want unreleased changes.
 
 To update an installed CLI from a stable release tag:
 
 ```bash
-mole upgrade 0.3.1
+mole upgrade 0.4.0
 mole install skills
 ```
 `mole upgrade` without a version uses the tag matching the installed CLI's
